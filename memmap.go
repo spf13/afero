@@ -14,11 +14,13 @@
 package afero
 
 import (
+	"errors"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 )
 
 var mux = &sync.Mutex{}
@@ -216,4 +218,38 @@ func (m *MemMapFs) Stat(name string) (os.FileInfo, error) {
 		return nil, err
 	}
 	return &InMemoryFileInfo{file: f.(*InMemoryFile)}, nil
+}
+
+func (m *MemMapFs) Chmod(name string, mode os.FileMode) error {
+	f, ok := m.getData()[name]
+	if !ok {
+		return &os.PathError{"chmod", name, ErrFileNotFound}
+	}
+
+	ff, ok := f.(*InMemoryFile)
+	if ok {
+		m.lock()
+		ff.mode = mode
+		m.unlock()
+	} else {
+		return errors.New("Unable to Chmod Memory File")
+	}
+	return nil
+}
+
+func (m *MemMapFs) Chtimes(name string, atime time.Time, mtime time.Time) error {
+	f, ok := m.getData()[name]
+	if !ok {
+		return &os.PathError{"chtimes", name, ErrFileNotFound}
+	}
+
+	ff, ok := f.(*InMemoryFile)
+	if ok {
+		m.lock()
+		ff.modtime = mtime
+		m.unlock()
+	} else {
+		return errors.New("Unable to Chtime Memory File")
+	}
+	return nil
 }

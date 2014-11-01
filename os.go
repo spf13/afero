@@ -14,7 +14,10 @@
 
 package afero
 
-import "os"
+import (
+	"os"
+	"time"
+)
 
 // OsFs is a Fs implementation that uses functions provided by the os package.
 //
@@ -58,4 +61,12 @@ func (OsFs) Rename(oldname, newname string) error {
 
 func (OsFs) Stat(name string) (os.FileInfo, error) {
 	return os.Stat(name)
+}
+
+func (OsFs) Chmod(name string, mode os.FileMode) error {
+	return os.Chmod(name, mode)
+}
+
+func (OsFs) Chtimes(name string, atime time.Time, mtime time.Time) error {
+	return os.Chtimes(name, atime, mtime)
 }

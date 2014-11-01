@@ -32,16 +32,19 @@ type MemDir interface {
 }
 
 type InMemoryFile struct {
-	at     int64
-	name   string
-	data   []byte
-	memDir MemDir
-	dir    bool
-	closed bool
+	at      int64
+	name    string
+	data    []byte
+	memDir  MemDir
+	dir     bool
+	closed  bool
+	mode    os.FileMode
+	modtime time.Time
 }
 
 func MemFileCreate(name string) *InMemoryFile {
-	return &InMemoryFile{name: name}
+	return &InMemoryFile{name: name, mode: os.ModeTemporary, modtime: time.Now()}
+}
 }
 
 func (f *InMemoryFile) Close() error {
@@ -184,7 +187,7 @@ type InMemoryFileInfo struct {
 // Implements os.FileInfo
 func (s *InMemoryFileInfo) Name() string       { return s.file.Name() }
 func (s *InMemoryFileInfo) Size() int64        { return int64(len(s.file.data)) }
-func (s *InMemoryFileInfo) Mode() os.FileMode  { return os.ModeTemporary }
-func (s *InMemoryFileInfo) ModTime() time.Time { return time.Time{} }
+func (s *InMemoryFileInfo) Mode() os.FileMode  { return s.file.mode }
+func (s *InMemoryFileInfo) ModTime() time.Time { return s.file.modtime }
 func (s *InMemoryFileInfo) IsDir() bool        { return s.file.dir }
 func (s *InMemoryFileInfo) Sys() interface{}   { return nil }

@@ -27,6 +27,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"time"
 )
 
 // File represents a file in the filesystem.
@@ -85,6 +86,12 @@ type Fs interface {
 
 	// The name of this FileSystem
 	Name() string
+
+	//Chmod changes the mode of the named file to mode.
+	Chmod(name string, mode os.FileMode) error
+
+	//Chtimes changes the access and modification times of the named file
+	Chtimes(name string, atime time.Time, mtime time.Time) error
 }
 
 var (
