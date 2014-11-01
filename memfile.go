@@ -45,6 +45,11 @@ type InMemoryFile struct {
 func MemFileCreate(name string) *InMemoryFile {
 	return &InMemoryFile{name: name, mode: os.ModeTemporary, modtime: time.Now()}
 }
+
+func (f *InMemoryFile) Open() error {
+	atomic.StoreInt64(&f.at, 0)
+	f.closed = false
+	return nil
 }
 
 func (f *InMemoryFile) Close() error {

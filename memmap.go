@@ -152,9 +152,13 @@ func (m *MemMapFs) MkdirAll(path string, perm os.FileMode) error {
 func (m *MemMapFs) Open(name string) (File, error) {
 	m.rlock()
 	f, ok := m.getData()[name]
-	m.runlock()
+	ff, ok := f.(*InMemoryFile)
 	if ok {
-		f.Seek(0, 0)
+		ff.Open()
+	}
+	m.runlock()
+
+	if ok {
 		return f, nil
 	} else {
 		return nil, ErrFileNotFound
