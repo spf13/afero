@@ -36,6 +36,7 @@ func (d httpDir) Open(name string) (http.File, error) {
 	if dir == "" {
 		dir = "."
 	}
+
 	f, err := d.fs.Open(filepath.Join(dir, filepath.FromSlash(path.Clean("/"+name))))
 	if err != nil {
 		return nil, err
