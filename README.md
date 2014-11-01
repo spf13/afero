@@ -2,7 +2,7 @@
 
 A FileSystem Abstraction System for Go
 
-[![Build Status](https://travis-ci.org/spf13/fs.png)](https://travis-ci.org/spf13/fs)
+[![Build Status](https://travis-ci.org/spf13/afero.png)](https://travis-ci.org/spf13/afero)
 
 ## Overview
 
