@@ -44,7 +44,7 @@ var Fss = []Fs{&MemMapFs{}, &OsFs{}}
 func TestRead0(t *testing.T) {
 	for _, fs := range Fss {
 		path := testDir + "/" + testName
-		if err := fs.MkdirAll(testDir, 777); err != nil {
+		if err := fs.MkdirAll(testDir, 0777); err != nil {
 			t.Fatal(fs.Name(), "unable to create dir", err)
 		}
 
