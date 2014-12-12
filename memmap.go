@@ -15,6 +15,7 @@ package afero
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -256,4 +257,11 @@ func (m *MemMapFs) Chtimes(name string, atime time.Time, mtime time.Time) error 
 		return errors.New("Unable to Chtime Memory File")
 	}
 	return nil
+}
+
+func (m *MemMapFs) List() {
+	for _, x := range m.data {
+		y, _ := x.Stat()
+		fmt.Println(x.Name(), y.Size())
+	}
 }
