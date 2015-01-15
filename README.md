@@ -51,14 +51,14 @@ operation and a mock filesystem during testing or as needed.
 
 ### MemMapFs
 
-Fs also provides a fully atomic memory backed filesystem perfect for use in
+Afero also provides a fully atomic memory backed filesystem perfect for use in
 mocking and to speed up unnecessary disk io when persistence isn’t
 necessary. It is fully concurrent and will work within go routines
 safely.
 
 ### MemFile
 
-As part of MemMapFs, fs also provides an atomic, fully concurrent memory
+As part of MemMapFs, Afero also provides an atomic, fully concurrent memory
 backed file implementation. This can be used in other memory backed file
 systems with ease. Plans are to add a radix tree memory stored file
 system using MemFile. 
@@ -140,7 +140,7 @@ returns an http.File type.
 Afero provides an httpFs file system which satisfies this requirement.
 Any Afero FileSystem can be used as an httpFs.
 
-	httpFs := &fs.HttpFs{SourceFs: <ExistingFS>}
+	httpFs := &afero.HttpFs{SourceFs: <ExistingFS>}
 	fileserver := http.FileServer(httpFs.Dir(<PATH>)))
     http.Handle("/", fileserver)
 
