@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"sync"
 	"sync/atomic"
 )
 
@@ -32,6 +33,7 @@ type MemDir interface {
 }
 
 type InMemoryFile struct {
+	sync.Mutex
 	at      int64
 	name    string
 	data    []byte
@@ -48,13 +50,17 @@ func MemFileCreate(name string) *InMemoryFile {
 
 func (f *InMemoryFile) Open() error {
 	atomic.StoreInt64(&f.at, 0)
+	f.Lock()
 	f.closed = false
+	f.Unlock()
 	return nil
 }
 
 func (f *InMemoryFile) Close() error {
 	atomic.StoreInt64(&f.at, 0)
+	f.Lock()
 	f.closed = true
+	f.Unlock()
 	return nil
 }
 
@@ -102,14 +108,18 @@ func (f *InMemoryFile) Readdirnames(n int) (names []string, err error) {
 }
 
 func (f *InMemoryFile) Read(b []byte) (n int, err error) {
+	f.Lock()
+	defer f.Unlock()
 	if f.closed == true {
 		return 0, ErrFileClosed
+	}
+	if len(b) > 0 && int(f.at) == len(f.data) {
+		return 0, io.EOF
 	}
 	if len(f.data)-int(f.at) >= len(b) {
 		n = len(b)
 	} else {
 		n = len(f.data) - int(f.at)
-		err = io.EOF
 	}
 	copy(b, f.data[f.at:f.at+int64(n)])
 	atomic.AddInt64(&f.at, int64(n))
@@ -155,6 +165,8 @@ func (f *InMemoryFile) Seek(offset int64, whence int) (int64, error) {
 func (f *InMemoryFile) Write(b []byte) (n int, err error) {
 	n = len(b)
 	cur := atomic.LoadInt64(&f.at)
+	f.Lock()
+	defer f.Unlock()
 	diff := cur - int64(len(f.data))
 	var tail []byte
 	if n+int(cur) < len(f.data) {
