@@ -105,12 +105,15 @@ func (f *InMemoryFile) Read(b []byte) (n int, err error) {
 	if f.closed == true {
 		return 0, ErrFileClosed
 	}
+	if len(b) > 0 && int(f.at) == len(f.data) {
+		return 0, io.EOF
+	}
 	if len(f.data)-int(f.at) >= len(b) {
 		n = len(b)
 	} else {
 		n = len(f.data) - int(f.at)
-		err = io.EOF
 	}
+
 	copy(b, f.data[f.at:f.at+int64(n)])
 	atomic.AddInt64(&f.at, int64(n))
 	return
