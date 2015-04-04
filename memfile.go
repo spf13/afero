@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"sync"
 	"sync/atomic"
 )
 
@@ -32,6 +33,7 @@ type MemDir interface {
 }
 
 type InMemoryFile struct {
+	sync.Mutex
 	at      int64
 	name    string
 	data    []byte
@@ -105,6 +107,8 @@ func (f *InMemoryFile) Read(b []byte) (n int, err error) {
 	if f.closed == true {
 		return 0, ErrFileClosed
 	}
+	f.Lock()
+	defer f.Unlock()
 	if len(b) > 0 && int(f.at) == len(f.data) {
 		return 0, io.EOF
 	}
@@ -157,6 +161,8 @@ func (f *InMemoryFile) Seek(offset int64, whence int) (int64, error) {
 func (f *InMemoryFile) Write(b []byte) (n int, err error) {
 	n = len(b)
 	cur := atomic.LoadInt64(&f.at)
+	f.Lock()
+	defer f.Unlock()
 	diff := cur - int64(len(f.data))
 	var tail []byte
 	if n+int(cur) < len(f.data) {
