@@ -50,13 +50,17 @@ func MemFileCreate(name string) *InMemoryFile {
 
 func (f *InMemoryFile) Open() error {
 	atomic.StoreInt64(&f.at, 0)
+	f.Lock()
 	f.closed = false
+	f.Unlock()
 	return nil
 }
 
 func (f *InMemoryFile) Close() error {
 	atomic.StoreInt64(&f.at, 0)
+	f.Lock()
 	f.closed = true
+	f.Unlock()
 	return nil
 }
 
@@ -104,11 +108,11 @@ func (f *InMemoryFile) Readdirnames(n int) (names []string, err error) {
 }
 
 func (f *InMemoryFile) Read(b []byte) (n int, err error) {
+	f.Lock()
+	defer f.Unlock()
 	if f.closed == true {
 		return 0, ErrFileClosed
 	}
-	f.Lock()
-	defer f.Unlock()
 	if len(b) > 0 && int(f.at) == len(f.data) {
 		return 0, io.EOF
 	}
