@@ -166,6 +166,7 @@ Any Afero FileSystem can be used as an httpFs.
 Names in no particular order:
 
 * [spf13](https://github.com/spf13)
+* [jaqx0r](https://github.com/jaqx0r)
 
 ## License
 
