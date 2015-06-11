@@ -78,10 +78,11 @@ func (MemMapFs) Name() string { return "MemMapFS" }
 
 func (m *MemMapFs) Create(name string) (File, error) {
 	m.lock()
-	m.getData()[name] = MemFileCreate(name)
+	file := MemFileCreate(name)
+	m.getData()[name] = file
 	m.unlock()
-	m.registerDirs(m.getData()[name])
-	return m.getData()[name], nil
+	m.registerDirs(file)
+	return file, nil
 }
 
 func (m *MemMapFs) registerDirs(f File) {
@@ -139,9 +140,10 @@ func (m *MemMapFs) Mkdir(name string, perm os.FileMode) error {
 		return ErrFileExists
 	} else {
 		m.lock()
-		m.getData()[name] = &InMemoryFile{name: name, memDir: &MemDirMap{}, dir: true}
+		item := &InMemoryFile{name: name, memDir: &MemDirMap{}, dir: true}
+		m.getData()[name] = item
 		m.unlock()
-		m.registerDirs(m.getData()[name])
+		m.registerDirs(item)
 	}
 	return nil
 }
