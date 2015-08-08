@@ -173,13 +173,11 @@ func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, erro
 }
 
 func (m *MemMapFs) Remove(name string) error {
-	m.rlock()
-	defer m.runlock()
+	m.lock()
+	defer m.unlock()
 
-	if _, ok := m.getData()["name"]; ok {
-		m.lock()
+	if _, ok := m.getData()[name]; ok {
 		delete(m.getData(), name)
-		m.unlock()
 	}
 	return nil
 }
