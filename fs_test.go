@@ -74,11 +74,29 @@ func TestOpenFile(t *testing.T) {
 		path := testDir + "/" + testName
 		fs.MkdirAll(testDir, 0777) // Just in case.
 		fs.Remove(path)            // Just in case.
+		defer fs.Remove(path)
 
-		f, err := fs.OpenFile(path, os.O_CREATE, 0600)
+		f, err := fs.OpenFile(path, os.O_RDWR|os.O_CREATE, 0600)
 		if err != nil {
 			t.Error(fs.Name(), "OpenFile (O_CREATE) failed:", err)
 			continue
+		}
+		io.WriteString(f, "initial")
+		f.Close()
+
+		f, err = fs.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0600)
+		if err != nil {
+			t.Error(fs.Name(), "OpenFile (O_APPEND) failed:", err)
+			continue
+		}
+		io.WriteString(f, "|append")
+		f.Close()
+
+		f, err = fs.OpenFile(path, os.O_RDONLY, 0600)
+		contents, _ := ioutil.ReadAll(f)
+		expectedContents := "initial|append"
+		if string(contents) != expectedContents {
+			t.Errorf("%v: appending, expected '%v', got: '%v'", fs.Name(), expectedContents, string(contents))
 		}
 		f.Close()
 	}
