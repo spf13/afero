@@ -178,6 +178,8 @@ func (m *MemMapFs) Remove(name string) error {
 
 	if _, ok := m.getData()[name]; ok {
 		delete(m.getData(), name)
+	} else {
+		return &os.PathError{"remove", name, os.ErrNotExist}
 	}
 	return nil
 }
