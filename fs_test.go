@@ -69,6 +69,21 @@ func TestRead0(t *testing.T) {
 	}
 }
 
+func TestOpenFile(t *testing.T) {
+	for _, fs := range Fss {
+		path := testDir + "/" + testName
+		fs.MkdirAll(testDir, 0777) // Just in case.
+		fs.Remove(path)            // Just in case.
+
+		f, err := fs.OpenFile(path, os.O_CREATE, 0600)
+		if err != nil {
+			t.Error(fs.Name(), "OpenFile (O_CREATE) failed:", err)
+			continue
+		}
+		f.Close()
+	}
+}
+
 func TestMemFileRead(t *testing.T) {
 	f := MemFileCreate("testfile")
 	f.WriteString("abcd")
