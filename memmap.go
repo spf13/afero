@@ -209,7 +209,17 @@ func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, erro
 	if os.IsNotExist(err) && (flag&os.O_CREATE > 0) {
 		file, err = m.Create(name)
 	}
-	return file, err
+	if err != nil {
+		return nil, err
+	}
+	if flag&os.O_APPEND > 0 {
+		_, err = file.Seek(0, os.SEEK_END)
+		if err != nil {
+			file.Close()
+			return nil, err
+		}
+	}
+	return file, nil
 }
 
 func (m *MemMapFs) Remove(name string) error {
