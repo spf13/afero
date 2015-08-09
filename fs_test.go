@@ -99,6 +99,17 @@ func TestOpenFile(t *testing.T) {
 			t.Errorf("%v: appending, expected '%v', got: '%v'", fs.Name(), expectedContents, string(contents))
 		}
 		f.Close()
+
+		f, err = fs.OpenFile(path, os.O_RDWR|os.O_TRUNC, 0600)
+		if err != nil {
+			t.Error(fs.Name(), "OpenFile (O_TRUNC) failed:", err)
+			continue
+		}
+		contents, _ = ioutil.ReadAll(f)
+		if string(contents) != "" {
+			t.Errorf("%v: expected truncated file, got: '%v'", fs.Name(), string(contents))
+		}
+		f.Close()
 	}
 }
 

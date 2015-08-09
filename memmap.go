@@ -183,6 +183,13 @@ func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, erro
 			return nil, err
 		}
 	}
+	if flag&os.O_TRUNC > 0 && flag&(os.O_RDWR|os.O_WRONLY) > 0 {
+		err = file.Truncate(0)
+		if err != nil {
+			file.Close()
+			return nil, err
+		}
+	}
 	return file, nil
 }
 
