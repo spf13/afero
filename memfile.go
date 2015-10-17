@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"path"
 	"sync"
 	"sync/atomic"
 )
@@ -102,7 +103,7 @@ func (f *InMemoryFile) Readdirnames(n int) (names []string, err error) {
 	fi, err := f.Readdir(n)
 	names = make([]string, len(fi))
 	for i, f := range fi {
-		names[i] = f.Name()
+		_, names[i] = path.Split(f.Name())
 	}
 	return names, err
 }
@@ -202,7 +203,10 @@ type InMemoryFileInfo struct {
 }
 
 // Implements os.FileInfo
-func (s *InMemoryFileInfo) Name() string       { return s.file.Name() }
+func (s *InMemoryFileInfo) Name() string {
+	_, name := path.Split(s.file.Name())
+	return name
+}
 func (s *InMemoryFileInfo) Mode() os.FileMode  { return s.file.mode }
 func (s *InMemoryFileInfo) ModTime() time.Time { return s.file.modtime }
 func (s *InMemoryFileInfo) IsDir() bool        { return s.file.dir }
