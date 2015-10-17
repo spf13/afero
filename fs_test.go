@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"syscall"
@@ -34,11 +35,10 @@ var dot = []string{
 	"memmap.go",
 }
 
-var testDir = "/tmp/fun"
+var testDir = "/tmp/afero"
+var testSubDir = "/tmp/afero/we/have/to/go/deeper"
 var testName = "test.txt"
 var Fss = []Fs{&MemMapFs{}, &OsFs{}}
-
-//var Fss = []Fs{OsFs{}}
 
 //Read with length 0 should not return EOF.
 func TestRead0(t *testing.T) {
@@ -136,6 +136,22 @@ func TestRemove(t *testing.T) {
 		err = fs.Remove(path)
 		if !os.IsNotExist(err) {
 			t.Errorf("%v: Remove() didn't raise error for non-existent file", fs.Name())
+		}
+
+		f, err := fs.Open(testDir)
+		if err != nil {
+			t.Error("TestDir should still exist:", err)
+		}
+
+		names, err := f.Readdirnames(-1)
+		if err != nil {
+			t.Error("Readdirnames failed:", err)
+		}
+
+		for _, e := range names {
+			if e == testName {
+				t.Error("File was not removed from parent directory")
+			}
 		}
 	}
 }
@@ -249,19 +265,137 @@ func TestWriteAt(t *testing.T) {
 	}
 }
 
-//func TestReaddirnames(t *testing.T) {
-//for _, fs := range Fss {
-//testReaddirnames(fs, ".", dot, t)
-////testReaddirnames(sysdir.name, fs, sysdir.files, t)
-//}
-//}
+func setupTestDir(t *testing.T) {
+	for _, fs := range Fss {
+		err := fs.RemoveAll(testDir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = fs.MkdirAll(testSubDir, 0700)
+		if err != nil && !os.IsExist(err) {
+			t.Fatal(err)
+		}
+		f, err := fs.Create(filepath.Join(testSubDir, "testfile1"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.WriteString("Testfile 1 content")
+		f.Close()
 
-//func TestReaddir(t *testing.T) {
-//for _, fs := range Fss {
-//testReaddir(fs, ".", dot, t)
-////testReaddir(sysdir.name, fs, sysdir.files, t)
-//}
-//}
+		f, err = fs.Create(filepath.Join(testSubDir, "testfile2"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.WriteString("Testfile 2 content")
+		f.Close()
+	}
+}
+
+func TestReaddirnames(t *testing.T) {
+	setupTestDir(t)
+	for _, fs := range Fss {
+		root, err := fs.Open(testDir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		namesRoot, err := root.Readdirnames(-1)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		sub, err := fs.Open(testSubDir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		namesSub, err := sub.Readdirnames(-1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		findNames(t, namesRoot, namesSub, fs)
+	}
+}
+
+func TestReaddir(t *testing.T) {
+	defer removeTestDir(t)
+	for _, fs := range Fss {
+		root, err := fs.Open(testDir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rootInfo, err := root.Readdir(-1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var namesRoot = []string{}
+		for _, e := range rootInfo {
+			namesRoot = append(namesRoot, e.Name())
+		}
+
+		sub, err := fs.Open(testSubDir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		subInfo, err := sub.Readdir(-1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var namesSub = []string{}
+		for _, e := range subInfo {
+			namesSub = append(namesSub, e.Name())
+		}
+
+		findNames(t, namesRoot, namesSub, fs)
+	}
+}
+
+func findNames(t *testing.T, root, sub []string, fs Fs) {
+	t.Logf("Names root: %v", root)
+	t.Logf("Names sub: %v", sub)
+
+	var foundRoot bool
+	for _, e := range root {
+		_, err := fs.Open(path.Join(testDir, e))
+		if err != nil {
+			t.Error("Open", e, ":", err)
+		}
+		if equal(e, "we") {
+			foundRoot = true
+		}
+	}
+	if !foundRoot {
+		t.Error("Didn't find subdirectory we")
+	}
+
+	var found1, found2 bool
+	for _, e := range sub {
+		_, err := fs.Open(path.Join(testSubDir, e))
+		if err != nil {
+			t.Error("Open", e, ":", err)
+		}
+		if equal(e, "testfile1") {
+			found1 = true
+		}
+		if equal(e, "testfile2") {
+			found2 = true
+		}
+	}
+
+	if !found1 {
+		t.Error("Didn't find testfile1")
+	}
+	if !found2 {
+		t.Error("Didn't find testfile2")
+	}
+}
+
+func removeTestDir(t *testing.T) {
+	// for _, fs := range Fss {
+	// 	err := fs.RemoveAll(testDir)
+	// 	if err != nil {
+	// 		t.Fatal(err)
+	// 	}
+	// }
+}
 
 func newFile(testName string, fs Fs, t *testing.T) (f File) {
 	// Use a local file system, not NFS.
@@ -294,61 +428,6 @@ func writeFile(t *testing.T, fs Fs, fname string, flag int, text string) string 
 		t.Fatalf("ReadFile: %v", err)
 	}
 	return string(data)
-}
-
-func testReaddirnames(fs Fs, dir string, contents []string, t *testing.T) {
-	file, err := fs.Open(dir)
-	if err != nil {
-		t.Fatalf("open %q failed: %v", dir, err)
-	}
-	defer file.Close()
-	s, err2 := file.Readdirnames(-1)
-	if err2 != nil {
-		t.Fatalf("readdirnames %q failed: %v", dir, err2)
-	}
-	for _, m := range contents {
-		found := false
-		for _, n := range s {
-			if n == "." || n == ".." {
-				t.Errorf("got %s in directory", n)
-			}
-			if equal(m, n) {
-				if found {
-					t.Error("present twice:", m)
-				}
-				found = true
-			}
-		}
-		if !found {
-			t.Error("could not find", m)
-		}
-	}
-}
-
-func testReaddir(fs Fs, dir string, contents []string, t *testing.T) {
-	file, err := fs.Open(dir)
-	if err != nil {
-		t.Fatalf("open %q failed: %v", dir, err)
-	}
-	defer file.Close()
-	s, err2 := file.Readdir(-1)
-	if err2 != nil {
-		t.Fatalf("readdir %q failed: %v", dir, err2)
-	}
-	for _, m := range contents {
-		found := false
-		for _, n := range s {
-			if equal(m, n.Name()) {
-				if found {
-					t.Error("present twice:", m)
-				}
-				found = true
-			}
-		}
-		if !found {
-			t.Error("could not find", m)
-		}
-	}
 }
 
 func equal(name1, name2 string) (r bool) {
