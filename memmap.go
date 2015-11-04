@@ -20,6 +20,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -65,8 +66,16 @@ func (m MemDirMap) Files() (files []File) {
 	for _, f := range m {
 		files = append(files, f)
 	}
+	sort.Sort(filesSorter(files))
 	return files
 }
+
+type filesSorter []File
+
+// implement sort.Interface for []File
+func (s filesSorter) Len() int           { return len(s) }
+func (s filesSorter) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s filesSorter) Less(i, j int) bool { return s[i].Name() < s[j].Name() }
 
 func (m MemDirMap) Names() (names []string) {
 	for x := range m {
@@ -95,6 +104,9 @@ func (m *MemMapFs) unRegisterWithParent(fileName string) {
 		return
 	}
 	parent := m.findParent(f)
+	if parent == nil {
+		log.Fatal("parent of ", f.Name(), " is nil")
+	}
 	pmem := parent.(*InMemoryFile)
 	pmem.memDir.Remove(f)
 }
@@ -113,11 +125,10 @@ func (m *MemMapFs) registerWithParent(f File) {
 	if f == nil {
 		return
 	}
-	var err error
 	parent := m.findParent(f)
 	if parent == nil {
 		pdir := filepath.Dir(path.Clean(f.Name()))
-		err = m.lockfreeMkdir(pdir, 0777)
+		err := m.lockfreeMkdir(pdir, 0777)
 		if err != nil {
 			log.Println("Mkdir error:", err)
 			return
@@ -211,6 +222,10 @@ func (m *MemMapFs) Remove(name string) error {
 }
 
 func (m *MemMapFs) RemoveAll(path string) error {
+	m.lock()
+	m.unRegisterWithParent(path)
+	m.unlock()
+
 	m.rlock()
 	defer m.runlock()
 
@@ -218,7 +233,6 @@ func (m *MemMapFs) RemoveAll(path string) error {
 		if strings.HasPrefix(p, path) {
 			m.runlock()
 			m.lock()
-			m.unRegisterWithParent(p)
 			delete(m.getData(), p)
 			m.unlock()
 			m.rlock()

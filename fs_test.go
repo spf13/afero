@@ -16,6 +16,7 @@ package afero
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -288,6 +289,20 @@ func setupTestDir(t *testing.T) {
 		}
 		f.WriteString("Testfile 2 content")
 		f.Close()
+
+		f, err = fs.Create(filepath.Join(testSubDir, "testfile3"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.WriteString("Testfile 3 content")
+		f.Close()
+
+		f, err = fs.Create(filepath.Join(testSubDir, "testfile4"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.WriteString("Testfile 4 content")
+		f.Close()
 	}
 }
 
@@ -315,7 +330,81 @@ func TestReaddirnames(t *testing.T) {
 	}
 }
 
+func TestReaddirSimple(t *testing.T) {
+	for _, fs := range Fss {
+		root, err := fs.Open(testDir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rootInfo, err := root.Readdir(1)
+		if err != nil {
+			t.Log(myFileInfo(rootInfo))
+			t.Error(err)
+		}
+		rootInfo, err = root.Readdir(5)
+		if err != io.EOF {
+			t.Log(myFileInfo(rootInfo))
+			t.Error(err)
+		}
+
+		sub, err := fs.Open(testSubDir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		subInfo, err := sub.Readdir(5)
+		if err != nil {
+			t.Log(myFileInfo(subInfo))
+			t.Error(err)
+		}
+	}
+}
+
 func TestReaddir(t *testing.T) {
+	for num := 0; num < 6; num++ {
+		outputs := make([]string, len(Fss))
+		for i, fs := range Fss {
+			root, err := fs.Open(testSubDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for j := 0; j < 6; j++ {
+				info, err := root.Readdir(num)
+				outputs[i] += fmt.Sprintf("%v  Error: %v\n", myFileInfo(info), err)
+			}
+		}
+
+		fail := false
+		for i, o := range outputs {
+			if i == 0 {
+				continue
+			}
+			if o != outputs[i-1] {
+				fail = true
+				break
+			}
+		}
+		if fail {
+			t.Log("Readdir outputs not equal for Readdir(", num, ")")
+			for i, o := range outputs {
+				t.Log(Fss[i].Name())
+				t.Log(o)
+			}
+			t.Fail()
+		}
+	}
+}
+
+type myFileInfo []os.FileInfo
+
+func (m myFileInfo) String() string {
+	out := "Fileinfos:\n"
+	for _, e := range m {
+		out += "  " + e.Name() + "\n"
+	}
+	return out
+}
+
+func TestReaddirAll(t *testing.T) {
 	defer removeTestDir(t)
 	for _, fs := range Fss {
 		root, err := fs.Open(testDir)
@@ -389,12 +478,12 @@ func findNames(t *testing.T, root, sub []string, fs Fs) {
 }
 
 func removeTestDir(t *testing.T) {
-	// for _, fs := range Fss {
-	// 	err := fs.RemoveAll(testDir)
-	// 	if err != nil {
-	// 		t.Fatal(err)
-	// 	}
-	// }
+	for _, fs := range Fss {
+		err := fs.RemoveAll(testDir)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 }
 
 func newFile(testName string, fs Fs, t *testing.T) (f File) {
