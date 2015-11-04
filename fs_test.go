@@ -362,6 +362,7 @@ func TestReaddirSimple(t *testing.T) {
 func TestReaddir(t *testing.T) {
 	for num := 0; num < 6; num++ {
 		outputs := make([]string, len(Fss))
+		infos := make([]string, len(Fss))
 		for i, fs := range Fss {
 			root, err := fs.Open(testSubDir)
 			if err != nil {
@@ -370,15 +371,16 @@ func TestReaddir(t *testing.T) {
 			for j := 0; j < 6; j++ {
 				info, err := root.Readdir(num)
 				outputs[i] += fmt.Sprintf("%v  Error: %v\n", myFileInfo(info), err)
+				infos[i] += fmt.Sprintln(len(info), err)
 			}
 		}
 
 		fail := false
-		for i, o := range outputs {
+		for i, o := range infos {
 			if i == 0 {
 				continue
 			}
-			if o != outputs[i-1] {
+			if o != infos[i-1] {
 				fail = true
 				break
 			}
