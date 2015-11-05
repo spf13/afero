@@ -56,12 +56,12 @@ mocking and to speed up unnecessary disk io when persistence isn’t
 necessary. It is fully concurrent and will work within go routines
 safely.
 
-### MemFile
+#### InMemoryFile
 
 As part of MemMapFs, Afero also provides an atomic, fully concurrent memory
 backed file implementation. This can be used in other memory backed file
 systems with ease. Plans are to add a radix tree memory stored file
-system using MemFile. 
+system using InMemoryFile. 
 
 ## Usage
 
@@ -164,6 +164,13 @@ Any Afero FileSystem can be used as an httpFs.
 
 
 ## Release Notes
+* **0.9.0** 2015.11.05
+  * New Walk function similar to filepath.Walk
+  * MemMapFs.OpenFile handles O_TRUNC, O_APPEND, O_TRUNC
+  * MemMapFs.Remove now really deletes the file
+  * InMemoryFile.Readdir and Readdirnames work correctly
+  * InMemoryFile functions lock it for concurrent access
+  * Test suite improvements
 * **0.8.0** 2014.10.28
   * First public version
   * Interfaces feel ready for people to build using
@@ -185,6 +192,7 @@ Names in no particular order:
 
 * [spf13](https://github.com/spf13)
 * [jaqx0r](https://github.com/jaqx0r)
+* [mbertschler](https://github.com/mbertschler)
 
 ## License
 
