@@ -100,8 +100,10 @@ the ability to drop in other filesystems as desired.
 Then throughout your functions and methods use the methods familiar
 already from the OS package.
 
-Methods Available:
+File System Methods Available:
 
+       Chmod(name string, mode os.FileMode) : error
+       Chtimes(name string, atime time.Time, mtime time.Time) : error
        Create(name string) : File, error
        Mkdir(name string, perm os.FileMode) : error
        MkdirAll(path string, perm os.FileMode) : error
@@ -112,6 +114,22 @@ Methods Available:
        RemoveAll(path string) : error
        Rename(oldname, newname string) : error
        Stat(name string) : os.FileInfo, error
+
+File Interfaces and Methods Available:
+
+       io.Closer
+       io.Reader
+       io.ReaderAt
+       io.Seeker
+       io.Writer
+       io.WriterAt
+
+       Stat() : os.FileInfo, error
+       Readdir(count int) : []os.FileInfo, error
+       Readdirnames(n int) : []string, error
+       WriteString(s string) : ret int, err error
+       Truncate(size int64) : error
+       Name() : string
 
 In our case we would call `AppFs.Open()` as an example because that is how we’ve defined to
 access our filesystem.
