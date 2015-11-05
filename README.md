@@ -2,7 +2,7 @@
 
 A FileSystem Abstraction System for Go
 
-[![Build Status](https://travis-ci.org/spf13/afero.png)](https://travis-ci.org/spf13/afero)
+[![Build Status](https://travis-ci.org/spf13/afero.svg)](https://travis-ci.org/spf13/afero) [![GoDoc](https://godoc.org/github.com/spf13/afero?status.svg)](https://godoc.org/github.com/spf13/afero)
 
 ## Overview
 
@@ -102,34 +102,36 @@ already from the OS package.
 
 File System Methods Available:
 
-       Chmod(name string, mode os.FileMode) : error
-       Chtimes(name string, atime time.Time, mtime time.Time) : error
-       Create(name string) : File, error
-       Mkdir(name string, perm os.FileMode) : error
-       MkdirAll(path string, perm os.FileMode) : error
-       Name() : string
-       Open(name string) : File, error
-       OpenFile(name string, flag int, perm os.FileMode) : File, error
-       Remove(name string) : error
-       RemoveAll(path string) : error
-       Rename(oldname, newname string) : error
-       Stat(name string) : os.FileInfo, error
+	Chmod(name string, mode os.FileMode) : error
+	Chtimes(name string, atime time.Time, mtime time.Time) : error
+	Create(name string) : File, error
+	Mkdir(name string, perm os.FileMode) : error
+	MkdirAll(path string, perm os.FileMode) : error
+	Name() : string
+	Open(name string) : File, error
+	OpenFile(name string, flag int, perm os.FileMode) : File, error
+	Remove(name string) : error
+	RemoveAll(path string) : error
+	Rename(oldname, newname string) : error
+	Stat(name string) : os.FileInfo, error
 
 File Interfaces and Methods Available:
 
-       io.Closer
-       io.Reader
-       io.ReaderAt
-       io.Seeker
-       io.Writer
-       io.WriterAt
-
-       Stat() : os.FileInfo, error
-       Readdir(count int) : []os.FileInfo, error
-       Readdirnames(n int) : []string, error
-       WriteString(s string) : ret int, err error
-       Truncate(size int64) : error
-       Name() : string
+	io.Closer
+	io.Reader
+	io.ReaderAt
+	io.Seeker
+	io.Writer
+	io.WriterAt
+	
+	Name() : string
+	Readdir(count int) : []os.FileInfo, error
+	Readdirnames(n int) : []string, error
+	Stat() : os.FileInfo, error
+	Sync() : error
+	Truncate(size int64) : error
+	WriteString(s string) : ret int, err error
+       
 
 In our case we would call `AppFs.Open()` as an example because that is how we’ve defined to
 access our filesystem.
