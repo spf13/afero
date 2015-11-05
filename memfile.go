@@ -74,6 +74,10 @@ func (f *InMemoryFile) Stat() (os.FileInfo, error) {
 	return &InMemoryFileInfo{f}, nil
 }
 
+func (f *InMemoryFile) Sync() error {
+	return nil
+}
+
 func (f *InMemoryFile) Readdir(count int) (res []os.FileInfo, err error) {
 	var outLength int64
 

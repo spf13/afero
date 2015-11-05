@@ -39,13 +39,14 @@ type File interface {
 	io.Seeker
 	io.Writer
 	io.WriterAt
-	//Fd() uintptr
-	Stat() (os.FileInfo, error)
+
+	Name() string
 	Readdir(count int) ([]os.FileInfo, error)
 	Readdirnames(n int) ([]string, error)
-	WriteString(s string) (ret int, err error)
+	Stat() (os.FileInfo, error)
+	Sync() error
 	Truncate(size int64) error
-	Name() string
+	WriteString(s string) (ret int, err error)
 }
 
 // Fs is the filesystem interface.
