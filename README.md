@@ -168,7 +168,7 @@ Any Afero FileSystem can be used as an httpFs.
 ## Release Notes
 * **0.9.0** 2015.11.05
   * New Walk function similar to filepath.Walk
-  * MemMapFs.OpenFile handles O_TRUNC, O_APPEND, O_TRUNC
+  * MemMapFs.OpenFile handles O_CREATE, O_APPEND, O_TRUNC
   * MemMapFs.Remove now really deletes the file
   * InMemoryFile.Readdir and Readdirnames work correctly
   * InMemoryFile functions lock it for concurrent access
