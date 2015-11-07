@@ -130,16 +130,26 @@ func (m *MemMapFs) registerWithParent(f File) {
 		pdir := filepath.Dir(path.Clean(f.Name()))
 		err := m.lockfreeMkdir(pdir, 0777)
 		if err != nil {
-			log.Println("Mkdir error:", err)
+			//log.Println("Mkdir error:", err)
 			return
 		}
 		parent, err = m.lockfreeOpen(pdir)
 		if err != nil {
-			log.Println("Open after Mkdir error:", err)
+			//log.Println("Open after Mkdir error:", err)
 			return
 		}
 	}
 	pmem := parent.(*InMemoryFile)
+
+	// TODO(mbertschler): memDir is only nil when it was not made with Mkdir
+	// or lockfreeMkdir. In this case the parent is also not a real directory.
+	// This currently only happens for the file ".".
+	// This is a quick hack to make the library usable with relative paths.
+	if pmem.memDir == nil {
+		pmem.dir = true
+		pmem.memDir = &MemDirMap{}
+	}
+
 	pmem.memDir.Add(f)
 }
 
