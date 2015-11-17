@@ -154,9 +154,16 @@ func (m *MemMapFs) registerWithParent(f File) {
 }
 
 func (m *MemMapFs) lockfreeMkdir(name string, perm os.FileMode) error {
-	_, ok := m.getData()[name]
+	x, ok := m.getData()[name]
 	if ok {
-		return ErrFileExists
+		// Only return ErrFileExists if it's a file, not a directory.
+		i, err := x.Stat()
+		if !i.IsDir() {
+			return ErrFileExists
+		}
+		if err != nil {
+			return err
+		}
 	} else {
 		item := &InMemoryFile{name: name, memDir: &MemDirMap{}, dir: true}
 		m.getData()[name] = item
@@ -167,10 +174,17 @@ func (m *MemMapFs) lockfreeMkdir(name string, perm os.FileMode) error {
 
 func (m *MemMapFs) Mkdir(name string, perm os.FileMode) error {
 	m.rlock()
-	_, ok := m.getData()[name]
+	x, ok := m.getData()[name]
 	m.runlock()
 	if ok {
-		return ErrFileExists
+		// Only return ErrFileExists if it's a file, not a directory.
+		i, err := x.Stat()
+		if !i.IsDir() {
+			return ErrFileExists
+		}
+		if err != nil {
+			return err
+		}
 	} else {
 		m.lock()
 		item := &InMemoryFile{name: name, memDir: &MemDirMap{}, dir: true}
