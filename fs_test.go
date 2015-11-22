@@ -143,6 +143,22 @@ func TestRename(t *testing.T) {
 		if err != nil {
 			t.Fatalf("rename %q, %q failed: %v", to, from, err)
 		}
+		names, err := readDirNames(testDir, fs)
+		if err != nil {
+			t.Fatalf("readDirNames error: %v", err)
+		}
+		found := false
+		for _, e := range names {
+			if e == "renamefrom" {
+				t.Error("File is still called renamefrom")
+			}
+			if e == "renameto" {
+				found = true
+			}
+		}
+		if !found {
+			t.Error("File was not renamed to renameto")
+		}
 		defer fs.Remove(to)
 		_, err = fs.Stat(to)
 		if err != nil {
@@ -512,9 +528,6 @@ func TestReaddirAll(t *testing.T) {
 }
 
 func findNames(t *testing.T, root, sub []string, fs Fs) {
-	t.Logf("Names root: %v", root)
-	t.Logf("Names sub: %v", sub)
-
 	var foundRoot bool
 	for _, e := range root {
 		_, err := fs.Open(path.Join(testDir, e))
@@ -526,6 +539,8 @@ func findNames(t *testing.T, root, sub []string, fs Fs) {
 		}
 	}
 	if !foundRoot {
+		t.Logf("Names root: %v", root)
+		t.Logf("Names sub: %v", sub)
 		t.Error("Didn't find subdirectory we")
 	}
 
@@ -544,9 +559,13 @@ func findNames(t *testing.T, root, sub []string, fs Fs) {
 	}
 
 	if !found1 {
+		t.Logf("Names root: %v", root)
+		t.Logf("Names sub: %v", sub)
 		t.Error("Didn't find testfile1")
 	}
 	if !found2 {
+		t.Logf("Names root: %v", root)
+		t.Logf("Names sub: %v", sub)
 		t.Error("Didn't find testfile2")
 	}
 }

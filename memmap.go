@@ -293,8 +293,12 @@ func (m *MemMapFs) Rename(oldname, newname string) error {
 		if _, ok := m.getData()[newname]; !ok {
 			m.runlock()
 			m.lock()
-			m.getData()[newname] = m.getData()[oldname]
+			m.unRegisterWithParent(oldname)
+			file := m.getData()[oldname].(*InMemoryFile)
 			delete(m.getData(), oldname)
+			file.name = newname
+			m.getData()[newname] = file
+			m.registerWithParent(file)
 			m.unlock()
 			m.rlock()
 		} else {
