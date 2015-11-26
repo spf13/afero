@@ -34,16 +34,18 @@ type MemDir interface {
 }
 
 type InMemoryFile struct {
-	sync.Mutex
+	// atomic requires 64-bit alignment for struct field access
 	at           int64
-	name         string
-	data         []byte
-	memDir       MemDir
-	dir          bool
-	closed       bool
-	mode         os.FileMode
-	modtime      time.Time
 	readDirCount int64
+
+	sync.Mutex
+	name    string
+	data    []byte
+	memDir  MemDir
+	dir     bool
+	closed  bool
+	mode    os.FileMode
+	modtime time.Time
 }
 
 func MemFileCreate(name string) *InMemoryFile {
