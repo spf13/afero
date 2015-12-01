@@ -1,4 +1,4 @@
-![afero logo](https://cloud.githubusercontent.com/assets/173412/11490213/7e06941e-97a4-11e5-934d-a5b6417ea81b.png)
+![afero logo-sm](https://cloud.githubusercontent.com/assets/173412/11490338/d50e16dc-97a5-11e5-8b12-019a300d0fcb.png)
 
 A FileSystem Abstraction System for Go
 
