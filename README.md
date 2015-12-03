@@ -51,20 +51,20 @@ First use go get to install the latest version of the library.
     $ go get github.com/spf13/afero
 
 Next include Afero in your application.
-
-    import "github.com/spf13/afero"
-
+```go
+import "github.com/spf13/afero"
+```
 
 ## Step 2: Declare a backend
 
 First define a package variable and set it to a pointer to a filesystem.
+```go
+var AppFs afero.Fs = &afero.MemMapFs{}
 
-    var AppFs afero.Fs = &afero.MemMapFs{}
+or
 
-    or
-
-    var AppFs afero.Fs = &afero.OsFs{}
-
+var AppFs afero.Fs = &afero.OsFs{}
+```
 It is important to note that if you repeat the composite literal you
 will be using a completely new and isolated filesystem. In the case of
 OsFs it will still use the same underlying filesystem but will reduce
@@ -76,9 +76,9 @@ Throughout your application use any function and method like you normally
 would.
 
 So if my application before had:
-
-    os.Open('/tmp/foo')
-
+```go
+os.Open('/tmp/foo')
+```
 We would replace it with a call to `AppFs.Open('/tmp/foo')`.
 
 `AppFs` being the variable we defined above.
@@ -87,37 +87,37 @@ We would replace it with a call to `AppFs.Open('/tmp/foo')`.
 ## List of all available functions
 
 File System Methods Available:
-
-	Chmod(name string, mode os.FileMode) : error
-	Chtimes(name string, atime time.Time, mtime time.Time) : error
-	Create(name string) : File, error
-	Mkdir(name string, perm os.FileMode) : error
-	MkdirAll(path string, perm os.FileMode) : error
-	Name() : string
-	Open(name string) : File, error
-	OpenFile(name string, flag int, perm os.FileMode) : File, error
-	Remove(name string) : error
-	RemoveAll(path string) : error
-	Rename(oldname, newname string) : error
-	Stat(name string) : os.FileInfo, error
-
+```go
+Chmod(name string, mode os.FileMode) : error
+Chtimes(name string, atime time.Time, mtime time.Time) : error
+Create(name string) : File, error
+Mkdir(name string, perm os.FileMode) : error
+MkdirAll(path string, perm os.FileMode) : error
+Name() : string
+Open(name string) : File, error
+OpenFile(name string, flag int, perm os.FileMode) : File, error
+Remove(name string) : error
+RemoveAll(path string) : error
+Rename(oldname, newname string) : error
+Stat(name string) : os.FileInfo, error
+```
 File Interfaces and Methods Available:
+```go
+io.Closer
+io.Reader
+io.ReaderAt
+io.Seeker
+io.Writer
+io.WriterAt
 
-	io.Closer
-	io.Reader
-	io.ReaderAt
-	io.Seeker
-	io.Writer
-	io.WriterAt
-	
-	Name() : string
-	Readdir(count int) : []os.FileInfo, error
-	Readdirnames(n int) : []string, error
-	Stat() : os.FileInfo, error
-	Sync() : error
-	Truncate(size int64) : error
-	WriteString(s string) : ret int, err error
-
+Name() : string
+Readdir(count int) : []os.FileInfo, error
+Readdirnames(n int) : []string, error
+Stat() : os.FileInfo, error
+Sync() : error
+Truncate(size int64) : error
+WriteString(s string) : ret int, err error
+```
 In some applications it may make sense to define a new package that
 simply exports the file system variable for easy access from anywhere.
 
@@ -146,31 +146,31 @@ appropriate in my application code. This approach ensures that Tests are order
 independent, with no test relying on the state left by an earlier test.
 
 Then in my tests I would initialize a new MemMapFs for each test:
+```go
+func TestExist(t *testing.T) {
+	appFS = &afero.MemMapFs{}
+	// create test files and directories
+	appFS.MkdirAll("src/a", 0755))
+	appFS.WriteFile("src/a/b", []byte("file b"), 0644)
+	appFS.WriteFile("src/c", []byte("file c"), 0644)
+	testExistence("src/c", true, t)
+}
 
-    func TestExist(t *testing.T) {
-        appFS = &afero.MemMapFs{}
-        // create test files and directories
-        appFS.MkdirAll("src/a", 0755))
-        appFS.WriteFile("src/a/b", []byte("file b"), 0644)
-        appFS.WriteFile("src/c", []byte("file c"), 0644)
-        testExistence("src/c", true, t)
-    }
-
-    func testExistence(name string, e bool, t *testing.T) {
-        _, err := appFS.Stat(name)
-        if os.IsNotExist(err) {
-            if e {
-                t.Errorf("file \"%s\" does not exist.\n", name)
-            }
-        } else if err != nil {
-            panic(err)
-        } else {
-            if !e {
-                t.Errorf("file \"%s\" exists.\n", name)
-            }
-        }
-    }
-
+func testExistence(name string, e bool, t *testing.T) {
+	_, err := appFS.Stat(name)
+	if os.IsNotExist(err) {
+	    if e {
+	        t.Errorf("file \"%s\" does not exist.\n", name)
+    	}
+	} else if err != nil {
+    	panic(err)
+	} else {
+    	if !e {
+    	    t.Errorf("file \"%s\" exists.\n", name)
+    	}
+	}
+}
+```
 
 ## Using Afero with Http
 
@@ -182,11 +182,11 @@ returns an http.File type.
 
 Afero provides an httpFs file system which satisfies this requirement.
 Any Afero FileSystem can be used as an httpFs.
-
-	httpFs := &afero.HttpFs{SourceFs: <ExistingFS>}
-	fileserver := http.FileServer(httpFs.Dir(<PATH>)))
-    http.Handle("/", fileserver)
-
+```go
+httpFs := &afero.HttpFs{SourceFs: <ExistingFS>}
+fileserver := http.FileServer(httpFs.Dir(<PATH>)))
+http.Handle("/", fileserver)
+```
 # Available Backends
 
 ## OsFs
