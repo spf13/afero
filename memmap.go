@@ -48,7 +48,7 @@ func (m *MemMapFs) getData() map[string]File {
 
 		// Root should always exist, right?
 		// TODO: what about windows?
-		m.getData()["/"] = &InMemoryFile{name: "/", memDir: &MemDirMap{}, dir: true}
+		m.data["/"] = &InMemoryFile{name: "/", memDir: &MemDirMap{}, dir: true}
 	}
 	return m.data
 }
