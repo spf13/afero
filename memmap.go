@@ -37,6 +37,7 @@ func (m *MemMapFs) lock() {
 	mx := m.getMutex()
 	mx.Lock()
 }
+
 func (m *MemMapFs) unlock()  { m.getMutex().Unlock() }
 func (m *MemMapFs) rlock()   { m.getMutex().RLock() }
 func (m *MemMapFs) runlock() { m.getMutex().RUnlock() }
@@ -227,6 +228,7 @@ func (m *MemMapFs) Open(name string) (File, error) {
 	m.rlock()
 	f, ok := m.getData()[name]
 	ff, ok := f.(*InMemoryFile)
+
 	if ok {
 		ff.Open()
 	}
@@ -346,7 +348,6 @@ func (m *MemMapFs) Rename(oldname, newname string) error {
 }
 
 func (m *MemMapFs) Stat(name string) (os.FileInfo, error) {
-	name = normalizePath(name)
 	f, err := m.Open(name)
 	if err != nil {
 		return nil, err
