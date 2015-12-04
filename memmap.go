@@ -204,7 +204,7 @@ func (m *MemMapFs) Mkdir(name string, perm os.FileMode) error {
 }
 
 func (m *MemMapFs) MkdirAll(path string, perm os.FileMode) error {
-	return m.Mkdir(path, 0777)
+	return m.Mkdir(path, perm)
 }
 
 // Handle some relative paths
