@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package util
+package afero
 
 import (
 	"bytes"
@@ -28,23 +28,17 @@ import (
 
 	"golang.org/x/text/transform"
 	"golang.org/x/text/unicode/norm"
-
-	"github.com/spf13/afero"
 )
-
-type AferoUtilFS struct {
-	fs afero.Fs
-}
 
 // Filepath separator defined by os.Separator.
 const FilePathSeparator = string(filepath.Separator)
 
 // Takes a reader and a path and writes the content
-func (a AferoUtilFS) WriteReader(path string, r io.Reader) (err error) {
+func (a Afero) WriteReader(path string, r io.Reader) (err error) {
 	return WriteReader(path, r, a.fs)
 }
 
-func WriteReader(path string, r io.Reader, fs afero.Fs) (err error) {
+func WriteReader(path string, r io.Reader, fs Fs) (err error) {
 	dir, _ := filepath.Split(path)
 	ospath := filepath.FromSlash(dir)
 
@@ -68,11 +62,11 @@ func WriteReader(path string, r io.Reader, fs afero.Fs) (err error) {
 }
 
 // Same as WriteReader but checks to see if file/directory already exists.
-func (a AferoUtilFS) SafeWriteReader(path string, r io.Reader) (err error) {
+func (a Afero) SafeWriteReader(path string, r io.Reader) (err error) {
 	return SafeWriteReader(path, r, a.fs)
 }
 
-func SafeWriteReader(path string, r io.Reader, fs afero.Fs) (err error) {
+func SafeWriteReader(path string, r io.Reader, fs Fs) (err error) {
 	dir, _ := filepath.Split(path)
 	ospath := filepath.FromSlash(dir)
 
@@ -101,13 +95,13 @@ func SafeWriteReader(path string, r io.Reader, fs afero.Fs) (err error) {
 	return
 }
 
-func (a AferoUtilFS) GetTempDir(subPath string) string {
+func (a Afero) GetTempDir(subPath string) string {
 	return GetTempDir(subPath, a.fs)
 }
 
 // GetTempDir returns the default temp directory with trailing slash
 // if subPath is not empty then it will be created recursively with mode 777 rwx rwx rwx
-func GetTempDir(subPath string, fs afero.Fs) string {
+func GetTempDir(subPath string, fs Fs) string {
 	addSlash := func(p string) string {
 		if FilePathSeparator != p[len(p)-1:] {
 			p = p + FilePathSeparator
@@ -175,12 +169,12 @@ func isMn(r rune) bool {
 	return unicode.Is(unicode.Mn, r) // Mn: nonspacing marks
 }
 
-func (a AferoUtilFS) FileContainsBytes(filename string, subslice []byte) (bool, error) {
+func (a Afero) FileContainsBytes(filename string, subslice []byte) (bool, error) {
 	return FileContainsBytes(filename, subslice, a.fs)
 }
 
 // Check if a file contains a specified string.
-func FileContainsBytes(filename string, subslice []byte, fs afero.Fs) (bool, error) {
+func FileContainsBytes(filename string, subslice []byte, fs Fs) (bool, error) {
 	f, err := fs.Open(filename)
 	if err != nil {
 		return false, err
@@ -226,12 +220,12 @@ func readerContains(r io.Reader, subslice []byte) bool {
 	return false
 }
 
-func (a AferoUtilFS) DirExists(path string) (bool, error) {
+func (a Afero) DirExists(path string) (bool, error) {
 	return DirExists(path, a.fs)
 }
 
 // DirExists checks if a path exists and is a directory.
-func DirExists(path string, fs afero.Fs) (bool, error) {
+func DirExists(path string, fs Fs) (bool, error) {
 	fi, err := fs.Stat(path)
 	if err == nil && fi.IsDir() {
 		return true, nil
@@ -242,12 +236,12 @@ func DirExists(path string, fs afero.Fs) (bool, error) {
 	return false, err
 }
 
-func (a AferoUtilFS) IsDir(path string) (bool, error) {
+func (a Afero) IsDir(path string) (bool, error) {
 	return IsDir(path, a.fs)
 }
 
 // IsDir checks if a given path is a directory.
-func IsDir(path string, fs afero.Fs) (bool, error) {
+func IsDir(path string, fs Fs) (bool, error) {
 	fi, err := fs.Stat(path)
 	if err != nil {
 		return false, err
@@ -255,12 +249,12 @@ func IsDir(path string, fs afero.Fs) (bool, error) {
 	return fi.IsDir(), nil
 }
 
-func (a AferoUtilFS) IsEmpty(path string) (bool, error) {
+func (a Afero) IsEmpty(path string) (bool, error) {
 	return IsEmpty(path, a.fs)
 }
 
 // IsEmpty checks if a given file or directory is empty.
-func IsEmpty(path string, fs afero.Fs) (bool, error) {
+func IsEmpty(path string, fs Fs) (bool, error) {
 	if b, _ := Exists(path, fs); !b {
 		return false, fmt.Errorf("%q path does not exist", path)
 	}
@@ -280,12 +274,12 @@ func IsEmpty(path string, fs afero.Fs) (bool, error) {
 	return fi.Size() == 0, nil
 }
 
-func (a AferoUtilFS) Exists(path string) (bool, error) {
+func (a Afero) Exists(path string) (bool, error) {
 	return Exists(path, a.fs)
 }
 
 // Check if a file or directory exists.
-func Exists(path string, fs afero.Fs) (bool, error) {
+func Exists(path string, fs Fs) (bool, error) {
 	_, err := fs.Stat(path)
 	if err == nil {
 		return true, nil

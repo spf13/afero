@@ -13,15 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package util
+package afero
 
-import (
-	"testing"
+import "testing"
 
-	"github.com/spf13/afero"
-)
-
-func checkSize(t *testing.T, path string, size int64) {
+func checkSizePath(t *testing.T, path string, size int64) {
 	dir, err := testFS.Stat(path)
 	if err != nil {
 		t.Fatalf("Stat %q (looking for size %d): %s", path, size, err)
@@ -32,8 +28,8 @@ func checkSize(t *testing.T, path string, size int64) {
 }
 
 func TestReadFile(t *testing.T) {
-	testFS = &afero.MemMapFs{}
-	fsutil := &AferoUtilFS{fs: testFS}
+	testFS = &MemMapFs{}
+	fsutil := &Afero{fs: testFS}
 
 	testFS.Create("this_exists.go")
 	filename := "rumpelstilzchen"
@@ -48,12 +44,12 @@ func TestReadFile(t *testing.T) {
 		t.Fatalf("ReadFile %s: %v", filename, err)
 	}
 
-	checkSize(t, filename, int64(len(contents)))
+	checkSizePath(t, filename, int64(len(contents)))
 }
 
 func TestWriteFile(t *testing.T) {
-	testFS = &afero.MemMapFs{}
-	fsutil := &AferoUtilFS{fs: testFS}
+	testFS = &MemMapFs{}
+	fsutil := &Afero{fs: testFS}
 	f, err := fsutil.TempFile("", "ioutil-test")
 	if err != nil {
 		t.Fatal(err)
@@ -82,7 +78,7 @@ func TestWriteFile(t *testing.T) {
 }
 
 func TestReadDir(t *testing.T) {
-	testFS = &afero.MemMapFs{}
+	testFS = &MemMapFs{}
 	testFS.Mkdir("/i-am-a-dir", 0777)
 	testFS.Create("/this_exists.go")
 	dirname := "rumpelstilzchen"

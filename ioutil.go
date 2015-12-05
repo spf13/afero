@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package util
+package afero
 
 import (
 	"bytes"
@@ -24,8 +24,6 @@ import (
 	"strconv"
 	"sync"
 	"time"
-
-	"github.com/spf13/afero"
 )
 
 // byName implements sort.Interface.
@@ -37,11 +35,11 @@ func (f byName) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
 
 // ReadDir reads the directory named by dirname and returns
 // a list of sorted directory entries.
-func (a AferoUtilFS) ReadDir(dirname string) ([]os.FileInfo, error) {
+func (a Afero) ReadDir(dirname string) ([]os.FileInfo, error) {
 	return ReadDir(dirname, a.fs)
 }
 
-func ReadDir(dirname string, fs afero.Fs) ([]os.FileInfo, error) {
+func ReadDir(dirname string, fs Fs) ([]os.FileInfo, error) {
 	f, err := fs.Open(dirname)
 	if err != nil {
 		return nil, err
@@ -59,11 +57,11 @@ func ReadDir(dirname string, fs afero.Fs) ([]os.FileInfo, error) {
 // A successful call returns err == nil, not err == EOF. Because ReadFile
 // reads the whole file, it does not treat an EOF from Read as an error
 // to be reported.
-func (a AferoUtilFS) ReadFile(filename string) ([]byte, error) {
+func (a Afero) ReadFile(filename string) ([]byte, error) {
 	return ReadFile(filename, a.fs)
 }
 
-func ReadFile(filename string, fs afero.Fs) ([]byte, error) {
+func ReadFile(filename string, fs Fs) ([]byte, error) {
 	f, err := fs.Open(filename)
 	if err != nil {
 		return nil, err
@@ -119,11 +117,11 @@ func ReadAll(r io.Reader) ([]byte, error) {
 // WriteFile writes data to a file named by filename.
 // If the file does not exist, WriteFile creates it with permissions perm;
 // otherwise WriteFile truncates it before writing.
-func (a AferoUtilFS) WriteFile(filename string, data []byte, perm os.FileMode) error {
+func (a Afero) WriteFile(filename string, data []byte, perm os.FileMode) error {
 	return WriteFile(filename, data, perm, a.fs)
 }
 
-func WriteFile(filename string, data []byte, perm os.FileMode, fs afero.Fs) error {
+func WriteFile(filename string, data []byte, perm os.FileMode, fs Fs) error {
 	f, err := fs.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm)
 	if err != nil {
 		return err
@@ -163,18 +161,18 @@ func nextSuffix() string {
 
 // TempFile creates a new temporary file in the directory dir
 // with a name beginning with prefix, opens the file for reading
-// and writing, and returns the resulting *afero.File.
+// and writing, and returns the resulting *File.
 // If dir is the empty string, TempFile uses the default directory
 // for temporary files (see os.TempDir).
 // Multiple programs calling TempFile simultaneously
 // will not choose the same file.  The caller can use f.Name()
 // to find the pathname of the file.  It is the caller's responsibility
 // to remove the file when no longer needed.
-func (a AferoUtilFS) TempFile(dir, prefix string) (f afero.File, err error) {
+func (a Afero) TempFile(dir, prefix string) (f File, err error) {
 	return TempFile(dir, prefix, a.fs)
 }
 
-func TempFile(dir, prefix string, fs afero.Fs) (f afero.File, err error) {
+func TempFile(dir, prefix string, fs Fs) (f File, err error) {
 	if dir == "" {
 		dir = os.TempDir()
 	}
@@ -203,10 +201,10 @@ func TempFile(dir, prefix string, fs afero.Fs) (f afero.File, err error) {
 // Multiple programs calling TempDir simultaneously
 // will not choose the same directory.  It is the caller's responsibility
 // to remove the directory when no longer needed.
-func (a AferoUtilFS) TempDir(dir, prefix string) (name string, err error) {
+func (a Afero) TempDir(dir, prefix string) (name string, err error) {
 	return TempDir(dir, prefix, a.fs)
 }
-func TempDir(dir, prefix string, fs afero.Fs) (name string, err error) {
+func TempDir(dir, prefix string, fs Fs) (name string, err error) {
 	if dir == "" {
 		dir = os.TempDir()
 	}

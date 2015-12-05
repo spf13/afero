@@ -458,42 +458,6 @@ func (m myFileInfo) String() string {
 	return out
 }
 
-func TestWalk(t *testing.T) {
-	outputs := make([]string, len(Fss))
-	for i, fs := range Fss {
-		walkFn := func(path string, info os.FileInfo, err error) error {
-			var size int64
-			if !info.IsDir() {
-				size = info.Size()
-			}
-			outputs[i] += fmt.Sprintln(path, info.Name(), size, info.IsDir(), err)
-			return nil
-		}
-		err := Walk(testDir, walkFn, fs)
-		if err != nil {
-			t.Error(err)
-		}
-	}
-	fail := false
-	for i, o := range outputs {
-		if i == 0 {
-			continue
-		}
-		if o != outputs[i-1] {
-			fail = true
-			break
-		}
-	}
-	if fail {
-		t.Log("Walk outputs not equal!")
-		for i, o := range outputs {
-			t.Log(Fss[i].Name())
-			t.Log(o)
-		}
-		t.Fail()
-	}
-}
-
 func TestReaddirAll(t *testing.T) {
 	defer removeTestDir(t)
 	for _, fs := range Fss {
