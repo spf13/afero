@@ -15,7 +15,7 @@
 // limitations under the License.
 //
 
-package util
+package afero
 
 import (
 	"fmt"
@@ -25,11 +25,9 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/spf13/afero"
 )
 
-var testFS = new(afero.MemMapFs)
+var testFS = new(MemMapFs)
 
 func TestDirExists(t *testing.T) {
 	type test struct {
@@ -38,7 +36,7 @@ func TestDirExists(t *testing.T) {
 	}
 
 	// First create a couple directories so there is something in the filesystem
-	//testFS := new(afero.MemMapFs)
+	//testFS := new(MemMapFs)
 	testFS.MkdirAll("/foo/bar", 0777)
 
 	data := []test{
@@ -68,7 +66,7 @@ func TestDirExists(t *testing.T) {
 }
 
 func TestIsDir(t *testing.T) {
-	testFS = new(afero.MemMapFs)
+	testFS = new(MemMapFs)
 
 	type test struct {
 		input    string
@@ -91,7 +89,7 @@ func TestIsDir(t *testing.T) {
 }
 
 func TestIsEmpty(t *testing.T) {
-	testFS = new(afero.MemMapFs)
+	testFS = new(MemMapFs)
 
 	zeroSizedFile, _ := createZeroSizedFileInTempDir()
 	defer deleteFileInTempDir(zeroSizedFile)
@@ -141,7 +139,7 @@ func TestIsEmpty(t *testing.T) {
 	}
 }
 
-func createZeroSizedFileInTempDir() (afero.File, error) {
+func createZeroSizedFileInTempDir() (File, error) {
 	filePrefix := "_path_test_"
 	f, e := TempFile("", filePrefix, testFS) // dir is os.TempDir()
 	if e != nil {
@@ -152,7 +150,7 @@ func createZeroSizedFileInTempDir() (afero.File, error) {
 	return f, nil
 }
 
-func createNonZeroSizedFileInTempDir() (afero.File, error) {
+func createNonZeroSizedFileInTempDir() (File, error) {
 	f, err := createZeroSizedFileInTempDir()
 	if err != nil {
 		// no file ??
@@ -167,7 +165,7 @@ func createNonZeroSizedFileInTempDir() (afero.File, error) {
 	return f, nil
 }
 
-func deleteFileInTempDir(f afero.File) {
+func deleteFileInTempDir(f File) {
 	err := testFS.Remove(f.Name())
 	if err != nil {
 		// now what?
@@ -365,7 +363,7 @@ func TestGetTempDir(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		output := GetTempDir(test.input, new(afero.MemMapFs))
+		output := GetTempDir(test.input, new(MemMapFs))
 		if output != test.expected {
 			t.Errorf("Expected %#v, got %#v\n", test.expected, output)
 		}
