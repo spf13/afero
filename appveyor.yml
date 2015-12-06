@@ -1,0 +1,10 @@
+version: '{build}'
+build_script:
+- cmd: >-
+    go version
+
+    go env
+
+    go build
+test_script:
+- cmd: go test -v ./...
