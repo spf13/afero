@@ -462,6 +462,10 @@ func TestWalk(t *testing.T) {
 	outputs := make([]string, len(Fss))
 	for i, fs := range Fss {
 		walkFn := func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				t.Error("walkFn error:", err)
+				return nil
+			}
 			var size int64
 			if !info.IsDir() {
 				size = info.Size()
