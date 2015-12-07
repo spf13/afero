@@ -35,10 +35,10 @@ const FilePathSeparator = string(filepath.Separator)
 
 // Takes a reader and a path and writes the content
 func (a Afero) WriteReader(path string, r io.Reader) (err error) {
-	return WriteReader(path, r, a.fs)
+	return WriteReader(a.fs, path, r)
 }
 
-func WriteReader(path string, r io.Reader, fs Fs) (err error) {
+func WriteReader(fs Fs, path string, r io.Reader) (err error) {
 	dir, _ := filepath.Split(path)
 	ospath := filepath.FromSlash(dir)
 
@@ -63,10 +63,10 @@ func WriteReader(path string, r io.Reader, fs Fs) (err error) {
 
 // Same as WriteReader but checks to see if file/directory already exists.
 func (a Afero) SafeWriteReader(path string, r io.Reader) (err error) {
-	return SafeWriteReader(path, r, a.fs)
+	return SafeWriteReader(a.fs, path, r)
 }
 
-func SafeWriteReader(path string, r io.Reader, fs Fs) (err error) {
+func SafeWriteReader(fs Fs, path string, r io.Reader) (err error) {
 	dir, _ := filepath.Split(path)
 	ospath := filepath.FromSlash(dir)
 
@@ -77,7 +77,7 @@ func SafeWriteReader(path string, r io.Reader, fs Fs) (err error) {
 		}
 	}
 
-	exists, err := Exists(path, fs)
+	exists, err := Exists(fs, path)
 	if err != nil {
 		return
 	}
@@ -96,12 +96,12 @@ func SafeWriteReader(path string, r io.Reader, fs Fs) (err error) {
 }
 
 func (a Afero) GetTempDir(subPath string) string {
-	return GetTempDir(subPath, a.fs)
+	return GetTempDir(a.fs, subPath)
 }
 
 // GetTempDir returns the default temp directory with trailing slash
 // if subPath is not empty then it will be created recursively with mode 777 rwx rwx rwx
-func GetTempDir(subPath string, fs Fs) string {
+func GetTempDir(fs Fs, subPath string) string {
 	addSlash := func(p string) string {
 		if FilePathSeparator != p[len(p)-1:] {
 			p = p + FilePathSeparator
@@ -120,7 +120,7 @@ func GetTempDir(subPath string, fs Fs) string {
 			dir = strings.Replace(dir, "____", "\\", -1)
 		}
 
-		if exists, _ := Exists(dir, fs); exists {
+		if exists, _ := Exists(fs, dir); exists {
 			return addSlash(dir)
 		}
 
@@ -170,11 +170,11 @@ func isMn(r rune) bool {
 }
 
 func (a Afero) FileContainsBytes(filename string, subslice []byte) (bool, error) {
-	return FileContainsBytes(filename, subslice, a.fs)
+	return FileContainsBytes(a.fs, filename, subslice)
 }
 
 // Check if a file contains a specified string.
-func FileContainsBytes(filename string, subslice []byte, fs Fs) (bool, error) {
+func FileContainsBytes(fs Fs, filename string, subslice []byte) (bool, error) {
 	f, err := fs.Open(filename)
 	if err != nil {
 		return false, err
@@ -221,11 +221,11 @@ func readerContains(r io.Reader, subslice []byte) bool {
 }
 
 func (a Afero) DirExists(path string) (bool, error) {
-	return DirExists(path, a.fs)
+	return DirExists(a.fs, path)
 }
 
 // DirExists checks if a path exists and is a directory.
-func DirExists(path string, fs Fs) (bool, error) {
+func DirExists(fs Fs, path string) (bool, error) {
 	fi, err := fs.Stat(path)
 	if err == nil && fi.IsDir() {
 		return true, nil
@@ -237,11 +237,11 @@ func DirExists(path string, fs Fs) (bool, error) {
 }
 
 func (a Afero) IsDir(path string) (bool, error) {
-	return IsDir(path, a.fs)
+	return IsDir(a.fs, path)
 }
 
 // IsDir checks if a given path is a directory.
-func IsDir(path string, fs Fs) (bool, error) {
+func IsDir(fs Fs, path string) (bool, error) {
 	fi, err := fs.Stat(path)
 	if err != nil {
 		return false, err
@@ -250,12 +250,12 @@ func IsDir(path string, fs Fs) (bool, error) {
 }
 
 func (a Afero) IsEmpty(path string) (bool, error) {
-	return IsEmpty(path, a.fs)
+	return IsEmpty(a.fs, path)
 }
 
 // IsEmpty checks if a given file or directory is empty.
-func IsEmpty(path string, fs Fs) (bool, error) {
-	if b, _ := Exists(path, fs); !b {
+func IsEmpty(fs Fs, path string) (bool, error) {
+	if b, _ := Exists(fs, path); !b {
 		return false, fmt.Errorf("%q path does not exist", path)
 	}
 	fi, err := fs.Stat(path)
@@ -275,11 +275,11 @@ func IsEmpty(path string, fs Fs) (bool, error) {
 }
 
 func (a Afero) Exists(path string) (bool, error) {
-	return Exists(path, a.fs)
+	return Exists(a.fs, path)
 }
 
 // Check if a file or directory exists.
-func Exists(path string, fs Fs) (bool, error) {
+func Exists(fs Fs, path string) (bool, error) {
 	_, err := fs.Stat(path)
 	if err == nil {
 		return true, nil

@@ -24,7 +24,7 @@ import (
 // readDirNames reads the directory named by dirname and returns
 // a sorted list of directory entries.
 // adapted from https://golang.org/src/path/filepath/path.go
-func readDirNames(dirname string, fs Fs) ([]string, error) {
+func readDirNames(fs Fs, dirname string) ([]string, error) {
 	f, err := fs.Open(dirname)
 	if err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func readDirNames(dirname string, fs Fs) ([]string, error) {
 
 // walk recursively descends path, calling walkFn
 // adapted from https://golang.org/src/path/filepath/path.go
-func walk(path string, info os.FileInfo, walkFn filepath.WalkFunc, fs Fs) error {
+func walk(fs Fs, path string, info os.FileInfo, walkFn filepath.WalkFunc) error {
 	err := walkFn(path, info, nil)
 	if err != nil {
 		if info.IsDir() && err == filepath.SkipDir {
@@ -53,20 +53,20 @@ func walk(path string, info os.FileInfo, walkFn filepath.WalkFunc, fs Fs) error 
 		return nil
 	}
 
-	names, err := readDirNames(path, fs)
+	names, err := readDirNames(fs, path)
 	if err != nil {
 		return walkFn(path, info, err)
 	}
 
 	for _, name := range names {
 		filename := filepath.Join(path, name)
-		fileInfo, err := lstatIfOs(filename, fs)
+		fileInfo, err := lstatIfOs(fs, filename)
 		if err != nil {
 			if err := walkFn(filename, fileInfo, err); err != nil && err != filepath.SkipDir {
 				return err
 			}
 		} else {
-			err = walk(filename, fileInfo, walkFn, fs)
+			err = walk(fs, filename, fileInfo, walkFn)
 			if err != nil {
 				if !fileInfo.IsDir() || err != filepath.SkipDir {
 					return err
@@ -78,7 +78,7 @@ func walk(path string, info os.FileInfo, walkFn filepath.WalkFunc, fs Fs) error 
 }
 
 // if the filesystem is OsFs use Lstat, else use fs.Stat
-func lstatIfOs(path string, fs Fs) (info os.FileInfo, err error) {
+func lstatIfOs(fs Fs, path string) (info os.FileInfo, err error) {
 	_, ok := fs.(*OsFs)
 	if ok {
 		info, err = os.Lstat(path)
@@ -96,13 +96,13 @@ func lstatIfOs(path string, fs Fs) (info os.FileInfo, err error) {
 // Walk does not follow symbolic links.
 
 func (a Afero) Walk(root string, walkFn filepath.WalkFunc) error {
-	return Walk(root, walkFn, a.fs)
+	return Walk(a.fs, root, walkFn)
 }
 
-func Walk(root string, walkFn filepath.WalkFunc, fs Fs) error {
-	info, err := lstatIfOs(root, fs)
+func Walk(fs Fs, root string, walkFn filepath.WalkFunc) error {
+	info, err := lstatIfOs(fs, root)
 	if err != nil {
 		return walkFn(root, nil, err)
 	}
-	return walk(root, info, walkFn, fs)
+	return walk(fs, root, info, walkFn)
 }

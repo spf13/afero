@@ -58,7 +58,7 @@ func TestDirExists(t *testing.T) {
 	}
 
 	for i, d := range data {
-		exists, _ := DirExists(filepath.FromSlash(d.input), testFS)
+		exists, _ := DirExists(testFS, filepath.FromSlash(d.input))
 		if d.expected != exists {
 			t.Errorf("Test %d %q failed. Expected %t got %t", i, d.input, d.expected, exists)
 		}
@@ -81,7 +81,7 @@ func TestIsDir(t *testing.T) {
 
 	for i, d := range data {
 
-		exists, _ := IsDir(d.input, testFS)
+		exists, _ := IsDir(testFS, d.input)
 		if d.expected != exists {
 			t.Errorf("Test %d failed. Expected %t got %t", i, d.expected, exists)
 		}
@@ -123,7 +123,7 @@ func TestIsEmpty(t *testing.T) {
 		{nonExistentDir, false, dirDoesNotExist},
 	}
 	for i, d := range data {
-		exists, err := IsEmpty(d.input, testFS)
+		exists, err := IsEmpty(testFS, d.input)
 		if d.expectedResult != exists {
 			t.Errorf("Test %d %q failed exists. Expected result %t got %t", i, d.input, d.expectedResult, exists)
 		}
@@ -141,7 +141,7 @@ func TestIsEmpty(t *testing.T) {
 
 func createZeroSizedFileInTempDir() (File, error) {
 	filePrefix := "_path_test_"
-	f, e := TempFile("", filePrefix, testFS) // dir is os.TempDir()
+	f, e := TempFile(testFS, "", filePrefix) // dir is os.TempDir()
 	if e != nil {
 		// if there was an error no file was created.
 		// => no requirement to delete the file
@@ -156,7 +156,7 @@ func createNonZeroSizedFileInTempDir() (File, error) {
 		// no file ??
 	}
 	byteString := []byte("byteString")
-	err = WriteFile(f.Name(), byteString, 0644, testFS)
+	err = WriteFile(testFS, f.Name(), byteString, 0644)
 	if err != nil {
 		// delete the file
 		deleteFileInTempDir(f)
@@ -174,7 +174,7 @@ func deleteFileInTempDir(f File) {
 
 func createEmptyTempDir() (string, error) {
 	dirPrefix := "_dir_prefix_"
-	d, e := TempDir("", dirPrefix, testFS) // will be in os.TempDir()
+	d, e := TempDir(testFS, "", dirPrefix) // will be in os.TempDir()
 	if e != nil {
 		// no directory to delete - it was never created
 		return "", e
@@ -188,7 +188,7 @@ func createTempDirWithZeroLengthFiles() (string, error) {
 		//now what?
 	}
 	filePrefix := "_path_test_"
-	_, fileErr := TempFile(d, filePrefix, testFS) // dir is os.TempDir()
+	_, fileErr := TempFile(testFS, d, filePrefix) // dir is os.TempDir()
 	if fileErr != nil {
 		// if there was an error no file was created.
 		// but we need to remove the directory to clean-up
@@ -206,7 +206,7 @@ func createTempDirWithNonZeroLengthFiles() (string, error) {
 		//now what?
 	}
 	filePrefix := "_path_test_"
-	f, fileErr := TempFile(d, filePrefix, testFS) // dir is os.TempDir()
+	f, fileErr := TempFile(testFS, d, filePrefix) // dir is os.TempDir()
 	if fileErr != nil {
 		// if there was an error no file was created.
 		// but we need to remove the directory to clean-up
@@ -214,7 +214,7 @@ func createTempDirWithNonZeroLengthFiles() (string, error) {
 		return "", fileErr
 	}
 	byteString := []byte("byteString")
-	fileErr = WriteFile(f.Name(), byteString, 0644, testFS)
+	fileErr = WriteFile(testFS, f.Name(), byteString, 0644)
 	if fileErr != nil {
 		// delete the file
 		deleteFileInTempDir(f)
@@ -252,7 +252,7 @@ func TestExists(t *testing.T) {
 		{nonExistentDir, false, nil},
 	}
 	for i, d := range data {
-		exists, err := Exists(d.input, testFS)
+		exists, err := Exists(testFS, d.input)
 		if d.expectedResult != exists {
 			t.Errorf("Test %d failed. Expected result %t got %t", i, d.expectedResult, exists)
 		}
@@ -287,7 +287,7 @@ func TestSafeWriteToDisk(t *testing.T) {
 	}
 
 	for i, d := range data {
-		e := SafeWriteReader(d.filename, reader, testFS)
+		e := SafeWriteReader(testFS, d.filename, reader)
 		if d.expectedErr != nil {
 			if d.expectedErr.Error() != e.Error() {
 				t.Errorf("Test %d failed. Expected error %q but got %q", i, d.expectedErr.Error(), e.Error())
@@ -296,7 +296,7 @@ func TestSafeWriteToDisk(t *testing.T) {
 			if d.expectedErr != e {
 				t.Errorf("Test %d failed. Expected %q but got %q", i, d.expectedErr, e)
 			}
-			contents, _ := ReadFile(d.filename, testFS)
+			contents, _ := ReadFile(testFS, d.filename)
 			if randomString != string(contents) {
 				t.Errorf("Test %d failed. Expected contents %q but got %q", i, randomString, string(contents))
 			}
@@ -327,11 +327,11 @@ func TestWriteToDisk(t *testing.T) {
 	}
 
 	for i, d := range data {
-		e := WriteReader(d.filename, reader, testFS)
+		e := WriteReader(testFS, d.filename, reader)
 		if d.expectedErr != e {
 			t.Errorf("Test %d failed. WriteToDisk Error Expected %q but got %q", i, d.expectedErr, e)
 		}
-		contents, e := ReadFile(d.filename, testFS)
+		contents, e := ReadFile(testFS, d.filename)
 		if e != nil {
 			t.Errorf("Test %d failed. Could not read file %s. Reason: %s\n", i, d.filename, e)
 		}
@@ -363,7 +363,7 @@ func TestGetTempDir(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		output := GetTempDir(test.input, new(MemMapFs))
+		output := GetTempDir(new(MemMapFs), test.input)
 		if output != test.expected {
 			t.Errorf("Expected %#v, got %#v\n", test.expected, output)
 		}

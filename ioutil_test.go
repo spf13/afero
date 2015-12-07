@@ -82,13 +82,13 @@ func TestReadDir(t *testing.T) {
 	testFS.Mkdir("/i-am-a-dir", 0777)
 	testFS.Create("/this_exists.go")
 	dirname := "rumpelstilzchen"
-	_, err := ReadDir(dirname, testFS)
+	_, err := ReadDir(testFS, dirname)
 	if err == nil {
 		t.Fatalf("ReadDir %s: error expected, none found", dirname)
 	}
 
 	dirname = ".."
-	list, err := ReadDir(dirname, testFS)
+	list, err := ReadDir(testFS, dirname)
 	if err != nil {
 		t.Fatalf("ReadDir %s: %v", dirname, err)
 	}

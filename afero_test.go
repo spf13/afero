@@ -143,7 +143,7 @@ func TestRename(t *testing.T) {
 		if err != nil {
 			t.Fatalf("rename %q, %q failed: %v", to, from, err)
 		}
-		names, err := readDirNames(testDir, fs)
+		names, err := readDirNames(fs, testDir)
 		if err != nil {
 			t.Fatalf("readDirNames error: %v", err)
 		}
@@ -378,7 +378,7 @@ func TestReaddirnames(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		findNames(t, namesRoot, namesSub, fs)
+		findNames(fs, t, namesRoot, namesSub)
 	}
 }
 
@@ -487,11 +487,11 @@ func TestReaddirAll(t *testing.T) {
 			namesSub = append(namesSub, e.Name())
 		}
 
-		findNames(t, namesRoot, namesSub, fs)
+		findNames(fs, t, namesRoot, namesSub)
 	}
 }
 
-func findNames(t *testing.T, root, sub []string, fs Fs) {
+func findNames(fs Fs, t *testing.T, root, sub []string) {
 	var foundRoot bool
 	for _, e := range root {
 		_, err := fs.Open(path.Join(testDir, e))

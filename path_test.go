@@ -48,7 +48,7 @@ func TestWalk(t *testing.T) {
 			outputs[i] += fmt.Sprintln(path, info.Name(), size, info.IsDir(), err)
 			return nil
 		}
-		err := Walk(testDir, walkFn, fs)
+		err := Walk(fs, testDir, walkFn)
 		if err != nil {
 			t.Error(err)
 		}
