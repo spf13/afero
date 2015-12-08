@@ -35,7 +35,7 @@ const FilePathSeparator = string(filepath.Separator)
 
 // Takes a reader and a path and writes the content
 func (a Afero) WriteReader(path string, r io.Reader) (err error) {
-	return WriteReader(a.fs, path, r)
+	return WriteReader(a.Fs, path, r)
 }
 
 func WriteReader(fs Fs, path string, r io.Reader) (err error) {
@@ -63,7 +63,7 @@ func WriteReader(fs Fs, path string, r io.Reader) (err error) {
 
 // Same as WriteReader but checks to see if file/directory already exists.
 func (a Afero) SafeWriteReader(path string, r io.Reader) (err error) {
-	return SafeWriteReader(a.fs, path, r)
+	return SafeWriteReader(a.Fs, path, r)
 }
 
 func SafeWriteReader(fs Fs, path string, r io.Reader) (err error) {
@@ -96,7 +96,7 @@ func SafeWriteReader(fs Fs, path string, r io.Reader) (err error) {
 }
 
 func (a Afero) GetTempDir(subPath string) string {
-	return GetTempDir(a.fs, subPath)
+	return GetTempDir(a.Fs, subPath)
 }
 
 // GetTempDir returns the default temp directory with trailing slash
@@ -170,7 +170,7 @@ func isMn(r rune) bool {
 }
 
 func (a Afero) FileContainsBytes(filename string, subslice []byte) (bool, error) {
-	return FileContainsBytes(a.fs, filename, subslice)
+	return FileContainsBytes(a.Fs, filename, subslice)
 }
 
 // Check if a file contains a specified string.
@@ -221,7 +221,7 @@ func readerContains(r io.Reader, subslice []byte) bool {
 }
 
 func (a Afero) DirExists(path string) (bool, error) {
-	return DirExists(a.fs, path)
+	return DirExists(a.Fs, path)
 }
 
 // DirExists checks if a path exists and is a directory.
@@ -237,7 +237,7 @@ func DirExists(fs Fs, path string) (bool, error) {
 }
 
 func (a Afero) IsDir(path string) (bool, error) {
-	return IsDir(a.fs, path)
+	return IsDir(a.Fs, path)
 }
 
 // IsDir checks if a given path is a directory.
@@ -250,7 +250,7 @@ func IsDir(fs Fs, path string) (bool, error) {
 }
 
 func (a Afero) IsEmpty(path string) (bool, error) {
-	return IsEmpty(a.fs, path)
+	return IsEmpty(a.Fs, path)
 }
 
 // IsEmpty checks if a given file or directory is empty.
@@ -275,7 +275,7 @@ func IsEmpty(fs Fs, path string) (bool, error) {
 }
 
 func (a Afero) Exists(path string) (bool, error) {
-	return Exists(a.fs, path)
+	return Exists(a.Fs, path)
 }
 
 // Check if a file or directory exists.

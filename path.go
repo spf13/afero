@@ -96,7 +96,7 @@ func lstatIfOs(fs Fs, path string) (info os.FileInfo, err error) {
 // Walk does not follow symbolic links.
 
 func (a Afero) Walk(root string, walkFn filepath.WalkFunc) error {
-	return Walk(a.fs, root, walkFn)
+	return Walk(a.Fs, root, walkFn)
 }
 
 func Walk(fs Fs, root string, walkFn filepath.WalkFunc) error {

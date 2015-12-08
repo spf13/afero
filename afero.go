@@ -30,7 +30,7 @@ import (
 )
 
 type Afero struct {
-	fs Fs
+	Fs
 }
 
 // File represents a file in the filesystem.
