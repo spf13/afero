@@ -36,7 +36,7 @@ func (f byName) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
 // ReadDir reads the directory named by dirname and returns
 // a list of sorted directory entries.
 func (a Afero) ReadDir(dirname string) ([]os.FileInfo, error) {
-	return ReadDir(a.fs, dirname)
+	return ReadDir(a.Fs, dirname)
 }
 
 func ReadDir(fs Fs, dirname string) ([]os.FileInfo, error) {
@@ -58,7 +58,7 @@ func ReadDir(fs Fs, dirname string) ([]os.FileInfo, error) {
 // reads the whole file, it does not treat an EOF from Read as an error
 // to be reported.
 func (a Afero) ReadFile(filename string) ([]byte, error) {
-	return ReadFile(a.fs, filename)
+	return ReadFile(a.Fs, filename)
 }
 
 func ReadFile(fs Fs, filename string) ([]byte, error) {
@@ -118,7 +118,7 @@ func ReadAll(r io.Reader) ([]byte, error) {
 // If the file does not exist, WriteFile creates it with permissions perm;
 // otherwise WriteFile truncates it before writing.
 func (a Afero) WriteFile(filename string, data []byte, perm os.FileMode) error {
-	return WriteFile(a.fs, filename, data, perm)
+	return WriteFile(a.Fs, filename, data, perm)
 }
 
 func WriteFile(fs Fs, filename string, data []byte, perm os.FileMode) error {
@@ -169,7 +169,7 @@ func nextSuffix() string {
 // to find the pathname of the file.  It is the caller's responsibility
 // to remove the file when no longer needed.
 func (a Afero) TempFile(dir, prefix string) (f File, err error) {
-	return TempFile(a.fs, dir, prefix)
+	return TempFile(a.Fs, dir, prefix)
 }
 
 func TempFile(fs Fs, dir, prefix string) (f File, err error) {
@@ -202,7 +202,7 @@ func TempFile(fs Fs, dir, prefix string) (f File, err error) {
 // will not choose the same directory.  It is the caller's responsibility
 // to remove the directory when no longer needed.
 func (a Afero) TempDir(dir, prefix string) (name string, err error) {
-	return TempDir(a.fs, dir, prefix)
+	return TempDir(a.Fs, dir, prefix)
 }
 func TempDir(fs Fs, dir, prefix string) (name string, err error) {
 	if dir == "" {

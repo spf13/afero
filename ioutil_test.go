@@ -29,7 +29,7 @@ func checkSizePath(t *testing.T, path string, size int64) {
 
 func TestReadFile(t *testing.T) {
 	testFS = &MemMapFs{}
-	fsutil := &Afero{fs: testFS}
+	fsutil := &Afero{Fs: testFS}
 
 	testFS.Create("this_exists.go")
 	filename := "rumpelstilzchen"
@@ -49,7 +49,7 @@ func TestReadFile(t *testing.T) {
 
 func TestWriteFile(t *testing.T) {
 	testFS = &MemMapFs{}
-	fsutil := &Afero{fs: testFS}
+	fsutil := &Afero{Fs: testFS}
 	f, err := fsutil.TempFile("", "ioutil-test")
 	if err != nil {
 		t.Fatal(err)
