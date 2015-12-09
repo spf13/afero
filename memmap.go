@@ -47,7 +47,7 @@ func (m *MemMapFs) getData() map[string]File {
 
 		// Root should always exist, right?
 		// TODO: what about windows?
-		m.data["/"] = &InMemoryFile{name: "/", memDir: &MemDirMap{}, dir: true}
+		m.data[FilePathSeparator] = &InMemoryFile{name: FilePathSeparator, memDir: &MemDirMap{}, dir: true}
 	}
 	return m.data
 }
@@ -104,7 +104,7 @@ func (m *MemMapFs) unRegisterWithParent(fileName string) {
 	f, err := m.lockfreeOpen(fileName)
 	if err != nil {
 		if os.IsNotExist(err) {
-			log.Println("Open err:", err)
+			log.Printf("Unable to unregister \"%v\" with Parent, err: %v", fileName, err)
 		}
 		return
 	}
@@ -213,9 +213,9 @@ func normalizePath(path string) string {
 
 	switch path {
 	case ".":
-		return "/"
+		return FilePathSeparator
 	case "..":
-		return "/"
+		return FilePathSeparator
 	default:
 		return path
 	}

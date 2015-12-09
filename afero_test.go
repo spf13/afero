@@ -28,27 +28,42 @@ import (
 	"testing"
 )
 
-var testDir = "/tmp/afero"
-var testSubDir = "/tmp/afero/we/have/to/go/deeper"
 var testName = "test.txt"
 var Fss = []Fs{&MemMapFs{}, &OsFs{}}
+
+var testRegistry map[Fs][]string = make(map[Fs][]string)
+
+func testDir(fs Fs) string {
+	name, err := TempDir(fs, "", "afero")
+	if err != nil {
+		panic(fmt.Sprint("unable to work with test dir", err))
+	}
+	testRegistry[fs] = append(testRegistry[fs], name)
+
+	return name
+}
+
+func tmpFile(fs Fs) File {
+	x, err := TempFile(fs, "", "afero")
+
+	if err != nil {
+		panic(fmt.Sprint("unable to work with temp file", err))
+	}
+
+	testRegistry[fs] = append(testRegistry[fs], x.Name())
+
+	return x
+}
 
 //Read with length 0 should not return EOF.
 func TestRead0(t *testing.T) {
 	for _, fs := range Fss {
-		path := testDir + "/" + testName
-		if err := fs.MkdirAll(testDir, 0777); err != nil {
-			t.Fatal(fs.Name(), "unable to create dir", err)
-		}
-
-		f, err := fs.Create(path)
-		if err != nil {
-			t.Fatal(fs.Name(), "create failed:", err)
-		}
+		f := tmpFile(fs)
 		defer f.Close()
 		f.WriteString("Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
 
-		b := make([]byte, 0)
+		var b []byte
+		// b := make([]byte, 0)
 		n, err := f.Read(b)
 		if n != 0 || err != nil {
 			t.Errorf("%v: Read(0) = %d, %v, want 0, nil", fs.Name(), n, err)
@@ -64,10 +79,9 @@ func TestRead0(t *testing.T) {
 
 func TestOpenFile(t *testing.T) {
 	for _, fs := range Fss {
-		path := testDir + "/" + testName
-		fs.MkdirAll(testDir, 0777) // Just in case.
-		fs.Remove(path)            // Just in case.
-		defer fs.Remove(path)
+		tmp := testDir(fs)
+		path := filepath.Join(tmp, testName)
+		defer removeAllTestFiles()
 
 		f, err := fs.OpenFile(path, os.O_RDWR|os.O_CREATE, 0600)
 		if err != nil {
@@ -107,7 +121,8 @@ func TestOpenFile(t *testing.T) {
 }
 
 func TestMemFileRead(t *testing.T) {
-	f := MemFileCreate("testfile")
+	f := tmpFile(new(MemMapFs))
+	// f := MemFileCreate("testfile")
 	f.WriteString("abcd")
 	f.Seek(0, 0)
 	b := make([]byte, 8)
@@ -129,9 +144,9 @@ func TestMemFileRead(t *testing.T) {
 
 func TestRename(t *testing.T) {
 	for _, fs := range Fss {
-		from, to := testDir+"/renamefrom", testDir+"/renameto"
-		fs.Remove(to)              // Just in case.
-		fs.MkdirAll(testDir, 0777) // Just in case.
+		tDir := testDir(fs)
+		from := filepath.Join(tDir, "/renamefrom")
+		to := filepath.Join(tDir, "/renameto")
 		file, err := fs.Create(from)
 		if err != nil {
 			t.Fatalf("open %q failed: %v", to, err)
@@ -143,7 +158,7 @@ func TestRename(t *testing.T) {
 		if err != nil {
 			t.Fatalf("rename %q, %q failed: %v", to, from, err)
 		}
-		names, err := readDirNames(fs, testDir)
+		names, err := readDirNames(fs, tDir)
 		if err != nil {
 			t.Fatalf("readDirNames error: %v", err)
 		}
@@ -159,7 +174,8 @@ func TestRename(t *testing.T) {
 		if !found {
 			t.Error("File was not renamed to renameto")
 		}
-		defer fs.Remove(to)
+
+		defer removeAllTestFiles()
 		_, err = fs.Stat(to)
 		if err != nil {
 			t.Errorf("stat %q failed: %v", to, err)
@@ -169,11 +185,18 @@ func TestRename(t *testing.T) {
 
 func TestRemove(t *testing.T) {
 	for _, fs := range Fss {
-		path := testDir + "/" + testName
-		fs.MkdirAll(testDir, 0777) // Just in case.
-		fs.Create(path)
 
-		err := fs.Remove(path)
+		x, err := TempFile(fs, "", "afero")
+		if err != nil {
+			t.Error(fmt.Sprint("unable to work with temp file", err))
+		}
+
+		path := x.Name()
+		x.Close()
+
+		tDir := filepath.Dir(path)
+
+		err = fs.Remove(path)
 		if err != nil {
 			t.Errorf("%v: Remove() failed: %v", fs.Name(), err)
 			continue
@@ -191,7 +214,7 @@ func TestRemove(t *testing.T) {
 			t.Errorf("%v: Remove() didn't raise error for non-existent file", fs.Name())
 		}
 
-		f, err := fs.Open(testDir)
+		f, err := fs.Open(tDir)
 		if err != nil {
 			t.Error("TestDir should still exist:", err)
 		}
@@ -211,9 +234,11 @@ func TestRemove(t *testing.T) {
 
 func TestTruncate(t *testing.T) {
 	for _, fs := range Fss {
-		f := newFile("TestTruncate", fs, t)
-		defer fs.Remove(f.Name())
+		// f := newFile("TestTruncate", fs, t)
+		f := tmpFile(fs)
+
 		defer f.Close()
+		defer removeAllTestFiles()
 
 		checkSize(t, f, 0)
 		f.Write([]byte("hello, world\n"))
@@ -233,9 +258,9 @@ func TestTruncate(t *testing.T) {
 
 func TestSeek(t *testing.T) {
 	for _, fs := range Fss {
-		f := newFile("TestSeek", fs, t)
-		defer fs.Remove(f.Name())
+		f := tmpFile(fs)
 		defer f.Close()
+		defer removeAllTestFiles()
 
 		const data = "hello, world\n"
 		io.WriteString(f, data)
@@ -271,9 +296,9 @@ func TestSeek(t *testing.T) {
 
 func TestReadAt(t *testing.T) {
 	for _, fs := range Fss {
-		f := newFile("TestReadAt", fs, t)
-		defer fs.Remove(f.Name())
+		f := tmpFile(fs)
 		defer f.Close()
+		defer removeAllTestFiles()
 
 		const data = "hello, world\n"
 		io.WriteString(f, data)
@@ -291,9 +316,10 @@ func TestReadAt(t *testing.T) {
 
 func TestWriteAt(t *testing.T) {
 	for _, fs := range Fss {
-		f := newFile("TestWriteAt", fs, t)
-		defer fs.Remove(f.Name())
+		// f := newFile("TestWriteAt", fs, t)
+		f := tmpFile(fs)
 		defer f.Close()
+		defer removeAllTestFiles()
 
 		const data = "hello, world\n"
 		io.WriteString(f, data)
@@ -318,50 +344,50 @@ func TestWriteAt(t *testing.T) {
 	}
 }
 
-func setupTestDir(t *testing.T) {
-	for _, fs := range Fss {
-		err := fs.RemoveAll(testDir)
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = fs.MkdirAll(testSubDir, 0700)
-		if err != nil && !os.IsExist(err) {
-			t.Fatal(err)
-		}
-		f, err := fs.Create(filepath.Join(testSubDir, "testfile1"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		f.WriteString("Testfile 1 content")
-		f.Close()
-
-		f, err = fs.Create(filepath.Join(testSubDir, "testfile2"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		f.WriteString("Testfile 2 content")
-		f.Close()
-
-		f, err = fs.Create(filepath.Join(testSubDir, "testfile3"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		f.WriteString("Testfile 3 content")
-		f.Close()
-
-		f, err = fs.Create(filepath.Join(testSubDir, "testfile4"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		f.WriteString("Testfile 4 content")
-		f.Close()
+func setupTestDir(t *testing.T, fs Fs) string {
+	x := testDir(fs)
+	testSubDir := filepath.Join(x, "more", "subdirectories", "for", "testing", "we")
+	err := fs.MkdirAll(testSubDir, 0700)
+	if err != nil && !os.IsExist(err) {
+		t.Fatal(err)
 	}
+
+	f, err := fs.Create(filepath.Join(testSubDir, "testfile1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.WriteString("Testfile 1 content")
+	f.Close()
+
+	f, err = fs.Create(filepath.Join(testSubDir, "testfile2"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.WriteString("Testfile 2 content")
+	f.Close()
+
+	f, err = fs.Create(filepath.Join(testSubDir, "testfile3"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.WriteString("Testfile 3 content")
+	f.Close()
+
+	f, err = fs.Create(filepath.Join(testSubDir, "testfile4"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.WriteString("Testfile 4 content")
+	f.Close()
+	return testSubDir
 }
 
 func TestReaddirnames(t *testing.T) {
-	setupTestDir(t)
+	defer removeAllTestFiles()
 	for _, fs := range Fss {
-		root, err := fs.Open(testDir)
+		testSubDir := setupTestDir(t, fs)
+		tDir := filepath.Dir(testSubDir)
+		root, err := fs.Open(tDir)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -378,13 +404,16 @@ func TestReaddirnames(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		findNames(fs, t, namesRoot, namesSub)
+		findNames(fs, t, tDir, testSubDir, namesRoot, namesSub)
 	}
 }
 
 func TestReaddirSimple(t *testing.T) {
+	defer removeAllTestFiles()
 	for _, fs := range Fss {
-		root, err := fs.Open(testDir)
+		testSubDir := setupTestDir(t, fs)
+		tDir := filepath.Dir(testSubDir)
+		root, err := fs.Open(tDir)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -412,10 +441,13 @@ func TestReaddirSimple(t *testing.T) {
 }
 
 func TestReaddir(t *testing.T) {
+	defer removeAllTestFiles()
 	for num := 0; num < 6; num++ {
 		outputs := make([]string, len(Fss))
 		infos := make([]string, len(Fss))
 		for i, fs := range Fss {
+			testSubDir := setupTestDir(t, fs)
+			//tDir := filepath.Dir(testSubDir)
 			root, err := fs.Open(testSubDir)
 			if err != nil {
 				t.Fatal(err)
@@ -459,9 +491,11 @@ func (m myFileInfo) String() string {
 }
 
 func TestReaddirAll(t *testing.T) {
-	defer removeTestDir(t)
+	defer removeAllTestFiles()
 	for _, fs := range Fss {
-		root, err := fs.Open(testDir)
+		testSubDir := setupTestDir(t, fs)
+		tDir := filepath.Dir(testSubDir)
+		root, err := fs.Open(tDir)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -487,16 +521,16 @@ func TestReaddirAll(t *testing.T) {
 			namesSub = append(namesSub, e.Name())
 		}
 
-		findNames(fs, t, namesRoot, namesSub)
+		findNames(fs, t, tDir, testSubDir, namesRoot, namesSub)
 	}
 }
 
-func findNames(fs Fs, t *testing.T, root, sub []string) {
+func findNames(fs Fs, t *testing.T, tDir, testSubDir string, root, sub []string) {
 	var foundRoot bool
 	for _, e := range root {
-		_, err := fs.Open(path.Join(testDir, e))
+		_, err := fs.Open(filepath.Join(tDir, e))
 		if err != nil {
-			t.Error("Open", e, ":", err)
+			t.Error("Open", filepath.Join(tDir, e), ":", err)
 		}
 		if equal(e, "we") {
 			foundRoot = true
@@ -510,9 +544,9 @@ func findNames(fs Fs, t *testing.T, root, sub []string) {
 
 	var found1, found2 bool
 	for _, e := range sub {
-		_, err := fs.Open(path.Join(testSubDir, e))
+		_, err := fs.Open(filepath.Join(testSubDir, e))
 		if err != nil {
-			t.Error("Open", e, ":", err)
+			t.Error("Open", filepath.Join(testSubDir, e), ":", err)
 		}
 		if equal(e, "testfile1") {
 			found1 = true
@@ -534,13 +568,13 @@ func findNames(fs Fs, t *testing.T, root, sub []string) {
 	}
 }
 
-func removeTestDir(t *testing.T) {
-	for _, fs := range Fss {
-		err := fs.RemoveAll(testDir)
-		if err != nil {
-			t.Fatal(err)
+func removeAllTestFiles() {
+	for fs, list := range testRegistry {
+		for _, path := range list {
+			fs.RemoveAll(path)
 		}
 	}
+	testRegistry = make(map[Fs][]string)
 }
 
 func newFile(testName string, fs Fs, t *testing.T) (f File) {
@@ -562,7 +596,7 @@ func newFile(testName string, fs Fs, t *testing.T) (f File) {
 func writeFile(t *testing.T, fs Fs, fname string, flag int, text string) string {
 	f, err := fs.OpenFile(fname, flag, 0666)
 	if err != nil {
-		t.Fatalf("Open: %v", err)
+		t.Fatalf("Unable to Open file %q for writing: %v", fname, err)
 	}
 	n, err := io.WriteString(f, text)
 	if err != nil {
