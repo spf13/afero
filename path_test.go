@@ -21,26 +21,22 @@ import (
 )
 
 func TestWalk(t *testing.T) {
-	var Fss = []Fs{&MemMapFs{}, &OsFs{}}
-	var testDir = "/tmp/afero"
-	var testName = "test.txt"
-	for _, fs := range Fss {
-		path := testDir + "/" + testName
-		if err := fs.MkdirAll(testDir, 0777); err != nil {
-			t.Fatal(fs.Name(), "unable to create dir", err)
+	defer removeAllTestFiles()
+	var testDir string
+	for i, fs := range Fss {
+		if i == 0 {
+			testDir = setupTestDirRoot(t, fs)
+		} else {
+			setupTestDirReusePath(t, fs, testDir)
 		}
-
-		f, err := fs.Create(path)
-		if err != nil {
-			t.Fatal(fs.Name(), "create failed:", err)
-		}
-		defer f.Close()
-		f.WriteString("Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
 	}
 
 	outputs := make([]string, len(Fss))
 	for i, fs := range Fss {
 		walkFn := func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				t.Error("walkFn err:", err)
+			}
 			var size int64
 			if !info.IsDir() {
 				size = info.Size()
@@ -66,8 +62,7 @@ func TestWalk(t *testing.T) {
 	if fail {
 		t.Log("Walk outputs not equal!")
 		for i, o := range outputs {
-			t.Log(Fss[i].Name())
-			t.Log(o)
+			t.Log(Fss[i].Name() + "\n" + o)
 		}
 		t.Fail()
 	}

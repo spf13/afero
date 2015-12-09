@@ -345,8 +345,23 @@ func TestWriteAt(t *testing.T) {
 }
 
 func setupTestDir(t *testing.T, fs Fs) string {
-	x := testDir(fs)
-	testSubDir := filepath.Join(x, "more", "subdirectories", "for", "testing", "we")
+	path := testDir(fs)
+	return setupTestFiles(t, fs, path)
+}
+
+func setupTestDirRoot(t *testing.T, fs Fs) string {
+	path := testDir(fs)
+	setupTestFiles(t, fs, path)
+	return path
+}
+
+func setupTestDirReusePath(t *testing.T, fs Fs, path string) string {
+	testRegistry[fs] = append(testRegistry[fs], path)
+	return setupTestFiles(t, fs, path)
+}
+
+func setupTestFiles(t *testing.T, fs Fs, path string) string {
+	testSubDir := filepath.Join(path, "more", "subdirectories", "for", "testing", "we")
 	err := fs.MkdirAll(testSubDir, 0700)
 	if err != nil && !os.IsExist(err) {
 		t.Fatal(err)
