@@ -93,6 +93,7 @@ func (MemMapFs) Name() string { return "MemMapFS" }
 func (m *MemMapFs) Create(name string) (File, error) {
 	name = normalizePath(name)
 	m.lock()
+	name, _ = filepath.Abs(name)
 	file := MemFileCreate(name)
 	m.getData()[name] = file
 	m.registerWithParent(file)
@@ -145,15 +146,6 @@ func (m *MemMapFs) registerWithParent(f File) {
 		}
 	}
 	pmem := parent.(*InMemoryFile)
-
-	// TODO(mbertschler): memDir is only nil when it was not made with Mkdir
-	// or lockfreeMkdir. In this case the parent is also not a real directory.
-	// This currently only happens for the file ".".
-	// This is a quick hack to make the library usable with relative paths.
-	if pmem.memDir == nil {
-		pmem.dir = true
-		pmem.memDir = &MemDirMap{}
-	}
 
 	pmem.memDir.Add(f)
 }
