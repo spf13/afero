@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -118,8 +117,8 @@ func (m *MemMapFs) unRegisterWithParent(fileName string) {
 }
 
 func (m *MemMapFs) findParent(f File) File {
-	pdir, _ := path.Split(f.Name())
-	pdir = path.Clean(pdir)
+	pdir, _ := filepath.Split(f.Name())
+	pdir = filepath.Clean(pdir)
 	pfile, err := m.lockfreeOpen(pdir)
 	if err != nil {
 		return nil
@@ -133,7 +132,7 @@ func (m *MemMapFs) registerWithParent(f File) {
 	}
 	parent := m.findParent(f)
 	if parent == nil {
-		pdir := filepath.Dir(path.Clean(f.Name()))
+		pdir := filepath.Dir(filepath.Clean(f.Name()))
 		err := m.lockfreeMkdir(pdir, 0777)
 		if err != nil {
 			//log.Println("Mkdir error:", err)
