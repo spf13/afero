@@ -21,7 +21,7 @@ import (
 )
 
 func TestWalk(t *testing.T) {
-	defer removeAllTestFiles()
+	defer removeAllTestFiles(t)
 	var testDir string
 	for i, fs := range Fss {
 		if i == 0 {
