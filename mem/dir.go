@@ -20,19 +20,3 @@ type Dir interface {
 	Add(File)
 	Remove(File)
 }
-
-func RemoveFromMemDir(dir *File, f *File) {
-	dir.memDir.Remove(*f)
-}
-
-func AddToMemDir(dir *File, f *File) {
-	dir.memDir.Add(*f)
-}
-
-func InitializeDir(d *File) {
-	if d.memDir == nil {
-		d.dir = true
-		d.memDir = &DirMap{}
-	}
-
-}
