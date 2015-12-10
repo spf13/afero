@@ -404,13 +404,13 @@ func TestReaddirnames(t *testing.T) {
 
 		root, err := fs.Open(tDir)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatal(fs.Name(), tDir, err)
 		}
 		defer root.Close()
 
 		namesRoot, err := root.Readdirnames(-1)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatal(fs.Name(), namesRoot, err)
 		}
 
 		sub, err := fs.Open(testSubDir)
@@ -421,7 +421,7 @@ func TestReaddirnames(t *testing.T) {
 
 		namesSub, err := sub.Readdirnames(-1)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatal(fs.Name(), namesSub, err)
 		}
 
 		findNames(fs, t, tDir, testSubDir, namesRoot, namesSub)
