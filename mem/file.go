@@ -26,24 +26,45 @@ import (
 
 import "time"
 
+const FilePathSeparator = string(filepath.Separator)
+
 type File struct {
 	// atomic requires 64-bit alignment for struct field access
 	at           int64
 	readDirCount int64
 
-	FileName string
-	MemDir   Dir
-	Dir      bool
-	Mode     os.FileMode
-	Modtime  time.Time
-
 	sync.Mutex
-	closed bool
-	data   []byte
+	name    string
+	data    []byte
+	memDir  Dir
+	dir     bool
+	closed  bool
+	mode    os.FileMode
+	modtime time.Time
 }
 
-func Create(name string) *File {
-	return &File{FileName: name, Mode: os.ModeTemporary, Modtime: time.Now()}
+func CreateFile(name string) *File {
+	return &File{name: name, mode: os.ModeTemporary, modtime: time.Now()}
+}
+
+func CreateDir(name string) *File {
+	return &File{name: name, memDir: &DirMap{}, dir: true}
+}
+
+func ChangeFileName(f *File, newname string) {
+	f.name = newname
+}
+
+func SetMode(f *File, mode os.FileMode) {
+	f.mode = mode
+}
+
+func SetModTime(f *File, mtime time.Time) {
+	f.modtime = mtime
+}
+
+func GetFileInfo(f *File) *FileInfo {
+	return &FileInfo{file: f}
 }
 
 func (f *File) Open() error {
@@ -63,7 +84,7 @@ func (f *File) Close() error {
 }
 
 func (f *File) Name() string {
-	return f.FileName
+	return f.name
 }
 
 func (f *File) Stat() (os.FileInfo, error) {
@@ -78,7 +99,7 @@ func (f *File) Readdir(count int) (res []os.FileInfo, err error) {
 	var outLength int64
 
 	f.Lock()
-	files := f.MemDir.Files()[f.readDirCount:]
+	files := f.memDir.Files()[f.readDirCount:]
 	if count > 0 {
 		if len(files) < count {
 			outLength = int64(len(files))
@@ -198,27 +219,27 @@ func (f *File) WriteString(s string) (ret int, err error) {
 }
 
 func (f *File) Info() *FileInfo {
-	return &FileInfo{File: f}
+	return &FileInfo{file: f}
 }
 
 type FileInfo struct {
-	File *File
+	file *File
 }
 
 // Implements os.FileInfo
 func (s *FileInfo) Name() string {
-	_, name := filepath.Split(s.File.Name())
+	_, name := filepath.Split(s.file.Name())
 	return name
 }
-func (s *FileInfo) Mode() os.FileMode  { return s.File.Mode }
-func (s *FileInfo) ModTime() time.Time { return s.File.Modtime }
-func (s *FileInfo) IsDir() bool        { return s.File.Dir }
+func (s *FileInfo) Mode() os.FileMode  { return s.file.mode }
+func (s *FileInfo) ModTime() time.Time { return s.file.modtime }
+func (s *FileInfo) IsDir() bool        { return s.file.dir }
 func (s *FileInfo) Sys() interface{}   { return nil }
 func (s *FileInfo) Size() int64 {
 	if s.IsDir() {
 		return int64(42)
 	}
-	return int64(len(s.File.data))
+	return int64(len(s.file.data))
 }
 
 var (

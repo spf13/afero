@@ -48,7 +48,7 @@ func (m *MemMapFs) getData() map[string]File {
 
 		// Root should always exist, right?
 		// TODO: what about windows?
-		m.data[FilePathSeparator] = &mem.File{FileName: FilePathSeparator, MemDir: &mem.DirMap{}, Dir: true}
+		m.data[FilePathSeparator] = mem.CreateDir(FilePathSeparator)
 	}
 	return m.data
 }
@@ -66,7 +66,7 @@ func (MemMapFs) Name() string { return "MemMapFS" }
 func (m *MemMapFs) Create(name string) (File, error) {
 	name = normalizePath(name)
 	m.lock()
-	file := mem.Create(name)
+	file := mem.CreateFile(name)
 	m.getData()[name] = file
 	m.registerWithParent(file)
 	m.unlock()
@@ -86,7 +86,8 @@ func (m *MemMapFs) unRegisterWithParent(fileName string) {
 		log.Fatal("parent of ", f.Name(), " is nil")
 	}
 	pmem := parent.(*mem.File)
-	pmem.MemDir.Remove(*f.(*mem.File))
+	fmem := f.(*mem.File)
+	mem.RemoveFromMemDir(pmem, fmem)
 }
 
 func (m *MemMapFs) findParent(f File) File {
@@ -118,17 +119,14 @@ func (m *MemMapFs) registerWithParent(f File) {
 		}
 	}
 	pmem := parent.(*mem.File)
+	fmem := f.(*mem.File)
 
 	// TODO(mbertschler): memDir is only nil when it was not made with Mkdir
 	// or lockfreeMkdir. In this case the parent is also not a real directory.
 	// This currently only happens for the file ".".
 	// This is a quick hack to make the library usable with relative paths.
-	if pmem.MemDir == nil {
-		pmem.Dir = true
-		pmem.MemDir = &mem.DirMap{}
-	}
-
-	pmem.MemDir.Add(*f.(*mem.File))
+	mem.InitializeDir(pmem)
+	mem.AddToMemDir(pmem, fmem)
 }
 
 func (m *MemMapFs) lockfreeMkdir(name string, perm os.FileMode) error {
@@ -144,7 +142,7 @@ func (m *MemMapFs) lockfreeMkdir(name string, perm os.FileMode) error {
 			return err
 		}
 	} else {
-		item := &mem.File{FileName: name, MemDir: &mem.DirMap{}, Dir: true}
+		item := mem.CreateDir(name)
 		m.getData()[name] = item
 		m.registerWithParent(item)
 	}
@@ -168,7 +166,7 @@ func (m *MemMapFs) Mkdir(name string, perm os.FileMode) error {
 		}
 	} else {
 		m.lock()
-		item := &mem.File{FileName: name, MemDir: &mem.DirMap{}, Dir: true}
+		item := mem.CreateDir(name)
 		m.getData()[name] = item
 		m.registerWithParent(item)
 		m.unlock()
@@ -305,7 +303,7 @@ func (m *MemMapFs) Rename(oldname, newname string) error {
 			m.unRegisterWithParent(oldname)
 			file := m.getData()[oldname].(*mem.File)
 			delete(m.getData(), oldname)
-			file.FileName = newname
+			mem.ChangeFileName(file, newname)
 			m.getData()[newname] = file
 			m.registerWithParent(file)
 			m.unlock()
@@ -324,7 +322,8 @@ func (m *MemMapFs) Stat(name string) (os.FileInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &mem.FileInfo{File: f.(*mem.File)}, nil
+	fi := mem.GetFileInfo(f.(*mem.File))
+	return fi, nil
 }
 
 func (m *MemMapFs) Chmod(name string, mode os.FileMode) error {
@@ -337,7 +336,7 @@ func (m *MemMapFs) Chmod(name string, mode os.FileMode) error {
 	ff, ok := f.(*mem.File)
 	if ok {
 		m.lock()
-		ff.Mode = mode
+		mem.SetMode(ff, mode)
 		m.unlock()
 	} else {
 		return errors.New("Unable to Chmod Memory File")
@@ -355,7 +354,7 @@ func (m *MemMapFs) Chtimes(name string, atime time.Time, mtime time.Time) error 
 	ff, ok := f.(*mem.File)
 	if ok {
 		m.lock()
-		ff.Modtime = mtime
+		mem.SetModTime(ff, mtime)
 		m.unlock()
 	} else {
 		return errors.New("Unable to Chtime Memory File")
