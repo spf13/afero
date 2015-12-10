@@ -1,4 +1,4 @@
-// Copyright © 2014 Steve Francia <spf@spf13.com>.
+// Copyright © 2015 Steve Francia <spf@spf13.com>.
 // Copyright 2013 tsuru authors. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package afero
+package mem
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -25,15 +26,9 @@ import (
 
 import "time"
 
-type MemDir interface {
-	Len() int
-	Names() []string
-	Files() []File
-	Add(File)
-	Remove(File)
-}
+const FilePathSeparator = string(filepath.Separator)
 
-type InMemoryFile struct {
+type File struct {
 	// atomic requires 64-bit alignment for struct field access
 	at           int64
 	readDirCount int64
@@ -41,18 +36,38 @@ type InMemoryFile struct {
 	sync.Mutex
 	name    string
 	data    []byte
-	memDir  MemDir
+	memDir  Dir
 	dir     bool
 	closed  bool
 	mode    os.FileMode
 	modtime time.Time
 }
 
-func MemFileCreate(name string) *InMemoryFile {
-	return &InMemoryFile{name: name, mode: os.ModeTemporary, modtime: time.Now()}
+func CreateFile(name string) *File {
+	return &File{name: name, mode: os.ModeTemporary, modtime: time.Now()}
 }
 
-func (f *InMemoryFile) Open() error {
+func CreateDir(name string) *File {
+	return &File{name: FilePathSeparator, memDir: &DirMap{}, dir: true}
+}
+
+func ChangeFileName(f *File, newname string) {
+	f.name = newname
+}
+
+func SetMode(f *File, mode os.FileMode) {
+	f.mode = mode
+}
+
+func SetModTime(f *File, mtime time.Time) {
+	f.modtime = mtime
+}
+
+func GetFileInfo(f *File) *FileInfo {
+	return &FileInfo{file: f}
+}
+
+func (f *File) Open() error {
 	atomic.StoreInt64(&f.at, 0)
 	atomic.StoreInt64(&f.readDirCount, 0)
 	f.Lock()
@@ -61,26 +76,26 @@ func (f *InMemoryFile) Open() error {
 	return nil
 }
 
-func (f *InMemoryFile) Close() error {
+func (f *File) Close() error {
 	f.Lock()
 	f.closed = true
 	f.Unlock()
 	return nil
 }
 
-func (f *InMemoryFile) Name() string {
+func (f *File) Name() string {
 	return f.name
 }
 
-func (f *InMemoryFile) Stat() (os.FileInfo, error) {
-	return &InMemoryFileInfo{f}, nil
+func (f *File) Stat() (os.FileInfo, error) {
+	return &FileInfo{f}, nil
 }
 
-func (f *InMemoryFile) Sync() error {
+func (f *File) Sync() error {
 	return nil
 }
 
-func (f *InMemoryFile) Readdir(count int) (res []os.FileInfo, err error) {
+func (f *File) Readdir(count int) (res []os.FileInfo, err error) {
 	var outLength int64
 
 	f.Lock()
@@ -108,7 +123,7 @@ func (f *InMemoryFile) Readdir(count int) (res []os.FileInfo, err error) {
 	return res, err
 }
 
-func (f *InMemoryFile) Readdirnames(n int) (names []string, err error) {
+func (f *File) Readdirnames(n int) (names []string, err error) {
 	fi, err := f.Readdir(n)
 	names = make([]string, len(fi))
 	for i, f := range fi {
@@ -117,7 +132,7 @@ func (f *InMemoryFile) Readdirnames(n int) (names []string, err error) {
 	return names, err
 }
 
-func (f *InMemoryFile) Read(b []byte) (n int, err error) {
+func (f *File) Read(b []byte) (n int, err error) {
 	f.Lock()
 	defer f.Unlock()
 	if f.closed == true {
@@ -136,12 +151,12 @@ func (f *InMemoryFile) Read(b []byte) (n int, err error) {
 	return
 }
 
-func (f *InMemoryFile) ReadAt(b []byte, off int64) (n int, err error) {
+func (f *File) ReadAt(b []byte, off int64) (n int, err error) {
 	atomic.StoreInt64(&f.at, off)
 	return f.Read(b)
 }
 
-func (f *InMemoryFile) Truncate(size int64) error {
+func (f *File) Truncate(size int64) error {
 	if f.closed == true {
 		return ErrFileClosed
 	}
@@ -157,7 +172,7 @@ func (f *InMemoryFile) Truncate(size int64) error {
 	return nil
 }
 
-func (f *InMemoryFile) Seek(offset int64, whence int) (int64, error) {
+func (f *File) Seek(offset int64, whence int) (int64, error) {
 	if f.closed == true {
 		return 0, ErrFileClosed
 	}
@@ -172,7 +187,7 @@ func (f *InMemoryFile) Seek(offset int64, whence int) (int64, error) {
 	return f.at, nil
 }
 
-func (f *InMemoryFile) Write(b []byte) (n int, err error) {
+func (f *File) Write(b []byte) (n int, err error) {
 	n = len(b)
 	cur := atomic.LoadInt64(&f.at)
 	f.Lock()
@@ -194,35 +209,44 @@ func (f *InMemoryFile) Write(b []byte) (n int, err error) {
 	return
 }
 
-func (f *InMemoryFile) WriteAt(b []byte, off int64) (n int, err error) {
+func (f *File) WriteAt(b []byte, off int64) (n int, err error) {
 	atomic.StoreInt64(&f.at, off)
 	return f.Write(b)
 }
 
-func (f *InMemoryFile) WriteString(s string) (ret int, err error) {
+func (f *File) WriteString(s string) (ret int, err error) {
 	return f.Write([]byte(s))
 }
 
-func (f *InMemoryFile) Info() *InMemoryFileInfo {
-	return &InMemoryFileInfo{file: f}
+func (f *File) Info() *FileInfo {
+	return &FileInfo{file: f}
 }
 
-type InMemoryFileInfo struct {
-	file *InMemoryFile
+type FileInfo struct {
+	file *File
 }
 
 // Implements os.FileInfo
-func (s *InMemoryFileInfo) Name() string {
+func (s *FileInfo) Name() string {
 	_, name := filepath.Split(s.file.Name())
 	return name
 }
-func (s *InMemoryFileInfo) Mode() os.FileMode  { return s.file.mode }
-func (s *InMemoryFileInfo) ModTime() time.Time { return s.file.modtime }
-func (s *InMemoryFileInfo) IsDir() bool        { return s.file.dir }
-func (s *InMemoryFileInfo) Sys() interface{}   { return nil }
-func (s *InMemoryFileInfo) Size() int64 {
+func (s *FileInfo) Mode() os.FileMode  { return s.file.mode }
+func (s *FileInfo) ModTime() time.Time { return s.file.modtime }
+func (s *FileInfo) IsDir() bool        { return s.file.dir }
+func (s *FileInfo) Sys() interface{}   { return nil }
+func (s *FileInfo) Size() int64 {
 	if s.IsDir() {
 		return int64(42)
 	}
 	return int64(len(s.file.data))
 }
+
+var (
+	ErrFileClosed        = errors.New("File is closed")
+	ErrOutOfRange        = errors.New("Out of range")
+	ErrTooLarge          = errors.New("Too large")
+	ErrFileNotFound      = os.ErrNotExist
+	ErrFileExists        = os.ErrExist
+	ErrDestinationExists = os.ErrExist
+)
