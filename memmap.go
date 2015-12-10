@@ -369,3 +369,9 @@ func (m *MemMapFs) List() {
 		fmt.Println(x.Name(), y.Size())
 	}
 }
+
+func debugMemMapList(fs Fs) {
+	if x, ok := fs.(*MemMapFs); ok {
+		x.List()
+	}
+}
