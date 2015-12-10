@@ -275,14 +275,23 @@ implement:
 
 # About the project
 
-## The name
+## What's in the name
 
-Initially this project was called fs. Unfortunately as I used it, the
-name proved confusing, there were too many fs’. In looking for
-alternatives I looked up the word 'abstract' in a variety of different
-languages. Afero is the Greek word for abstract and it seemed to be a
-fitting name for the project. It also means ‘to do’ or ‘thing’ in
-Esperanto which is also fitting.
+Afero comes from the latin roots Ad-Facere.
+
+**"Ad"** is a prefix meaning "to".
+
+**"Facere"** is a form of the root "faciō" making "make or do".
+
+The literal meaning of afero is "to make" or "to do" which seems very fitting
+for a library that allows one to make files and directories and do things with them.
+
+The English word that shares the same roots as Afero is "affair". Affair shares
+the same concept but as a noun it means "something that is made or done" or "an
+object of a particular type".
+
+It's also nice that unlike some of my other libraries (hugo, cobra, viper) it
+Googles very well.
 
 ## Release Notes
 
