@@ -31,6 +31,7 @@ filesystem for full interoperability.
 * A set of interfaces to encourage and enforce interoperability between backends
 * An atomic cross platform memory backed file system
 * Support for compositional file systems by joining various different file systems (see httpFs)
+* A set of utility functions ported from io, ioutil & hugo to be afero aware
 
 
 # Using Afero
@@ -121,6 +122,54 @@ WriteString(s string) : ret int, err error
 In some applications it may make sense to define a new package that
 simply exports the file system variable for easy access from anywhere.
 
+## Using Afero's utility functions
+
+Afero provides a set of functions to make it easier to use the underlying file systems.
+These functions have been primarily ported from io & ioutil with some developed for Hugo.
+
+The afero utilities support all afero compatible backends.
+
+The list of utilities includes:
+
+```go
+DirExists(path string) (bool, error)
+Exists(path string) (bool, error)
+FileContainsBytes(filename string, subslice []byte) (bool, error)
+GetTempDir(subPath string) string
+IsDir(path string) (bool, error)
+IsEmpty(path string) (bool, error)
+ReadDir(dirname string) ([]os.FileInfo, error)
+ReadFile(filename string) ([]byte, error)
+SafeWriteReader(path string, r io.Reader) (err error)
+TempDir(dir, prefix string) (name string, err error)
+TempFile(dir, prefix string) (f File, err error)
+Walk(root string, walkFn filepath.WalkFunc) error
+WriteFile(filename string, data []byte, perm os.FileMode) error
+WriteReader(path string, r io.Reader) (err error)
+```
+For a complete list see [Afero's GoDoc](https://godoc.org/github.com/spf13/afero)
+
+They are available under two different approaches to use. You can either call
+them directly where the first parameter of each function will be the file
+system, or you can declare a new `Afero`, a custom type used to bind these
+functions as methods to a given filesystem.
+
+### Calling utilities directly
+
+```go
+fs := new(afero.MemMapFs)
+f, err := afero.TempFile(fs,"", "ioutil-test")
+
+```
+
+### Calling via Afero
+
+```go
+fs := new(afero.MemMapFs)
+afs := &Afero{Fs: fs}
+f, err := afs.TempFile("", "ioutil-test")
+```
+
 ## Using Afero for Testing
 
 There is a large benefit to using a mock filesystem for testing. It has a
@@ -182,11 +231,13 @@ returns an http.File type.
 
 Afero provides an httpFs file system which satisfies this requirement.
 Any Afero FileSystem can be used as an httpFs.
+
 ```go
 httpFs := &afero.HttpFs{SourceFs: <ExistingFS>}
 fileserver := http.FileServer(httpFs.Dir(<PATH>)))
 http.Handle("/", fileserver)
 ```
+
 # Available Backends
 
 ## OsFs
