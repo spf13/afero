@@ -6,6 +6,8 @@ A FileSystem Abstraction System for Go
 
 # Overview
 
+[![Join the chat at https://gitter.im/spf13/afero](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/spf13/afero?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Afero is an filesystem framework providing a simple, uniform and universal API
 interacting with any filesystem, as an abstraction layer providing interfaces,
 types and methods. Afero has an exceptionally clean interface and simple design
