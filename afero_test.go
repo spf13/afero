@@ -120,6 +120,52 @@ func TestOpenFile(t *testing.T) {
 	}
 }
 
+func TestCreate(t *testing.T) {
+	defer removeAllTestFiles(t)
+	for _, fs := range Fss {
+		tmp := testDir(fs)
+		path := filepath.Join(tmp, testName)
+
+		f, err := fs.Create(path)
+		if err != nil {
+			t.Error(fs.Name(), "Create failed:", err)
+			f.Close()
+			continue
+		}
+		io.WriteString(f, "initial")
+		f.Close()
+
+		f, err = fs.Create(path)
+		if err != nil {
+			t.Error(fs.Name(), "Create failed:", err)
+			f.Close()
+			continue
+		}
+		secondContent := "second create"
+		io.WriteString(f, secondContent)
+		f.Close()
+
+		f, err = fs.Open(path)
+		if err != nil {
+			t.Error(fs.Name(), "Open failed:", err)
+			f.Close()
+			continue
+		}
+		buf, err := ReadAll(f)
+		if err != nil {
+			t.Error(fs.Name(), "ReadAll failed:", err)
+			f.Close()
+			continue
+		}
+		if string(buf) != secondContent {
+			t.Error(fs.Name(), "Content should be", "\""+secondContent+"\" but is \""+string(buf)+"\"")
+			f.Close()
+			continue
+		}
+		f.Close()
+	}
+}
+
 func TestMemFileRead(t *testing.T) {
 	f := tmpFile(new(MemMapFs))
 	// f := MemFileCreate("testfile")
