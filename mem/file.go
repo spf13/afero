@@ -29,7 +29,7 @@ import "time"
 const FilePathSeparator = string(filepath.Separator)
 
 type File struct {
-	io.Writer
+	io.WriterTo
 
 	// atomic requires 64-bit alignment for struct field access
 	at           int64
