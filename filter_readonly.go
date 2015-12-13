@@ -42,10 +42,10 @@ func (r *ReadOnlyFilter) Remove(n string) error {
 }
 
 func (r *ReadOnlyFilter) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
-	if flag&os.O_RDONLY != 0 {
-		return nil, nil
+	if flag&(os.O_WRONLY|syscall.O_RDWR|os.O_APPEND|os.O_CREATE|os.O_TRUNC) != 0 {
+		return nil, syscall.EPERM
 	}
-	return nil, syscall.EPERM
+	return nil, nil
 }
 
 func (r *ReadOnlyFilter) Open(n string) (File, error) {
