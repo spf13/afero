@@ -31,6 +31,8 @@ filesystem for full interoperability.
 * A set of interfaces to encourage and enforce interoperability between backends
 * An atomic cross platform memory backed file system
 * Support for compositional file systems by joining various different file systems (see httpFs)
+* Filtering of calls to intercept opening / modifying files, several filters
+may be stacked.
 * A set of utility functions ported from io, ioutil & hugo to be afero aware
 
 
@@ -272,6 +274,28 @@ implement:
 * S3
 * Mem buffering to disk/network
 * BasePath (where all paths are relative to a fixed basepath)
+
+# Filters
+
+You can add "filtering" to an Fs by adding a FilterFs to an existing Afero Fs
+like
+```go
+    ROFs := afero.NewFilter(AppFs)
+    ROFs.AddFilter(afero.NewReadonlyFilter())
+```
+The ROFs behaves like a normal afero.Fs now, with the only exception, that it
+provides a readonly view of the underlying Fs.
+
+The FilterFs is run before the source Fs, any non nil error is returned
+to the caller without going to the source Fs. If every filter in the
+chain returns a nil error, the call is sent to the source Fs.
+
+The `AddFilter` adds a new filter before any existing filters.
+
+## Available filters
+
+* NewReadonlyFilter() - provide a read only view of the source Fs
+
 
 # About the project
 
