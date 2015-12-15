@@ -1,7 +1,7 @@
 package afero
 
 import (
-	"regexp"
+//	"regexp"
 	"testing"
 )
 
@@ -52,7 +52,7 @@ func TestReadonlyRemoveAndRead(t *testing.T) {
 		t.Errorf("File still present")
 	}
 }
-
+/*
 func TestRegexp(t *testing.T) {
 	mfs := &MemMapFs{}
 	fs := NewFilter(mfs)
@@ -75,3 +75,4 @@ func TestRORegexpChain(t *testing.T) {
 	}
 	t.Logf("ERR=%s", err)
 }
+*/
