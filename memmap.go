@@ -27,7 +27,7 @@ import (
 )
 
 type MemMapFs struct {
-	sync.RWMutex
+	mu   sync.RWMutex
 	data map[string]File
 	init sync.Once
 }
@@ -48,11 +48,11 @@ func (MemMapFs) Name() string { return "MemMapFS" }
 
 func (m *MemMapFs) Create(name string) (File, error) {
 	name = normalizePath(name)
-	m.Lock()
+	m.mu.Lock()
 	file := mem.CreateFile(name)
 	m.getData()[name] = file
 	m.registerWithParent(file)
-	m.Unlock()
+	m.mu.Unlock()
 	return file, nil
 }
 
@@ -135,9 +135,9 @@ func (m *MemMapFs) lockfreeMkdir(name string, perm os.FileMode) error {
 func (m *MemMapFs) Mkdir(name string, perm os.FileMode) error {
 	name = normalizePath(name)
 
-	m.RLock()
+	m.mu.RLock()
 	x, ok := m.getData()[name]
-	m.RUnlock()
+	m.mu.RUnlock()
 	if ok {
 		// Only return ErrFileExists if it's a file, not a directory.
 		i, err := x.Stat()
@@ -148,11 +148,11 @@ func (m *MemMapFs) Mkdir(name string, perm os.FileMode) error {
 			return err
 		}
 	} else {
-		m.Lock()
+		m.mu.Lock()
 		item := mem.CreateDir(name)
 		m.getData()[name] = item
 		m.registerWithParent(item)
-		m.Unlock()
+		m.mu.Unlock()
 	}
 	return nil
 }
@@ -178,14 +178,14 @@ func normalizePath(path string) string {
 func (m *MemMapFs) Open(name string) (File, error) {
 	name = normalizePath(name)
 
-	m.RLock()
+	m.mu.RLock()
 	f, ok := m.getData()[name]
 	ff, ok := f.(*mem.File)
 
 	if ok {
 		ff.Open()
 	}
-	m.RUnlock()
+	m.mu.RUnlock()
 
 	if ok {
 		return f, nil
@@ -236,8 +236,8 @@ func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, erro
 func (m *MemMapFs) Remove(name string) error {
 	name = normalizePath(name)
 
-	m.Lock()
-	defer m.Unlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	if _, ok := m.getData()[name]; ok {
 		m.unRegisterWithParent(name)
@@ -250,20 +250,20 @@ func (m *MemMapFs) Remove(name string) error {
 
 func (m *MemMapFs) RemoveAll(path string) error {
 	path = normalizePath(path)
-	m.Lock()
+	m.mu.Lock()
 	m.unRegisterWithParent(path)
-	m.Unlock()
+	m.mu.Unlock()
 
-	m.RLock()
-	defer m.RUnlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
 	for p, _ := range m.getData() {
 		if strings.HasPrefix(p, path) {
-			m.RUnlock()
-			m.Lock()
+			m.mu.RUnlock()
+			m.mu.Lock()
 			delete(m.getData(), p)
-			m.Unlock()
-			m.RLock()
+			m.mu.Unlock()
+			m.mu.RLock()
 		}
 	}
 	return nil
@@ -277,20 +277,20 @@ func (m *MemMapFs) Rename(oldname, newname string) error {
 		return nil
 	}
 
-	m.RLock()
-	defer m.RUnlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	if _, ok := m.getData()[oldname]; ok {
 		if _, ok := m.getData()[newname]; !ok {
-			m.RUnlock()
-			m.Lock()
+			m.mu.RUnlock()
+			m.mu.Lock()
 			m.unRegisterWithParent(oldname)
 			file := m.getData()[oldname].(*mem.File)
 			delete(m.getData(), oldname)
 			mem.ChangeFileName(file, newname)
 			m.getData()[newname] = file
 			m.registerWithParent(file)
-			m.Unlock()
-			m.RLock()
+			m.mu.Unlock()
+			m.mu.RLock()
 		} else {
 			return ErrDestinationExists
 		}
@@ -318,9 +318,9 @@ func (m *MemMapFs) Chmod(name string, mode os.FileMode) error {
 
 	ff, ok := f.(*mem.File)
 	if ok {
-		m.Lock()
+		m.mu.Lock()
 		mem.SetMode(ff, mode)
-		m.Unlock()
+		m.mu.Unlock()
 	} else {
 		return errors.New("Unable to Chmod Memory File")
 	}
@@ -336,9 +336,9 @@ func (m *MemMapFs) Chtimes(name string, atime time.Time, mtime time.Time) error 
 
 	ff, ok := f.(*mem.File)
 	if ok {
-		m.Lock()
+		m.mu.Lock()
 		mem.SetModTime(ff, mtime)
-		m.Unlock()
+		m.mu.Unlock()
 	} else {
 		return errors.New("Unable to Chtime Memory File")
 	}
