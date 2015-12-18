@@ -26,8 +26,6 @@ import (
 	"github.com/spf13/afero/mem"
 )
 
-var mux = &sync.Mutex{}
-
 type MemMapFs struct {
 	sync.RWMutex
 	data map[string]File
