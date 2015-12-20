@@ -15,12 +15,16 @@ import (
 // of filtering (e.g. admins get write access, normal users just readonly)
 type FilterFs interface {
 	Fs
-	AddFilter(Fs)
+	AddFilter(FilterFs)
+	SetSource(Fs)
 }
 
 type Filter struct {
-	chain  []Fs
 	source Fs
+}
+
+func (f *Filter) SetSource(fs Fs) {
+	f.source = fs
 }
 
 // create a new FilterFs that implements Fs, argument must be an Fs, not
@@ -30,101 +34,44 @@ func NewFilter(fs Fs) FilterFs {
 }
 
 // prepend a filter in the filter chain
-func (f *Filter) AddFilter(fs Fs) {
-	c := []Fs{fs}
-	for _, ch := range f.chain {
-		c = append(c, ch)
-	}
-	f.chain = c
+func (f *Filter) AddFilter(fs FilterFs) {
+	fs.SetSource(f.source)
+	f.source = fs
 }
 
 func (f *Filter) Create(name string) (file File, err error) {
-	for _, c := range f.chain {
-		file, err = c.Create(name)
-		if err != nil {
-			return
-		}
-	}
 	return f.source.Create(name)
 }
 
-func (f *Filter) Mkdir(name string, perm os.FileMode) (err error) {
-	for _, c := range f.chain {
-		err = c.Mkdir(name, perm)
-		if err != nil {
-			return
-		}
-	}
+func (f *Filter) Mkdir(name string, perm os.FileMode) (error) {
 	return f.source.Mkdir(name, perm)
 }
 
-func (f *Filter) MkdirAll(path string, perm os.FileMode) (err error) {
-	for _, c := range f.chain {
-		err = c.MkdirAll(path, perm)
-		if err != nil {
-			return
-		}
-	}
+func (f *Filter) MkdirAll(path string, perm os.FileMode) (error) {
 	return f.source.MkdirAll(path, perm)
 }
 
-func (f *Filter) Open(name string) (file File, err error) {
-	for _, c := range f.chain {
-		file, err = c.Open(name)
-		if err != nil {
-			return
-		}
-	}
+func (f *Filter) Open(name string) (File, error) {
 	return f.source.Open(name)
 }
 
-func (f *Filter) OpenFile(name string, flag int, perm os.FileMode) (file File, err error) {
-	for _, c := range f.chain {
-		file, err = c.OpenFile(name, flag, perm)
-		if err != nil {
-			return
-		}
-	}
+func (f *Filter) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
 	return f.source.OpenFile(name, flag, perm)
 }
 
-func (f *Filter) Remove(name string) (err error) {
-	for _, c := range f.chain {
-		err = c.Remove(name)
-		if err != nil {
-			return
-		}
-	}
+func (f *Filter) Remove(name string) (error) {
 	return f.source.Remove(name)
 }
 
-func (f *Filter) RemoveAll(path string) (err error) {
-	for _, c := range f.chain {
-		err = c.RemoveAll(path)
-		if err != nil {
-			return
-		}
-	}
+func (f *Filter) RemoveAll(path string) (error) {
 	return f.source.RemoveAll(path)
 }
 
-func (f *Filter) Rename(oldname, newname string) (err error) {
-	for _, c := range f.chain {
-		err = c.Rename(oldname, newname)
-		if err != nil {
-			return
-		}
-	}
+func (f *Filter) Rename(oldname, newname string) (error) {
 	return f.source.Rename(oldname, newname)
 }
 
-func (f *Filter) Stat(name string) (fi os.FileInfo, err error) {
-	for _, c := range f.chain {
-		fi, err = c.Stat(name)
-		if err != nil {
-			return
-		}
-	}
+func (f *Filter) Stat(name string) (os.FileInfo, error) {
 	return f.source.Stat(name)
 }
 
@@ -132,22 +79,10 @@ func (f *Filter) Name() string {
 	return f.source.Name()
 }
 
-func (f *Filter) Chmod(name string, mode os.FileMode) (err error) {
-	for _, c := range f.chain {
-		err = c.Chmod(name, mode)
-		if err != nil {
-			return
-		}
-	}
+func (f *Filter) Chmod(name string, mode os.FileMode) (error) {
 	return f.source.Chmod(name, mode)
 }
 
-func (f *Filter) Chtimes(name string, atime, mtime time.Time) (err error) {
-	for _, c := range f.chain {
-		err = c.Chtimes(name, atime, mtime)
-		if err != nil {
-			return
-		}
-	}
+func (f *Filter) Chtimes(name string, atime, mtime time.Time) (error) {
 	return f.source.Chtimes(name, atime, mtime)
 }
