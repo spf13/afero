@@ -284,17 +284,21 @@ like
     ROFs.AddFilter(afero.NewReadonlyFilter())
 ```
 The ROFs behaves like a normal afero.Fs now, with the only exception, that it
-provides a readonly view of the underlying Fs.
+provides a readonly view of the underlying AppFs.
 
-The FilterFs is run before the source Fs, any non nil error is returned
-to the caller without going to the source Fs. If every filter in the
-chain returns a nil error, the call is sent to the source Fs.
+The FilterFs is run before the source Fs and may intercept the call to the
+underlying source Fs and can modify the returned data. If it does not wish to
+do so, it just returns the data from the source.
 
-The `AddFilter` adds a new filter before any existing filters.
+The `AddFilter` adds a new FilterFs before any existing filters.
 
 ## Available filters
 
 * NewReadonlyFilter() - provide a read only view of the source Fs
+* NewRegexpFilter(*regexp.Regexp) - provide a filtered view on file names, any
+file (not directory) NOT matching the passed regexp will be treated as
+non-existing
+
 
 
 # About the project
