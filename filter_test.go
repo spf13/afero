@@ -1,11 +1,11 @@
 package afero
 
 import (
-//	"regexp"
+	"regexp"
 	"testing"
 )
 
-func TestReadOnly(t *testing.T) {
+func TestFilterReadOnly(t *testing.T) {
 	mfs := &MemMapFs{}
 	fs := NewFilter(mfs)
 	fs.AddFilter(NewReadonlyFilter())
@@ -16,7 +16,7 @@ func TestReadOnly(t *testing.T) {
 	t.Logf("ERR=%s", err)
 }
 
-func TestReadonlyRemoveAndRead(t *testing.T) {
+func TestFilterReadonlyRemoveAndRead(t *testing.T) {
 	mfs := &MemMapFs{}
 	fh, err := mfs.Create("/file.txt")
 	fh.Write([]byte("content here"))
@@ -52,11 +52,11 @@ func TestReadonlyRemoveAndRead(t *testing.T) {
 		t.Errorf("File still present")
 	}
 }
-/*
-func TestRegexp(t *testing.T) {
+
+func TestFilterRegexp(t *testing.T) {
 	mfs := &MemMapFs{}
 	fs := NewFilter(mfs)
-	fs.AddFilter(NewRegexpFilter(regexp.MustCompile(`\.txt$`), nil))
+	fs.AddFilter(NewRegexpFilter(regexp.MustCompile(`\.txt$`)))
 	_, err := fs.Create("/file.html")
 	if err == nil {
 		t.Errorf("Did not fail to create file")
@@ -64,15 +64,40 @@ func TestRegexp(t *testing.T) {
 	t.Logf("ERR=%s", err)
 }
 
-func TestRORegexpChain(t *testing.T) {
+func TestFilterRORegexpChain(t *testing.T) {
 	mfs := &MemMapFs{}
 	fs := NewFilter(mfs)
 	fs.AddFilter(NewReadonlyFilter())
-	fs.AddFilter(NewRegexpFilter(regexp.MustCompile(`\.txt$`), nil))
+	fs.AddFilter(NewRegexpFilter(regexp.MustCompile(`\.txt$`)))
 	_, err := fs.Create("/file.txt")
 	if err == nil {
 		t.Errorf("Did not fail to create file")
 	}
 	t.Logf("ERR=%s", err)
 }
-*/
+
+func TestFilterRegexReadDir(t *testing.T) {
+	mfs := &MemMapFs{}
+	fs := NewFilter(mfs)
+	fs.AddFilter(NewRegexpFilter(regexp.MustCompile(`\.txt$`)))
+	fs.AddFilter(NewRegexpFilter(regexp.MustCompile(`^a`)))
+
+	mfs.MkdirAll("/dir/sub", 0777)
+	for _, name := range []string{"afile.txt", "afile.html", "bfile.txt"} {
+		for _, dir := range []string{"/dir/", "/dir/sub/"} {
+			fh, _ := mfs.Create(dir + name)
+			fh.Close()
+		}
+	}
+
+	files, _ := ReadDir(fs, "/dir")
+	if len(files) != 2 { // afile.txt, sub
+		t.Errorf("Got wrong number of files: %#v", files)
+	}
+
+	f, _ := fs.Open("/dir/sub")
+	names, _ := f.Readdirnames(-1)
+	if len(names) != 1 {
+		t.Errorf("Got wrong number of names: %v", names)
+	}
+}
