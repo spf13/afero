@@ -56,13 +56,10 @@ func (m *MemMapFs) Create(name string) (File, error) {
 	return file, nil
 }
 
-func (m *MemMapFs) unRegisterWithParent(fileName string) {
+func (m *MemMapFs) unRegisterWithParent(fileName string) error {
 	f, err := m.lockfreeOpen(fileName)
 	if err != nil {
-		if os.IsNotExist(err) {
-			log.Printf("Unable to unregister \"%v\" with Parent, err: %v", fileName, err)
-		}
-		return
+		return err
 	}
 	parent := m.findParent(f)
 	if parent == nil {
@@ -71,6 +68,7 @@ func (m *MemMapFs) unRegisterWithParent(fileName string) {
 	pmem := parent.(*mem.File)
 	fmem := f.(*mem.File)
 	mem.RemoveFromMemDir(pmem, fmem)
+	return nil
 }
 
 func (m *MemMapFs) findParent(f File) File {
@@ -136,17 +134,10 @@ func (m *MemMapFs) Mkdir(name string, perm os.FileMode) error {
 	name = normalizePath(name)
 
 	m.mu.RLock()
-	x, ok := m.getData()[name]
+	_, ok := m.getData()[name]
 	m.mu.RUnlock()
 	if ok {
-		// Only return ErrFileExists if it's a file, not a directory.
-		i, err := x.Stat()
-		if !i.IsDir() {
-			return ErrFileExists
-		}
-		if err != nil {
-			return err
-		}
+		return &os.PathError{"mkdir", name, ErrFileExists}
 	} else {
 		m.mu.Lock()
 		item := mem.CreateDir(name)
@@ -158,7 +149,15 @@ func (m *MemMapFs) Mkdir(name string, perm os.FileMode) error {
 }
 
 func (m *MemMapFs) MkdirAll(path string, perm os.FileMode) error {
-	return m.Mkdir(path, perm)
+	err := m.Mkdir(path, perm)
+	if err != nil {
+		if err.(*os.PathError).Err == ErrFileExists {
+			return nil
+		} else {
+			return err
+		}
+	}
+	return nil
 }
 
 // Handle some relative paths
@@ -190,7 +189,7 @@ func (m *MemMapFs) Open(name string) (File, error) {
 	if ok {
 		return f, nil
 	} else {
-		return nil, ErrFileNotFound
+		return nil, &os.PathError{"open", name, ErrFileNotFound}
 	}
 }
 
@@ -200,8 +199,6 @@ func (m *MemMapFs) lockfreeOpen(name string) (File, error) {
 	ff, ok := f.(*mem.File)
 	if ok {
 		ff.Open()
-	}
-	if ok {
 		return f, nil
 	} else {
 		return nil, ErrFileNotFound
@@ -240,7 +237,10 @@ func (m *MemMapFs) Remove(name string) error {
 	defer m.mu.Unlock()
 
 	if _, ok := m.getData()[name]; ok {
-		m.unRegisterWithParent(name)
+		err := m.unRegisterWithParent(name)
+		if err != nil {
+			return &os.PathError{"remove", name, err}
+		}
 		delete(m.getData(), name)
 	} else {
 		return &os.PathError{"remove", name, os.ErrNotExist}
@@ -292,10 +292,10 @@ func (m *MemMapFs) Rename(oldname, newname string) error {
 			m.mu.Unlock()
 			m.mu.RLock()
 		} else {
-			return ErrDestinationExists
+			return &os.PathError{"rename", newname, ErrDestinationExists}
 		}
 	} else {
-		return ErrFileNotFound
+		return &os.PathError{"rename", oldname, ErrFileNotFound}
 	}
 	return nil
 }
