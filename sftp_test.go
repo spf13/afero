@@ -18,7 +18,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/xor-gate/afero"
+	"github.com/spf13/afero"
 
 	"golang.org/x/crypto/ssh"
 	"github.com/pkg/sftp"
