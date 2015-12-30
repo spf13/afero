@@ -278,7 +278,6 @@ implement:
 * TAR
 * S3
 * Mem buffering to disk/network
-* BasePath (where all paths are relative to a fixed basepath)
 
 # Filters
 
@@ -299,12 +298,20 @@ The `AddFilter` adds a new FilterFs before any existing filters.
 
 ## Available filters
 
-* NewReadonlyFilter() - provide a read only view of the source Fs
-* NewRegexpFilter(*regexp.Regexp) - provide a filtered view on file names, any
-file (not directory) NOT matching the passed regexp will be treated as
-non-existing
+# NewBasePathFs(Fs, path)
 
+The BasePathFs restricts all operations to a given path within an Fs.
+The given file name to the operations on this Fs will be prepended with
+the base path before calling the base Fs.
 
+# NewReadonlyFilter()
+
+provide a read only view of the source Fs
+
+# NewRegexpFilter(\*regexp.Regexp)
+
+provide a filtered view on file names, any file (not directory) NOT matching
+the passed regexp will be treated as non-existing
 
 # About the project
 
