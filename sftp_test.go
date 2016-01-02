@@ -81,7 +81,8 @@ func (ctx *SftpFsContext) Disconnect() error {
 	return nil
 }
 
-func RunSftpServer() {
+// TODO for such a weird reason rootpath is "." when writing "file1" with afero sftp backend
+func RunSftpServer(rootpath string) {
 	var (
 		readOnly      bool
 		debugLevelStr string
@@ -91,15 +92,15 @@ func RunSftpServer() {
 	)
 
 	flag.BoolVar(&readOnly, "R", false, "read-only server")
-	flag.BoolVar(&debugStderr, "e", false, "debug to stderr")
+	flag.BoolVar(&debugStderr, "e", true, "debug to stderr")
 	flag.StringVar(&debugLevelStr, "l", "none", "debug level")
-	flag.StringVar(&rootDir, "root", ".", "root directory")
+	flag.StringVar(&rootDir, "root", rootpath, "root directory")
 	flag.Parse()
 
 	debugStream := ioutil.Discard
 	if debugStderr {
 		debugStream = os.Stderr
-		debugLevel = 1
+		debugLevel = 5
 	}
 
 	// An SSH server is represented by a ServerConfig, which holds
@@ -188,7 +189,7 @@ func RunSftpServer() {
 			}
 		}(requests)
 
-		server, err := sftp.NewServer(channel, channel, debugStream, debugLevel, readOnly, rootDir)
+		server, err := sftp.NewServer(channel, channel, debugStream, debugLevel, readOnly, rootpath)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -197,7 +198,6 @@ func RunSftpServer() {
 		}
 	}
 }
-
 
 // MakeSSHKeyPair make a pair of public and private keys for SSH access.
 // Public key is encoded in the format for inclusion in an OpenSSH authorized_keys file.
@@ -233,7 +233,7 @@ func TestSftpCreate(t *testing.T) {
 	os.Mkdir("./test", 0777)
 	MakeSSHKeyPair(1024, "./test/id_rsa.pub", "./test/id_rsa")
 
-	go RunSftpServer()
+	go RunSftpServer("./test/")
 	time.Sleep(2 * time.Second)
 
 	ctx, err := SftpConnect("test", "test", "localhost:2022")
@@ -256,8 +256,8 @@ func TestSftpCreate(t *testing.T) {
 	}
 	defer file.Close()
 
-	file.Write([]byte("whohoo\n"))
-	file.WriteString("sdsdsdsdsddssdsd")
+	file.Write([]byte("hello\t"))
+	file.WriteString("world!\n")
 
 	f1, err := AppFs.Open("file1")
 	if err != nil {
@@ -270,5 +270,5 @@ func TestSftpCreate(t *testing.T) {
 	_, err = f1.Read(b)
 	fmt.Println(string(b))
 
-	AppFs.Remove("test")
+	// TODO check here if "hello\tworld\n" is in buffer b
 }
