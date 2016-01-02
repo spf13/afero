@@ -132,9 +132,9 @@ func TestUnionCacheExpire(t *testing.T) {
 
 	fh, _ = base.Create("/data/file.txt")
 	fh.WriteString("Another test")
+	time.Sleep(2 * time.Second)
 	fh.Close()
 
-	time.Sleep(2 * time.Second)
 	data, _ := ReadFile(ufs, "/data/file.txt")
 	if string(data) != "Another test" {
         t.Errorf("cache time failed: <%s>", data)
