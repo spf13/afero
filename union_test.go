@@ -137,6 +137,6 @@ func TestUnionCacheExpire(t *testing.T) {
 	time.Sleep(1 * time.Second)
 	data, _ := ReadFile(ufs, "/data/file.txt")
 	if string(data) != "Another test" {
-		t.Errorf("cache time failed")
+        t.Errorf("cache time failed: <%s>", data)
 	}
 }
