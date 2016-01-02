@@ -366,6 +366,7 @@ Names in no particular order:
 * [spf13](https://github.com/spf13)
 * [jaqx0r](https://github.com/jaqx0r)
 * [mbertschler](https://github.com/mbertschler)
+* [xor-gate](https://github.com/xor-gate)
 
 ## License
 
