@@ -37,7 +37,10 @@ type SftpFsContext struct {
 	sftpc  *sftp.Client
 }
 
+// TODO we only connect with hardcoded user+pass for now
+// it should be possible to use $HOME/.ssh/id_rsa to login into the stub sftp server
 func SftpConnect(user, password, host string) (*SftpFsContext, error) {
+/*
 	pemBytes, err := ioutil.ReadFile(os.Getenv("HOME") + "/.ssh/id_rsa")
 	if err != nil {
 		return nil,err
@@ -53,6 +56,14 @@ func SftpConnect(user, password, host string) (*SftpFsContext, error) {
 		Auth: []ssh.AuthMethod{
 			ssh.Password(password),
 			ssh.PublicKeys(signer),
+		},
+	}
+*/
+
+	sshcfg := &ssh.ClientConfig{
+		User: user,
+		Auth: []ssh.AuthMethod{
+			ssh.Password(password),
 		},
 	}
 
@@ -100,7 +111,7 @@ func RunSftpServer(rootpath string) {
 	debugStream := ioutil.Discard
 	if debugStderr {
 		debugStream = os.Stderr
-		debugLevel = 5
+		debugLevel = 1
 	}
 
 	// An SSH server is represented by a ServerConfig, which holds
@@ -234,7 +245,7 @@ func TestSftpCreate(t *testing.T) {
 	MakeSSHKeyPair(1024, "./test/id_rsa.pub", "./test/id_rsa")
 
 	go RunSftpServer("./test/")
-	time.Sleep(2 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	ctx, err := SftpConnect("test", "test", "localhost:2022")
 	if err != nil {
@@ -248,6 +259,7 @@ func TestSftpCreate(t *testing.T) {
 
 	AppFs.MkdirAll("test/dir1/dir2/dir3", os.FileMode(0777))
 	AppFs.Mkdir("test/foo", os.FileMode(0000))
+	AppFs.Chmod("test/foo", os.FileMode(0700))
 	AppFs.Mkdir("test/bar", os.FileMode(0777))
 
 	file, err := AppFs.Create("file1")
