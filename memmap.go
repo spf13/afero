@@ -207,6 +207,9 @@ func (m *MemMapFs) lockfreeOpen(name string) (File, error) {
 
 func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
 	file, err := m.Open(name)
+	if flag&os.O_RDONLY > 0 {
+		return file, err
+	}
 	if os.IsNotExist(err) && (flag&os.O_CREATE > 0) {
 		file, err = m.Create(name)
 	}
