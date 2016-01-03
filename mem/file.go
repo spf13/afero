@@ -66,20 +66,20 @@ func CreateDir(name string) *FileData {
 	return &FileData{name: name, memDir: &DirMap{}, dir: true}
 }
 
-func ChangeFileName(f *File, newname string) {
-	f.fileData.name = newname
+func ChangeFileName(f *FileData, newname string) {
+	f.name = newname
 }
 
-func SetMode(f *File, mode os.FileMode) {
-	f.fileData.mode = mode
+func SetMode(f *FileData, mode os.FileMode) {
+	f.mode = mode
 }
 
-func SetModTime(f *File, mtime time.Time) {
-	f.fileData.modtime = mtime
+func SetModTime(f *FileData, mtime time.Time) {
+	f.modtime = mtime
 }
 
-func GetFileInfo(f *File) *FileInfo {
-	return &FileInfo{f.fileData}
+func GetFileInfo(f *FileData) *FileInfo {
+	return &FileInfo{f}
 }
 
 func (f *File) Open() error {
