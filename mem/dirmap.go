@@ -15,25 +15,25 @@ package mem
 
 import "sort"
 
-type DirMap map[string]File
+type DirMap map[string]*FileData
 
-func (m DirMap) Len() int      { return len(m) }
-func (m DirMap) Add(f File)    { m[f.Name()] = f }
-func (m DirMap) Remove(f File) { delete(m, f.Name()) }
-func (m DirMap) Files() (files []File) {
+func (m DirMap) Len() int       { return len(m) }
+func (m DirMap) Add(f *File)    { m[f.fileData.name] = f.fileData }
+func (m DirMap) Remove(f *File) { delete(m, f.fileData.name) }
+func (m DirMap) Files() (files []*File) {
 	for _, f := range m {
-		files = append(files, f)
+		files = append(files, NewFileHandle(f))
 	}
 	sort.Sort(filesSorter(files))
 	return files
 }
 
-type filesSorter []File
+type filesSorter []*File
 
 // implement sort.Interface for []File
 func (s filesSorter) Len() int           { return len(s) }
 func (s filesSorter) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
-func (s filesSorter) Less(i, j int) bool { return s[i].Name() < s[j].Name() }
+func (s filesSorter) Less(i, j int) bool { return s[i].fileData.name < s[j].fileData.name }
 
 func (m DirMap) Names() (names []string) {
 	for x := range m {

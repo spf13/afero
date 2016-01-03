@@ -106,10 +106,9 @@ func TestMultipleOpenFiles(t *testing.T) {
 	defer removeAllTestFiles(t)
 	const fileName = "./afero-demo2.txt"
 
-	var fss = []Fs{&OsFs{}, &MemMapFs{}}
-	var data = make([][]byte, len(fss))
+	var data = make([][]byte, len(Fss))
 
-	for i, fs := range fss {
+	for i, fs := range Fss {
 		dir := testDir(fs)
 		path := filepath.Join(dir, fileName)
 		fh1, err := fs.Create(path)
@@ -120,18 +119,36 @@ func TestMultipleOpenFiles(t *testing.T) {
 		if err != nil {
 			t.Error("fh.Write failed: " + err.Error())
 		}
-		fh1.Seek(0, os.SEEK_SET)
+		_, err = fh1.Seek(0, os.SEEK_SET)
+		if err != nil {
+			t.Error(err)
+		}
 
 		fh2, err := fs.OpenFile(path, os.O_RDWR, 0777)
 		if err != nil {
 			t.Error("fs.OpenFile failed: " + err.Error())
 		}
-		fh2.Seek(0, os.SEEK_END)
-		fh2.Write([]byte("data"))
-		fh2.Close()
+		_, err = fh2.Seek(0, os.SEEK_END)
+		if err != nil {
+			t.Error(err)
+		}
+		_, err = fh2.Write([]byte("data"))
+		if err != nil {
+			t.Error(err)
+		}
+		err = fh2.Close()
+		if err != nil {
+			t.Error(err)
+		}
 
-		fh1.Write([]byte("data"))
-		fh1.Close()
+		_, err = fh1.Write([]byte("data"))
+		if err != nil {
+			t.Error(err)
+		}
+		err = fh1.Close()
+		if err != nil {
+			t.Error(err)
+		}
 		// the file now should contain "datadata"
 		data[i], err = ReadFile(fs, path)
 		if err != nil {
@@ -139,14 +156,14 @@ func TestMultipleOpenFiles(t *testing.T) {
 		}
 	}
 
-	for i, fs := range fss {
+	for i, fs := range Fss {
 		if i == 0 {
 			continue
 		}
 		if string(data[0]) != string(data[i]) {
-			t.Errorf("OsFs and %s don't behave the same\n"+
-				"OsFs: \"%s\"\n%s: \"%s\"\n",
-				fs.Name(), data[0], fs.Name(), data[i])
+			t.Errorf("%s and %s don't behave the same\n"+
+				"%s: \"%s\"\n%s: \"%s\"\n",
+				Fss[0].Name(), fs.Name(), Fss[0].Name(), data[0], fs.Name(), data[i])
 		}
 	}
 }

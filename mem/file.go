@@ -32,63 +32,74 @@ type File struct {
 	// atomic requires 64-bit alignment for struct field access
 	at           int64
 	readDirCount int64
+	closed       bool
+	fileData     *FileData
+}
 
+func NewFileHandle(data *FileData) *File {
+	return &File{fileData: data}
+}
+
+func (f File) Data() *FileData {
+	return f.fileData
+}
+
+type FileData struct {
 	sync.Mutex
 	name    string
 	data    []byte
 	memDir  Dir
 	dir     bool
-	closed  bool
 	mode    os.FileMode
 	modtime time.Time
 }
 
-func CreateFile(name string) *File {
-	return &File{name: name, mode: os.ModeTemporary, modtime: time.Now()}
+func CreateFile(name string) *FileData {
+	return &FileData{name: name, mode: os.ModeTemporary, modtime: time.Now()}
 }
 
-func CreateDir(name string) *File {
-	return &File{name: name, memDir: &DirMap{}, dir: true}
+func CreateDir(name string) *FileData {
+	return &FileData{name: name, memDir: &DirMap{}, dir: true}
 }
 
 func ChangeFileName(f *File, newname string) {
-	f.name = newname
+	f.fileData.name = newname
 }
 
 func SetMode(f *File, mode os.FileMode) {
-	f.mode = mode
+	f.fileData.mode = mode
 }
 
 func SetModTime(f *File, mtime time.Time) {
-	f.modtime = mtime
+	f.fileData.modtime = mtime
 }
 
 func GetFileInfo(f *File) *FileInfo {
-	return &FileInfo{file: f}
+	return &FileInfo{f.fileData}
 }
 
 func (f *File) Open() error {
 	atomic.StoreInt64(&f.at, 0)
 	atomic.StoreInt64(&f.readDirCount, 0)
-	f.Lock()
+	f.fileData.Lock()
 	f.closed = false
-	f.Unlock()
+	f.fileData.Unlock()
 	return nil
 }
 
 func (f *File) Close() error {
-	f.Lock()
+	f.fileData.Lock()
 	f.closed = true
-	f.Unlock()
+	f.fileData.Unlock()
 	return nil
 }
 
 func (f *File) Name() string {
-	return f.name
+	return f.fileData.name
 }
 
 func (f *File) Stat() (os.FileInfo, error) {
-	return &FileInfo{f}, nil
+	return &FileInfo{f.fileData}, nil
 }
 
 func (f *File) Sync() error {
@@ -98,8 +109,8 @@ func (f *File) Sync() error {
 func (f *File) Readdir(count int) (res []os.FileInfo, err error) {
 	var outLength int64
 
-	f.Lock()
-	files := f.memDir.Files()[f.readDirCount:]
+	f.fileData.Lock()
+	files := f.fileData.memDir.Files()[f.readDirCount:]
 	if count > 0 {
 		if len(files) < count {
 			outLength = int64(len(files))
@@ -113,11 +124,11 @@ func (f *File) Readdir(count int) (res []os.FileInfo, err error) {
 		outLength = int64(len(files))
 	}
 	f.readDirCount += outLength
-	f.Unlock()
+	f.fileData.Unlock()
 
 	res = make([]os.FileInfo, outLength)
 	for i := range res {
-		res[i], _ = files[i].Stat()
+		res[i] = &FileInfo{files[i].fileData}
 	}
 
 	return res, err
@@ -133,20 +144,20 @@ func (f *File) Readdirnames(n int) (names []string, err error) {
 }
 
 func (f *File) Read(b []byte) (n int, err error) {
-	f.Lock()
-	defer f.Unlock()
+	f.fileData.Lock()
+	defer f.fileData.Unlock()
 	if f.closed == true {
 		return 0, ErrFileClosed
 	}
-	if len(b) > 0 && int(f.at) == len(f.data) {
+	if len(b) > 0 && int(f.at) == len(f.fileData.data) {
 		return 0, io.EOF
 	}
-	if len(f.data)-int(f.at) >= len(b) {
+	if len(f.fileData.data)-int(f.at) >= len(b) {
 		n = len(b)
 	} else {
-		n = len(f.data) - int(f.at)
+		n = len(f.fileData.data) - int(f.at)
 	}
-	copy(b, f.data[f.at:f.at+int64(n)])
+	copy(b, f.fileData.data[f.at:f.at+int64(n)])
 	atomic.AddInt64(&f.at, int64(n))
 	return
 }
@@ -163,11 +174,11 @@ func (f *File) Truncate(size int64) error {
 	if size < 0 {
 		return ErrOutOfRange
 	}
-	if size > int64(len(f.data)) {
-		diff := size - int64(len(f.data))
-		f.data = append(f.data, bytes.Repeat([]byte{00}, int(diff))...)
+	if size > int64(len(f.fileData.data)) {
+		diff := size - int64(len(f.fileData.data))
+		f.fileData.data = append(f.fileData.data, bytes.Repeat([]byte{00}, int(diff))...)
 	} else {
-		f.data = f.data[0:size]
+		f.fileData.data = f.fileData.data[0:size]
 	}
 	return nil
 }
@@ -182,7 +193,7 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 	case 1:
 		atomic.AddInt64(&f.at, int64(offset))
 	case 2:
-		atomic.StoreInt64(&f.at, int64(len(f.data))+offset)
+		atomic.StoreInt64(&f.at, int64(len(f.fileData.data))+offset)
 	}
 	return f.at, nil
 }
@@ -190,22 +201,22 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 func (f *File) Write(b []byte) (n int, err error) {
 	n = len(b)
 	cur := atomic.LoadInt64(&f.at)
-	f.Lock()
-	defer f.Unlock()
-	diff := cur - int64(len(f.data))
+	f.fileData.Lock()
+	defer f.fileData.Unlock()
+	diff := cur - int64(len(f.fileData.data))
 	var tail []byte
-	if n+int(cur) < len(f.data) {
-		tail = f.data[n+int(cur):]
+	if n+int(cur) < len(f.fileData.data) {
+		tail = f.fileData.data[n+int(cur):]
 	}
 	if diff > 0 {
-		f.data = append(bytes.Repeat([]byte{00}, int(diff)), b...)
-		f.data = append(f.data, tail...)
+		f.fileData.data = append(bytes.Repeat([]byte{00}, int(diff)), b...)
+		f.fileData.data = append(f.fileData.data, tail...)
 	} else {
-		f.data = append(f.data[:cur], b...)
-		f.data = append(f.data, tail...)
+		f.fileData.data = append(f.fileData.data[:cur], b...)
+		f.fileData.data = append(f.fileData.data, tail...)
 	}
 
-	atomic.StoreInt64(&f.at, int64(len(f.data)))
+	atomic.StoreInt64(&f.at, int64(len(f.fileData.data)))
 	return
 }
 
@@ -219,27 +230,27 @@ func (f *File) WriteString(s string) (ret int, err error) {
 }
 
 func (f *File) Info() *FileInfo {
-	return &FileInfo{file: f}
+	return &FileInfo{f.fileData}
 }
 
 type FileInfo struct {
-	file *File
+	*FileData
 }
 
 // Implements os.FileInfo
 func (s *FileInfo) Name() string {
-	_, name := filepath.Split(s.file.Name())
+	_, name := filepath.Split(s.name)
 	return name
 }
-func (s *FileInfo) Mode() os.FileMode  { return s.file.mode }
-func (s *FileInfo) ModTime() time.Time { return s.file.modtime }
-func (s *FileInfo) IsDir() bool        { return s.file.dir }
+func (s *FileInfo) Mode() os.FileMode  { return s.mode }
+func (s *FileInfo) ModTime() time.Time { return s.modtime }
+func (s *FileInfo) IsDir() bool        { return s.dir }
 func (s *FileInfo) Sys() interface{}   { return nil }
 func (s *FileInfo) Size() int64 {
 	if s.IsDir() {
 		return int64(42)
 	}
-	return int64(len(s.file.data))
+	return int64(len(s.data))
 }
 
 var (

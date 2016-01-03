@@ -16,22 +16,22 @@ package mem
 type Dir interface {
 	Len() int
 	Names() []string
-	Files() []File
-	Add(File)
-	Remove(File)
+	Files() []*File
+	Add(*File)
+	Remove(*File)
 }
 
 func RemoveFromMemDir(dir *File, f *File) {
-	dir.memDir.Remove(*f)
+	dir.fileData.memDir.Remove(f)
 }
 
 func AddToMemDir(dir *File, f *File) {
-	dir.memDir.Add(*f)
+	dir.fileData.memDir.Add(f)
 }
 
 func InitializeDir(d *File) {
-	if d.memDir == nil {
-		d.dir = true
-		d.memDir = &DirMap{}
+	if d.fileData.memDir == nil {
+		d.fileData.dir = true
+		d.fileData.memDir = &DirMap{}
 	}
 }
