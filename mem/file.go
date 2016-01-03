@@ -54,6 +54,10 @@ type FileData struct {
 	modtime time.Time
 }
 
+func (d FileData) Name() string {
+	return d.name
+}
+
 func CreateFile(name string) *FileData {
 	return &FileData{name: name, mode: os.ModeTemporary, modtime: time.Now()}
 }
@@ -128,7 +132,7 @@ func (f *File) Readdir(count int) (res []os.FileInfo, err error) {
 
 	res = make([]os.FileInfo, outLength)
 	for i := range res {
-		res[i] = &FileInfo{files[i].fileData}
+		res[i] = &FileInfo{files[i]}
 	}
 
 	return res, err

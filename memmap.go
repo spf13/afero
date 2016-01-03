@@ -50,11 +50,9 @@ func (m *MemMapFs) Create(name string) (File, error) {
 	m.mu.Lock()
 	file := mem.CreateFile(name)
 	m.getData()[name] = file
-
-	handle := mem.NewFileHandle(file)
-	m.registerWithParent(handle)
+	m.registerWithParent(file)
 	m.mu.Unlock()
-	return handle, nil
+	return mem.NewFileHandle(file), nil
 }
 
 func (m *MemMapFs) unRegisterWithParent(fileName string) error {
@@ -66,7 +64,7 @@ func (m *MemMapFs) unRegisterWithParent(fileName string) error {
 	if parent == nil {
 		log.Fatal("parent of ", f.Name(), " is nil")
 	}
-	mem.RemoveFromMemDir(parent, f)
+	mem.RemoveFromMemDir(parent.Data(), f.Data())
 	return nil
 }
 
@@ -80,11 +78,11 @@ func (m *MemMapFs) findParent(f *mem.File) *mem.File {
 	return pfile
 }
 
-func (m *MemMapFs) registerWithParent(f *mem.File) {
+func (m *MemMapFs) registerWithParent(f *mem.FileData) {
 	if f == nil {
 		return
 	}
-	parent := m.findParent(f)
+	parent := m.findParent(mem.NewFileHandle(f))
 	if parent == nil {
 		pdir := filepath.Dir(filepath.Clean(f.Name()))
 		err := m.lockfreeMkdir(pdir, 0777)
@@ -99,8 +97,8 @@ func (m *MemMapFs) registerWithParent(f *mem.File) {
 		}
 	}
 
-	mem.InitializeDir(parent)
-	mem.AddToMemDir(parent, f)
+	mem.InitializeDir(parent.Data())
+	mem.AddToMemDir(parent.Data(), f)
 }
 
 func (m *MemMapFs) lockfreeMkdir(name string, perm os.FileMode) error {
@@ -118,7 +116,7 @@ func (m *MemMapFs) lockfreeMkdir(name string, perm os.FileMode) error {
 	} else {
 		item := mem.CreateDir(name)
 		m.getData()[name] = item
-		m.registerWithParent(mem.NewFileHandle(item))
+		m.registerWithParent(item)
 	}
 	return nil
 }
@@ -135,7 +133,7 @@ func (m *MemMapFs) Mkdir(name string, perm os.FileMode) error {
 		m.mu.Lock()
 		item := mem.CreateDir(name)
 		m.getData()[name] = item
-		m.registerWithParent(mem.NewFileHandle(item))
+		m.registerWithParent(item)
 		m.mu.Unlock()
 	}
 	return nil
@@ -274,11 +272,10 @@ func (m *MemMapFs) Rename(oldname, newname string) error {
 			m.mu.Lock()
 			m.unRegisterWithParent(oldname)
 			fileData := m.getData()[oldname]
-			file := mem.NewFileHandle(fileData)
 			delete(m.getData(), oldname)
-			mem.ChangeFileName(file, newname)
+			mem.ChangeFileName(mem.NewFileHandle(fileData), newname)
 			m.getData()[newname] = fileData
-			m.registerWithParent(file)
+			m.registerWithParent(fileData)
 			m.mu.Unlock()
 			m.mu.RLock()
 		} else {
