@@ -14,7 +14,6 @@
 package afero
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -28,15 +27,15 @@ import (
 
 type MemMapFs struct {
 	mu   sync.RWMutex
-	data map[string]File
+	data map[string]*mem.FileData
 	init sync.Once
 }
 
 var memfsInit sync.Once
 
-func (m *MemMapFs) getData() map[string]File {
+func (m *MemMapFs) getData() map[string]*mem.FileData {
 	m.init.Do(func() {
-		m.data = make(map[string]File)
+		m.data = make(map[string]*mem.FileData)
 		// Root should always exist, right?
 		// TODO: what about windows?
 		m.data[FilePathSeparator] = mem.CreateDir(FilePathSeparator)
@@ -53,7 +52,7 @@ func (m *MemMapFs) Create(name string) (File, error) {
 	m.getData()[name] = file
 	m.registerWithParent(file)
 	m.mu.Unlock()
-	return file, nil
+	return mem.NewFileHandle(file), nil
 }
 
 func (m *MemMapFs) unRegisterWithParent(fileName string) error {
@@ -65,13 +64,11 @@ func (m *MemMapFs) unRegisterWithParent(fileName string) error {
 	if parent == nil {
 		log.Fatal("parent of ", f.Name(), " is nil")
 	}
-	pmem := parent.(*mem.File)
-	fmem := f.(*mem.File)
-	mem.RemoveFromMemDir(pmem, fmem)
+	mem.RemoveFromMemDir(parent, f)
 	return nil
 }
 
-func (m *MemMapFs) findParent(f File) File {
+func (m *MemMapFs) findParent(f *mem.FileData) *mem.FileData {
 	pdir, _ := filepath.Split(f.Name())
 	pdir = filepath.Clean(pdir)
 	pfile, err := m.lockfreeOpen(pdir)
@@ -81,7 +78,7 @@ func (m *MemMapFs) findParent(f File) File {
 	return pfile
 }
 
-func (m *MemMapFs) registerWithParent(f File) {
+func (m *MemMapFs) registerWithParent(f *mem.FileData) {
 	if f == nil {
 		return
 	}
@@ -99,15 +96,9 @@ func (m *MemMapFs) registerWithParent(f File) {
 			return
 		}
 	}
-	pmem := parent.(*mem.File)
-	fmem := f.(*mem.File)
 
-	// TODO(mbertschler): memDir is only nil when it was not made with Mkdir
-	// or lockfreeMkdir. In this case the parent is also not a real directory.
-	// This currently only happens for the file ".".
-	// This is a quick hack to make the library usable with relative paths.
-	mem.InitializeDir(pmem)
-	mem.AddToMemDir(pmem, fmem)
+	mem.InitializeDir(parent)
+	mem.AddToMemDir(parent, f)
 }
 
 func (m *MemMapFs) lockfreeMkdir(name string, perm os.FileMode) error {
@@ -115,12 +106,9 @@ func (m *MemMapFs) lockfreeMkdir(name string, perm os.FileMode) error {
 	x, ok := m.getData()[name]
 	if ok {
 		// Only return ErrFileExists if it's a file, not a directory.
-		i, err := x.Stat()
+		i := mem.FileInfo{x}
 		if !i.IsDir() {
 			return ErrFileExists
-		}
-		if err != nil {
-			return err
 		}
 	} else {
 		item := mem.CreateDir(name)
@@ -179,26 +167,17 @@ func (m *MemMapFs) Open(name string) (File, error) {
 
 	m.mu.RLock()
 	f, ok := m.getData()[name]
-	ff, ok := f.(*mem.File)
-
-	if ok {
-		ff.Open()
-	}
 	m.mu.RUnlock()
-
-	if ok {
-		return f, nil
-	} else {
+	if !ok {
 		return nil, &os.PathError{"open", name, ErrFileNotFound}
 	}
+	return mem.NewFileHandle(f), nil
 }
 
-func (m *MemMapFs) lockfreeOpen(name string) (File, error) {
+func (m *MemMapFs) lockfreeOpen(name string) (*mem.FileData, error) {
 	name = normalizePath(name)
 	f, ok := m.getData()[name]
-	ff, ok := f.(*mem.File)
 	if ok {
-		ff.Open()
 		return f, nil
 	} else {
 		return nil, ErrFileNotFound
@@ -284,11 +263,11 @@ func (m *MemMapFs) Rename(oldname, newname string) error {
 			m.mu.RUnlock()
 			m.mu.Lock()
 			m.unRegisterWithParent(oldname)
-			file := m.getData()[oldname].(*mem.File)
+			fileData := m.getData()[oldname]
 			delete(m.getData(), oldname)
-			mem.ChangeFileName(file, newname)
-			m.getData()[newname] = file
-			m.registerWithParent(file)
+			mem.ChangeFileName(fileData, newname)
+			m.getData()[newname] = fileData
+			m.registerWithParent(fileData)
 			m.mu.Unlock()
 			m.mu.RLock()
 		} else {
@@ -305,7 +284,7 @@ func (m *MemMapFs) Stat(name string) (os.FileInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	fi := mem.GetFileInfo(f.(*mem.File))
+	fi := mem.GetFileInfo(f.(*mem.File).Data())
 	return fi, nil
 }
 
@@ -316,14 +295,10 @@ func (m *MemMapFs) Chmod(name string, mode os.FileMode) error {
 		return &os.PathError{"chmod", name, ErrFileNotFound}
 	}
 
-	ff, ok := f.(*mem.File)
-	if ok {
-		m.mu.Lock()
-		mem.SetMode(ff, mode)
-		m.mu.Unlock()
-	} else {
-		return errors.New("Unable to Chmod Memory File")
-	}
+	m.mu.Lock()
+	mem.SetMode(f, mode)
+	m.mu.Unlock()
+
 	return nil
 }
 
@@ -334,20 +309,16 @@ func (m *MemMapFs) Chtimes(name string, atime time.Time, mtime time.Time) error 
 		return &os.PathError{"chtimes", name, ErrFileNotFound}
 	}
 
-	ff, ok := f.(*mem.File)
-	if ok {
-		m.mu.Lock()
-		mem.SetModTime(ff, mtime)
-		m.mu.Unlock()
-	} else {
-		return errors.New("Unable to Chtime Memory File")
-	}
+	m.mu.Lock()
+	mem.SetModTime(f, mtime)
+	m.mu.Unlock()
+
 	return nil
 }
 
 func (m *MemMapFs) List() {
 	for _, x := range m.data {
-		y, _ := x.Stat()
+		y := mem.FileInfo{x}
 		fmt.Println(x.Name(), y.Size())
 	}
 }
