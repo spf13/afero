@@ -100,3 +100,53 @@ func checkPathError(t *testing.T, err error, op string) {
 		t.Error(op+":", err, "contains another os.PathError")
 	}
 }
+
+// Fails if multiple file objects use the same file.at counter in MemMapFs
+func TestMultipleOpenFiles(t *testing.T) {
+	defer removeAllTestFiles(t)
+	const fileName = "./afero-demo2.txt"
+
+	var fss = []Fs{&OsFs{}, &MemMapFs{}}
+	var data = make([][]byte, len(fss))
+
+	for i, fs := range fss {
+		dir := testDir(fs)
+		path := filepath.Join(dir, fileName)
+		fh1, err := fs.Create(path)
+		if err != nil {
+			t.Error("os.Create failed: " + err.Error())
+		}
+		_, err = fh1.Write([]byte("test"))
+		if err != nil {
+			t.Error("fh.Write failed: " + err.Error())
+		}
+		fh1.Seek(0, os.SEEK_SET)
+
+		fh2, err := fs.OpenFile(path, os.O_RDWR, 0777)
+		if err != nil {
+			t.Error("fs.OpenFile failed: " + err.Error())
+		}
+		fh2.Seek(0, os.SEEK_END)
+		fh2.Write([]byte("data"))
+		fh2.Close()
+
+		fh1.Write([]byte("data"))
+		fh1.Close()
+		// the file now should contain "datadata"
+		data[i], err = ReadFile(fs, path)
+		if err != nil {
+			t.Error(err)
+		}
+	}
+
+	for i, fs := range fss {
+		if i == 0 {
+			continue
+		}
+		if string(data[0]) != string(data[i]) {
+			t.Errorf("OsFs and %s don't behave the same\n"+
+				"OsFs: \"%s\"\n%s: \"%s\"\n",
+				fs.Name(), data[0], fs.Name(), data[i])
+		}
+	}
+}
