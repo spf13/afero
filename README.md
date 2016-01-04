@@ -263,6 +263,10 @@ backed file implementation. This can be used in other memory backed file
 systems with ease. Plans are to add a radix tree memory stored file
 system using InMemoryFile.
 
+### BasePathFs
+
+See NewBasePathFs() in the Filters section.
+
 ## Desired/possible backends
 
 The following is a short list of possible backends we hope someone will
@@ -273,7 +277,6 @@ implement:
 * TAR
 * S3
 * Mem buffering to disk/network
-* BasePath (where all paths are relative to a fixed basepath)
 
 # Filters
 
@@ -294,12 +297,20 @@ The `AddFilter` adds a new FilterFs before any existing filters.
 
 ## Available filters
 
-* NewReadonlyFilter() - provide a read only view of the source Fs
-* NewRegexpFilter(*regexp.Regexp) - provide a filtered view on file names, any
-file (not directory) NOT matching the passed regexp will be treated as
-non-existing
+# NewBasePathFs(Fs, path)
 
+The BasePathFs restricts all operations to a given path within an Fs.
+The given file name to the operations on this Fs will be prepended with
+the base path before calling the base Fs.
 
+# NewReadonlyFilter()
+
+provide a read only view of the source Fs
+
+# NewRegexpFilter(\*regexp.Regexp)
+
+provide a filtered view on file names, any file (not directory) NOT matching
+the passed regexp will be treated as non-existing
 
 # About the project
 
@@ -309,7 +320,7 @@ Afero comes from the latin roots Ad-Facere.
 
 **"Ad"** is a prefix meaning "to".
 
-**"Facere"** is a form of the root "faciō" making "make or do".
+**"Facere"** is the base form of a verb meaning "making" or "doing".
 
 The literal meaning of afero is "to make" or "to do" which seems very fitting
 for a library that allows one to make files and directories and do things with them.
