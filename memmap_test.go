@@ -104,7 +104,7 @@ func checkPathError(t *testing.T, err error, op string) {
 // Fails if multiple file objects use the same file.at counter in MemMapFs
 func TestMultipleOpenFiles(t *testing.T) {
 	defer removeAllTestFiles(t)
-	const fileName = "./afero-demo2.txt"
+	const fileName = "afero-demo2.txt"
 
 	var data = make([][]byte, len(Fss))
 
@@ -113,7 +113,7 @@ func TestMultipleOpenFiles(t *testing.T) {
 		path := filepath.Join(dir, fileName)
 		fh1, err := fs.Create(path)
 		if err != nil {
-			t.Error("os.Create failed: " + err.Error())
+			t.Error("fs.Create failed: " + err.Error())
 		}
 		_, err = fh1.Write([]byte("test"))
 		if err != nil {
@@ -165,5 +165,46 @@ func TestMultipleOpenFiles(t *testing.T) {
 				"%s: \"%s\"\n%s: \"%s\"\n",
 				Fss[0].Name(), fs.Name(), Fss[0].Name(), data[0], fs.Name(), data[i])
 		}
+	}
+}
+
+// Test if file.Write() fails when opened as read only
+func TestReadOnly(t *testing.T) {
+	defer removeAllTestFiles(t)
+	const fileName = "afero-demo.txt"
+
+	for _, fs := range Fss {
+		dir := testDir(fs)
+		path := filepath.Join(dir, fileName)
+
+		f, err := fs.Create(path)
+		if err != nil {
+			t.Error(fs.Name()+":", "fs.Create failed: "+err.Error())
+		}
+		_, err = f.Write([]byte("test"))
+		if err != nil {
+			t.Error(fs.Name()+":", "Write failed: "+err.Error())
+		}
+		f.Close()
+
+		f, err = fs.Open(path)
+		if err != nil {
+			t.Error("fs.Open failed: " + err.Error())
+		}
+		_, err = f.Write([]byte("data"))
+		if err == nil {
+			t.Error(fs.Name()+":", "No write error")
+		}
+		f.Close()
+
+		f, err = fs.OpenFile(path, os.O_RDONLY, 0644)
+		if err != nil {
+			t.Error("fs.Open failed: " + err.Error())
+		}
+		_, err = f.Write([]byte("data"))
+		if err == nil {
+			t.Error(fs.Name()+":", "No write error")
+		}
+		f.Close()
 	}
 }

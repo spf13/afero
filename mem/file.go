@@ -33,11 +33,16 @@ type File struct {
 	at           int64
 	readDirCount int64
 	closed       bool
+	readOnly     bool
 	fileData     *FileData
 }
 
 func NewFileHandle(data *FileData) *File {
 	return &File{fileData: data}
+}
+
+func NewReadOnlyFileHandle(data *FileData) *File {
+	return &File{fileData: data, readOnly: true}
 }
 
 func (f File) Data() *FileData {
@@ -203,6 +208,9 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 }
 
 func (f *File) Write(b []byte) (n int, err error) {
+	if f.readOnly {
+		return 0, &os.PathError{"write", f.fileData.name, errors.New("file handle is read only")}
+	}
 	n = len(b)
 	cur := atomic.LoadInt64(&f.at)
 	f.fileData.Lock()

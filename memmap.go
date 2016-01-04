@@ -163,6 +163,22 @@ func normalizePath(path string) string {
 }
 
 func (m *MemMapFs) Open(name string) (File, error) {
+	f, err := m.open(name)
+	if f != nil {
+		return mem.NewReadOnlyFileHandle(f), err
+	}
+	return nil, err
+}
+
+func (m *MemMapFs) openWrite(name string) (File, error) {
+	f, err := m.open(name)
+	if f != nil {
+		return mem.NewFileHandle(f), err
+	}
+	return nil, err
+}
+
+func (m *MemMapFs) open(name string) (*mem.FileData, error) {
 	name = normalizePath(name)
 
 	m.mu.RLock()
@@ -171,7 +187,7 @@ func (m *MemMapFs) Open(name string) (File, error) {
 	if !ok {
 		return nil, &os.PathError{"open", name, ErrFileNotFound}
 	}
-	return mem.NewFileHandle(f), nil
+	return f, nil
 }
 
 func (m *MemMapFs) lockfreeOpen(name string) (*mem.FileData, error) {
@@ -185,12 +201,15 @@ func (m *MemMapFs) lockfreeOpen(name string) (*mem.FileData, error) {
 }
 
 func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
-	file, err := m.Open(name)
+	file, err := m.openWrite(name)
 	if os.IsNotExist(err) && (flag&os.O_CREATE > 0) {
 		file, err = m.Create(name)
 	}
 	if err != nil {
 		return nil, err
+	}
+	if flag == os.O_RDONLY {
+		file = mem.NewReadOnlyFileHandle(file.(*mem.File).Data())
 	}
 	if flag&os.O_APPEND > 0 {
 		_, err = file.Seek(0, os.SEEK_END)

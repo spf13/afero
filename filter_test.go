@@ -13,7 +13,7 @@ func TestFilterReadOnly(t *testing.T) {
 	if err == nil {
 		t.Errorf("Did not fail to create file")
 	}
-	t.Logf("ERR=%s", err)
+	// t.Logf("ERR=%s", err)
 }
 
 func TestFilterReadonlyRemoveAndRead(t *testing.T) {
@@ -59,9 +59,10 @@ func TestFilterRegexp(t *testing.T) {
 	fs.AddFilter(NewRegexpFilter(regexp.MustCompile(`\.txt$`)))
 	_, err := fs.Create("/file.html")
 	if err == nil {
+
 		t.Errorf("Did not fail to create file")
 	}
-	t.Logf("ERR=%s", err)
+	// t.Logf("ERR=%s", err)
 }
 
 func TestFilterRORegexpChain(t *testing.T) {
@@ -73,7 +74,7 @@ func TestFilterRORegexpChain(t *testing.T) {
 	if err == nil {
 		t.Errorf("Did not fail to create file")
 	}
-	t.Logf("ERR=%s", err)
+	// t.Logf("ERR=%s", err)
 }
 
 func TestFilterRegexReadDir(t *testing.T) {
