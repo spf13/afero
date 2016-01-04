@@ -99,6 +99,9 @@ func (f *File) Open() error {
 func (f *File) Close() error {
 	f.fileData.Lock()
 	f.closed = true
+	if !f.readOnly {
+		SetModTime(f.fileData, time.Now())
+	}
 	f.fileData.Unlock()
 	return nil
 }
@@ -180,6 +183,9 @@ func (f *File) Truncate(size int64) error {
 	if f.closed == true {
 		return ErrFileClosed
 	}
+	if f.readOnly {
+		return &os.PathError{"truncate", f.fileData.name, errors.New("file handle is read only")}
+	}
 	if size < 0 {
 		return ErrOutOfRange
 	}
@@ -189,6 +195,7 @@ func (f *File) Truncate(size int64) error {
 	} else {
 		f.fileData.data = f.fileData.data[0:size]
 	}
+	SetModTime(f.fileData, time.Now())
 	return nil
 }
 
@@ -227,6 +234,7 @@ func (f *File) Write(b []byte) (n int, err error) {
 		f.fileData.data = append(f.fileData.data[:cur], b...)
 		f.fileData.data = append(f.fileData.data, tail...)
 	}
+	SetModTime(f.fileData, time.Now())
 
 	atomic.StoreInt64(&f.at, int64(len(f.fileData.data)))
 	return

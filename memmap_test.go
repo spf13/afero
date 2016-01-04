@@ -208,3 +208,45 @@ func TestReadOnly(t *testing.T) {
 		f.Close()
 	}
 }
+
+func TestWriteCloseTime(t *testing.T) {
+	defer removeAllTestFiles(t)
+	const fileName = "afero-demo.txt"
+
+	for _, fs := range Fss {
+		dir := testDir(fs)
+		path := filepath.Join(dir, fileName)
+
+		f, err := fs.Create(path)
+		if err != nil {
+			t.Error(fs.Name()+":", "fs.Create failed: "+err.Error())
+		}
+		f.Close()
+
+		f, err = fs.Create(path)
+		if err != nil {
+			t.Error(fs.Name()+":", "fs.Create failed: "+err.Error())
+		}
+		fi, err := f.Stat()
+		if err != nil {
+			t.Error(fs.Name()+":", "Stat failed: "+err.Error())
+		}
+		timeBefore := fi.ModTime()
+		// sorry for the delay, but we have to make sure time advances, also
+		// on non Un*x systems...
+		time.Sleep(2 * time.Second)
+
+		_, err = f.Write([]byte("test"))
+		if err != nil {
+			t.Error(fs.Name()+":", "Write failed: "+err.Error())
+		}
+		f.Close()
+		fi, err = fs.Stat(path)
+		if err != nil {
+			t.Error(fs.Name()+":", "fs.Stat failed: "+err.Error())
+		}
+		if fi.ModTime().Equal(timeBefore) {
+			t.Error(fs.Name()+":", "ModTime was not set on Close()")
+		}
+	}
+}
