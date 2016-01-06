@@ -317,15 +317,22 @@ Available UnionFs are:
 
 ### NewCacheUnionFs(time.Duration)
 
-Cache files in the layer for the given time.Duration, a cache duration of 0 means
-"forever". If the base filesystem is writeable, calls like Mkdir(), Rename() or 
-Chtimes() will be also passed down to the base layer. Writing to a file is (currently)
-not forwarded to the base.
+Cache files in the layer for the given time.Duration, a cache duration of 0
+means "forever".
+
+If the base filesystem is writeable, any changes to files will be done first
+to the base, then to the overlay layer. Write calls to open file handles
+like `Write()` or `Truncate()` to the overlay first.
+
+A read-only base will make the overlay also read-only but still copy files
+from the base to the overlay when they're not present (or outdated) in the
+caching layer.
 
 ### NewCoWUnionFs()
 
-A CopyOnWrite union: any attempt to modify a file in the base will copy the file to
-the layer before modification. The layer is currently limited to MemMapFs.
+A CopyOnWrite union: any attempt to modify a file in the base will copy
+the file to the overlay layer before modification. This overlay layer is
+currently limited to MemMapFs.
 
 # About the project
 
