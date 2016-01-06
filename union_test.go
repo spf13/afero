@@ -131,12 +131,13 @@ func TestUnionCacheExpire(t *testing.T) {
 	fh.Close()
 
 	fh, _ = base.Create("/data/file.txt")
-	fh.WriteString("Another test")
+	// sleep some time, so we really get a different time.Now() on write...
 	time.Sleep(2 * time.Second)
+	fh.WriteString("Another test")
 	fh.Close()
 
 	data, _ := ReadFile(ufs, "/data/file.txt")
 	if string(data) != "Another test" {
-        t.Errorf("cache time failed: <%s>", data)
+		t.Errorf("cache time failed: <%s>", data)
 	}
 }
