@@ -33,6 +33,7 @@ filesystem for full interoperability.
 * Support for compositional file systems by joining various different file systems (see httpFs)
 * Filtering of calls to intercept opening / modifying files, several filters
 may be stacked.
+* Unions of filesystems to overlay two filesystems. These may be stacked.
 * A set of utility functions ported from io, ioutil & hugo to be afero aware
 
 
@@ -299,12 +300,44 @@ The `AddFilter` adds a new FilterFs before any existing filters.
 
 ## Available filters
 
-* NewReadonlyFilter() - provide a read only view of the source Fs
-* NewRegexpFilter(*regexp.Regexp) - provide a filtered view on file names, any
-file (not directory) NOT matching the passed regexp will be treated as
-non-existing
+### NewReadonlyFilter()
 
+provide a read only view of the source Fs
 
+### NewRegexpFilter(\*regexp.Regexp)
+
+provide a filtered view on file names, any file (not directory) NOT matching
+the passed regexp will be treated as non-existing
+
+## Unions
+
+Afero has the possibilty to overlay two filesystems as a union, these are
+special types of filters. To create a new union Fs use the `NewUnionFs()`. The
+example below creates an memory cache for the OsFs:
+```go
+    ufs := NewUnionFs(&OsFs{}, &MemMapFs{}, NewCacheUnionFs(1 * time.Minute))
+```
+
+Available UnionFs are:
+
+### NewCacheUnionFs(time.Duration)
+
+Cache files in the layer for the given time.Duration, a cache duration of 0
+means "forever".
+
+If the base filesystem is writeable, any changes to files will be done first
+to the base, then to the overlay layer. Write calls to open file handles
+like `Write()` or `Truncate()` to the overlay first.
+
+A read-only base will make the overlay also read-only but still copy files
+from the base to the overlay when they're not present (or outdated) in the
+caching layer.
+
+### NewCoWUnionFs()
+
+A CopyOnWrite union: any attempt to modify a file in the base will copy
+the file to the overlay layer before modification. This overlay layer is
+currently limited to MemMapFs.
 
 # About the project
 
@@ -314,7 +347,7 @@ Afero comes from the latin roots Ad-Facere.
 
 **"Ad"** is a prefix meaning "to".
 
-**"Facere"** is a form of the root "faciō" making "make or do".
+**"Facere"** is the base form of a verb meaning "making" or "doing".
 
 The literal meaning of afero is "to make" or "to do" which seems very fitting
 for a library that allows one to make files and directories and do things with them.
