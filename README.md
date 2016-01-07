@@ -263,12 +263,17 @@ backed file implementation. This can be used in other memory backed file
 systems with ease. Plans are to add a radix tree memory stored file
 system using InMemoryFile.
 
+## SftpFs
+
+Afero has experimental support for secure file transfer protocol (sftp). Which can
+be used to perform file operations over a encrypted channel.
+
 ## Desired/possible backends
 
 The following is a short list of possible backends we hope someone will
 implement:
 
-* SSH/SCP
+* SSH
 * ZIP
 * TAR
 * S3
@@ -361,6 +366,7 @@ Names in no particular order:
 * [spf13](https://github.com/spf13)
 * [jaqx0r](https://github.com/jaqx0r)
 * [mbertschler](https://github.com/mbertschler)
+* [xor-gate](https://github.com/xor-gate)
 
 ## License
 
