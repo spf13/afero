@@ -103,7 +103,7 @@ func (f *UnionFile) Read(s []byte) (int, error) {
 		if (err == nil || err == io.EOF) && f.base != nil {
 			// advance the file position also in the base file, the next
 			// call may be a write at this position (or a seek with SEEK_CUR)
-			if _, seekErr := f.base.Seek(int64(n), os.SEEK_CUR); serr != nil {
+			if _, seekErr := f.base.Seek(int64(n), os.SEEK_CUR); seekErr != nil {
 				// only overwrite err in case the seek fails: we need to
 				// report an eventual io.EOF to the caller
 				err = seekErr
