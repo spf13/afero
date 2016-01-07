@@ -278,20 +278,16 @@ func (m *MemMapFs) Rename(oldname, newname string) error {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	if _, ok := m.getData()[oldname]; ok {
-		if _, ok := m.getData()[newname]; !ok {
-			m.mu.RUnlock()
-			m.mu.Lock()
-			m.unRegisterWithParent(oldname)
-			fileData := m.getData()[oldname]
-			delete(m.getData(), oldname)
-			mem.ChangeFileName(fileData, newname)
-			m.getData()[newname] = fileData
-			m.registerWithParent(fileData)
-			m.mu.Unlock()
-			m.mu.RLock()
-		} else {
-			return &os.PathError{"rename", newname, ErrDestinationExists}
-		}
+		m.mu.RUnlock()
+		m.mu.Lock()
+		m.unRegisterWithParent(oldname)
+		fileData := m.getData()[oldname]
+		delete(m.getData(), oldname)
+		mem.ChangeFileName(fileData, newname)
+		m.getData()[newname] = fileData
+		m.registerWithParent(fileData)
+		m.mu.Unlock()
+		m.mu.RLock()
 	} else {
 		return &os.PathError{"rename", oldname, ErrFileNotFound}
 	}
