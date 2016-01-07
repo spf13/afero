@@ -3,6 +3,7 @@ package afero
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -232,9 +233,14 @@ func TestWriteCloseTime(t *testing.T) {
 			t.Error(fs.Name()+":", "Stat failed: "+err.Error())
 		}
 		timeBefore := fi.ModTime()
-		// sorry for the delay, but we have to make sure time advances, also
-		// on non Un*x systems...
-		time.Sleep(2 * time.Second)
+
+		if runtime.GOOS == "windows" {
+			// sorry for the delay, but we have to make sure time advances,
+			// also on non Un*x systems...
+			time.Sleep(2 * time.Second)
+		} else {
+			time.Sleep(10 * time.Millisecond)
+		}
 
 		_, err = f.Write([]byte("test"))
 		if err != nil {
