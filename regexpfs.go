@@ -7,11 +7,11 @@ import (
 	"time"
 )
 
-// The RegexpFilter filters files (not directories) by regular expression. Only
+// The RegexpFs filters files (not directories) by regular expression. Only
 // files matching the given regexp will be allowed, all others get a ENOENT error (
 // "No such file or directory").
 //
-type RegexpFilter struct {
+type RegexpFs struct {
 	re     *regexp.Regexp
 	source Fs
 }
@@ -21,21 +21,7 @@ type RegexpFile struct {
 	re *regexp.Regexp
 }
 
-func NewRegexpFilter(re *regexp.Regexp) FilterFs {
-	return &RegexpFilter{re: re}
-}
-
-// prepend a filter in the filter chain
-func (r *RegexpFilter) AddFilter(fs FilterFs) {
-	fs.SetSource(r.source)
-	r.source = fs
-}
-
-func (r *RegexpFilter) SetSource(fs Fs) {
-	r.source = fs
-}
-
-func (r *RegexpFilter) matchesName(name string) error {
+func (r *RegexpFs) matchesName(name string) error {
 	if r.re == nil {
 		return nil
 	}
@@ -45,7 +31,7 @@ func (r *RegexpFilter) matchesName(name string) error {
 	return syscall.ENOENT
 }
 
-func (r *RegexpFilter) dirOrMatches(name string) error {
+func (r *RegexpFs) dirOrMatches(name string) error {
 	dir, err := IsDir(r.source, name)
 	if err != nil {
 		return err
@@ -56,32 +42,32 @@ func (r *RegexpFilter) dirOrMatches(name string) error {
 	return r.matchesName(name)
 }
 
-func (r *RegexpFilter) Chtimes(name string, a, m time.Time) error {
+func (r *RegexpFs) Chtimes(name string, a, m time.Time) error {
 	if err := r.dirOrMatches(name); err != nil {
 		return err
 	}
 	return r.source.Chtimes(name, a, m)
 }
 
-func (r *RegexpFilter) Chmod(name string, mode os.FileMode) error {
+func (r *RegexpFs) Chmod(name string, mode os.FileMode) error {
 	if err := r.dirOrMatches(name); err != nil {
 		return err
 	}
 	return r.source.Chmod(name, mode)
 }
 
-func (r *RegexpFilter) Name() string {
-	return "RegexpFilter"
+func (r *RegexpFs) Name() string {
+	return "RegexpFs"
 }
 
-func (r *RegexpFilter) Stat(name string) (os.FileInfo, error) {
+func (r *RegexpFs) Stat(name string) (os.FileInfo, error) {
 	if err := r.dirOrMatches(name); err != nil {
 		return nil, err
 	}
 	return r.source.Stat(name)
 }
 
-func (r *RegexpFilter) Rename(oldname, newname string) error {
+func (r *RegexpFs) Rename(oldname, newname string) error {
 	dir, err := IsDir(r.source, oldname)
 	if err != nil {
 		return err
@@ -98,7 +84,7 @@ func (r *RegexpFilter) Rename(oldname, newname string) error {
 	return r.source.Rename(oldname, newname)
 }
 
-func (r *RegexpFilter) RemoveAll(p string) error {
+func (r *RegexpFs) RemoveAll(p string) error {
 	dir, err := IsDir(r.source, p)
 	if err != nil {
 		return err
@@ -111,21 +97,21 @@ func (r *RegexpFilter) RemoveAll(p string) error {
 	return r.source.RemoveAll(p)
 }
 
-func (r *RegexpFilter) Remove(name string) error {
+func (r *RegexpFs) Remove(name string) error {
 	if err := r.dirOrMatches(name); err != nil {
 		return err
 	}
 	return r.source.Remove(name)
 }
 
-func (r *RegexpFilter) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
+func (r *RegexpFs) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
 	if err := r.dirOrMatches(name); err != nil {
 		return nil, err
 	}
 	return r.source.OpenFile(name, flag, perm)
 }
 
-func (r *RegexpFilter) Open(name string) (File, error) {
+func (r *RegexpFs) Open(name string) (File, error) {
 	dir, err := IsDir(r.source, name)
 	if err != nil {
 		return nil, err
@@ -139,15 +125,15 @@ func (r *RegexpFilter) Open(name string) (File, error) {
 	return &RegexpFile{f: f, re: r.re}, nil
 }
 
-func (r *RegexpFilter) Mkdir(n string, p os.FileMode) error {
+func (r *RegexpFs) Mkdir(n string, p os.FileMode) error {
 	return r.source.Mkdir(n, p)
 }
 
-func (r *RegexpFilter) MkdirAll(n string, p os.FileMode) error {
+func (r *RegexpFs) MkdirAll(n string, p os.FileMode) error {
 	return r.source.MkdirAll(n, p)
 }
 
-func (r *RegexpFilter) Create(name string) (File, error) {
+func (r *RegexpFs) Create(name string) (File, error) {
 	if err := r.matchesName(name); err != nil {
 		return nil, err
 	}

@@ -9,8 +9,7 @@ import (
 
 func TestUnionCreateExisting(t *testing.T) {
 	base := &MemMapFs{}
-	roBase := NewFilter(base)
-	roBase.AddFilter(NewReadonlyFilter())
+	roBase := &ReadOnlyFs{source: base}
 
 	ufs := NewUnionFs(roBase, &MemMapFs{}, NewCoWUnionFs())
 
@@ -60,8 +59,7 @@ func TestUnionCreateExisting(t *testing.T) {
 
 func TestUnionMergeReaddir(t *testing.T) {
 	base := &MemMapFs{}
-	roBase := NewFilter(base)
-	roBase.AddFilter(NewReadonlyFilter())
+	roBase := &ReadOnlyFs{source: base}
 
 	ufs := NewUnionFs(roBase, &MemMapFs{}, NewCoWUnionFs())
 
