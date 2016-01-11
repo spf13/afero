@@ -20,16 +20,13 @@ type BasePathFs struct {
 	path   string
 }
 
-// NewBasePathFs applies filepath.Clean on creation
-func NewBasePathFs(source Fs, path string) *BasePathFs {
-	return &BasePathFs{source: source, path: filepath.Clean(path) + string(os.PathSeparator)}
-}
-
 // on a file outside the base path it returns the given file name and an error,
 // else the given file with the base path prepended
 func (b *BasePathFs) RealPath(name string) (path string, err error) {
-	path = filepath.Clean(filepath.Join(b.path, name))
-	if !strings.HasPrefix(path, b.path) {
+	bpath := filepath.Clean(b.path) + string(os.PathSeparator)
+
+	path = filepath.Clean(filepath.Join(bpath, name))
+	if !strings.HasPrefix(path, bpath) {
 		return name, os.ErrNotExist
 	}
 	return path, nil
