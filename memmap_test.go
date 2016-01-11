@@ -234,11 +234,14 @@ func TestWriteCloseTime(t *testing.T) {
 		}
 		timeBefore := fi.ModTime()
 
-		if runtime.GOOS == "windows" {
-			// sorry for the delay, but we have to make sure time advances,
-			// also on non Un*x systems...
+		// sorry for the delay, but we have to make sure time advances,
+		// also on non Un*x systems...
+		switch runtime.GOOS {
+		case "windows":
 			time.Sleep(2 * time.Second)
-		} else {
+		case "darwin":
+			time.Sleep(1 * time.Second)
+		default:
 			time.Sleep(10 * time.Millisecond)
 		}
 
