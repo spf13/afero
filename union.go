@@ -7,63 +7,6 @@ import (
 	"syscall"
 )
 
-type UnionFs func(Fs) FilterFs
-
-// Create a new UnionFs:
-//
-//    ufs := NewUnionFs(baseFs, layerFs, NewCoWUnionFs())
-//    cfs := NewUnionFs(baseFs, layerFs, NewCacheUnionFs(cacheTime))
-func NewUnionFs(base Fs, overlay Fs, impl UnionFs) Fs {
-	ufs := impl(overlay)
-	ufs.SetSource(base)
-	return ufs
-}
-
-func copyToLayer(base Fs, layer Fs, name string) error {
-	bfh, err := base.Open(name)
-	if err != nil {
-		return err
-	}
-	defer bfh.Close()
-
-	exists, err := Exists(layer, filepath.Dir(name))
-	if err != nil {
-		return err
-	}
-	if !exists {
-		err = layer.MkdirAll(filepath.Dir(name), 0777) // FIXME?
-		if err != nil {
-			return err
-		}
-	}
-
-	lfh, err := layer.Create(name)
-	if err != nil {
-		return err
-	}
-	n, err := io.Copy(lfh, bfh)
-	if err != nil {
-		layer.Remove(name)
-		lfh.Close()
-		return err
-	}
-
-	bfi, err := bfh.Stat()
-	if err != nil || bfi.Size() != n {
-		layer.Remove(name)
-		lfh.Close()
-		return syscall.EIO
-	}
-
-	err = lfh.Close()
-	if err != nil {
-		layer.Remove(name)
-		lfh.Close()
-		return err
-	}
-	return layer.Chtimes(name, bfi.ModTime(), bfi.ModTime())
-}
-
 // The UnionFile implements the afero.File interface and will be returned
 // when reading a directory present at least in the overlay or opening a file
 // for writing.
@@ -277,4 +220,49 @@ func (f *UnionFile) WriteString(s string) (n int, err error) {
 		return f.base.WriteString(s)
 	}
 	return 0, BADFD
+}
+
+func copyToLayer(base Fs, layer Fs, name string) error {
+	bfh, err := base.Open(name)
+	if err != nil {
+		return err
+	}
+	defer bfh.Close()
+
+	exists, err := Exists(layer, filepath.Dir(name))
+	if err != nil {
+		return err
+	}
+	if !exists {
+		err = layer.MkdirAll(filepath.Dir(name), 0777) // FIXME?
+		if err != nil {
+			return err
+		}
+	}
+
+	lfh, err := layer.Create(name)
+	if err != nil {
+		return err
+	}
+	n, err := io.Copy(lfh, bfh)
+	if err != nil {
+		layer.Remove(name)
+		lfh.Close()
+		return err
+	}
+
+	bfi, err := bfh.Stat()
+	if err != nil || bfi.Size() != n {
+		layer.Remove(name)
+		lfh.Close()
+		return syscall.EIO
+	}
+
+	err = lfh.Close()
+	if err != nil {
+		layer.Remove(name)
+		lfh.Close()
+		return err
+	}
+	return layer.Chtimes(name, bfi.ModTime(), bfi.ModTime())
 }

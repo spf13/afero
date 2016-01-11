@@ -11,7 +11,7 @@ func TestUnionCreateExisting(t *testing.T) {
 	base := &MemMapFs{}
 	roBase := &ReadOnlyFs{source: base}
 
-	ufs := NewUnionFs(roBase, &MemMapFs{}, NewCoWUnionFs())
+	ufs := &CopyOnWriteUnionFs{base: roBase, layer: &MemMapFs{}}
 
 	base.MkdirAll("/home/test", 0777)
 	fh, _ := base.Create("/home/test/file.txt")
@@ -61,7 +61,7 @@ func TestUnionMergeReaddir(t *testing.T) {
 	base := &MemMapFs{}
 	roBase := &ReadOnlyFs{source: base}
 
-	ufs := NewUnionFs(roBase, &MemMapFs{}, NewCoWUnionFs())
+	ufs := &CopyOnWriteUnionFs{base: roBase, layer: &MemMapFs{}}
 
 	base.MkdirAll("/home/test", 0777)
 	fh, _ := base.Create("/home/test/file.txt")
@@ -85,7 +85,8 @@ func TestUnionMergeReaddir(t *testing.T) {
 func TestUnionCacheWrite(t *testing.T) {
 	base := &MemMapFs{}
 	layer := &MemMapFs{}
-	ufs := NewUnionFs(base, layer, NewCacheUnionFs(0))
+
+	ufs := &CacheUnionFs{base: base, layer: layer, cacheTime: 0}
 
 	base.Mkdir("/data", 0777)
 
@@ -114,7 +115,7 @@ func TestUnionCacheWrite(t *testing.T) {
 func TestUnionCacheExpire(t *testing.T) {
 	base := &MemMapFs{}
 	layer := &MemMapFs{}
-	ufs := NewUnionFs(base, layer, NewCacheUnionFs(1*time.Second))
+	ufs := &CacheUnionFs{base: base, layer: layer, cacheTime: 1 * time.Second}
 
 	base.Mkdir("/data", 0777)
 

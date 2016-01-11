@@ -25,21 +25,6 @@ type CacheUnionFs struct {
 	cacheTime time.Duration
 }
 
-func NewCacheUnionFs(t time.Duration) UnionFs {
-	return func(layer Fs) FilterFs {
-		return &CacheUnionFs{cacheTime: t, layer: layer}
-	}
-}
-
-func (u *CacheUnionFs) AddFilter(fs FilterFs) {
-	fs.SetSource(u.base)
-	u.base = fs
-}
-
-func (u *CacheUnionFs) SetSource(fs Fs) {
-	u.base = fs
-}
-
 type cacheState int
 
 const (
