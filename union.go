@@ -94,7 +94,7 @@ func (f *UnionFile) Close() error {
 	if f.layer != nil {
 		return f.layer.Close()
 	}
-	return syscall.EBADFD
+	return BADFD
 }
 
 func (f *UnionFile) Read(s []byte) (int, error) {
@@ -114,7 +114,7 @@ func (f *UnionFile) Read(s []byte) (int, error) {
 	if f.base != nil {
 		return f.base.Read(s)
 	}
-	return 0, syscall.EBADFD
+	return 0, BADFD
 }
 
 func (f *UnionFile) ReadAt(s []byte, o int64) (int, error) {
@@ -128,7 +128,7 @@ func (f *UnionFile) ReadAt(s []byte, o int64) (int, error) {
 	if f.base != nil {
 		return f.base.ReadAt(s, o)
 	}
-	return 0, syscall.EBADFD
+	return 0, BADFD
 }
 
 func (f *UnionFile) Seek(o int64, w int) (pos int64, err error) {
@@ -142,7 +142,7 @@ func (f *UnionFile) Seek(o int64, w int) (pos int64, err error) {
 	if f.base != nil {
 		return f.base.Seek(o, w)
 	}
-	return 0, syscall.EBADFD
+	return 0, BADFD
 }
 
 func (f *UnionFile) Write(s []byte) (n int, err error) {
@@ -156,7 +156,7 @@ func (f *UnionFile) Write(s []byte) (n int, err error) {
 	if f.base != nil {
 		return f.base.Write(s)
 	}
-	return 0, syscall.EBADFD
+	return 0, BADFD
 }
 
 func (f *UnionFile) WriteAt(s []byte, o int64) (n int, err error) {
@@ -170,7 +170,7 @@ func (f *UnionFile) WriteAt(s []byte, o int64) (n int, err error) {
 	if f.base != nil {
 		return f.base.WriteAt(s, o)
 	}
-	return 0, syscall.EBADFD
+	return 0, BADFD
 }
 
 func (f *UnionFile) Name() string {
@@ -234,7 +234,7 @@ func (f *UnionFile) Stat() (os.FileInfo, error) {
 	if f.base != nil {
 		return f.base.Stat()
 	}
-	return nil, syscall.EBADFD
+	return nil, BADFD
 }
 
 func (f *UnionFile) Sync() (err error) {
@@ -248,7 +248,7 @@ func (f *UnionFile) Sync() (err error) {
 	if f.base != nil {
 		return f.base.Sync()
 	}
-	return syscall.EBADFD
+	return BADFD
 }
 
 func (f *UnionFile) Truncate(s int64) (err error) {
@@ -262,7 +262,7 @@ func (f *UnionFile) Truncate(s int64) (err error) {
 	if f.base != nil {
 		return f.base.Truncate(s)
 	}
-	return syscall.EBADFD
+	return BADFD
 }
 
 func (f *UnionFile) WriteString(s string) (n int, err error) {
@@ -276,5 +276,5 @@ func (f *UnionFile) WriteString(s string) (n int, err error) {
 	if f.base != nil {
 		return f.base.WriteString(s)
 	}
-	return 0, syscall.EBADFD
+	return 0, BADFD
 }
