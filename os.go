@@ -25,6 +25,10 @@ import (
 // (http://golang.org/pkg/os/).
 type OsFs struct{}
 
+func NewOsFs() Fs {
+	return &OsFs{}
+}
+
 func (OsFs) Name() string { return "OsFs" }
 
 func (OsFs) Create(name string) (File, error) {

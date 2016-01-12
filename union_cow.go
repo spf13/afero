@@ -22,6 +22,10 @@ type CopyOnWriteFs struct {
 	layer Fs
 }
 
+func NewCopyOnWriteFs(base Fs, layer Fs) Fs {
+	return &CopyOnWriteFs{base: base, layer: layer}
+}
+
 func (u *CopyOnWriteFs) isBaseFile(name string) (bool, error) {
 	if _, err := u.layer.Stat(name); err == nil {
 		return false, nil

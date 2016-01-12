@@ -20,6 +20,10 @@ type BasePathFs struct {
 	path   string
 }
 
+func NewBasePathFs(source Fs, path string) Fs {
+	return &BasePathFs{source: source, path: path}
+}
+
 // on a file outside the base path it returns the given file name and an error,
 // else the given file with the base path prepended
 func (b *BasePathFs) RealPath(name string) (path string, err error) {

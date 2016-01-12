@@ -20,6 +20,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type httpDir struct {
@@ -48,6 +49,10 @@ type HttpFs struct {
 	source Fs
 }
 
+func NewHttpFs(source Fs) *HttpFs {
+	return &HttpFs{source: source}
+}
+
 func (h HttpFs) Dir(s string) *httpDir {
 	return &httpDir{basePath: s, fs: h}
 }
@@ -56,6 +61,14 @@ func (h HttpFs) Name() string { return "h HttpFs" }
 
 func (h HttpFs) Create(name string) (File, error) {
 	return h.source.Create(name)
+}
+
+func (h HttpFs) Chmod(name string, mode os.FileMode) error {
+	return h.source.Chmod(name, mode)
+}
+
+func (h HttpFs) Chtimes(name string, atime time.Time, mtime time.Time) error {
+	return h.source.Chtimes(name, atime, mtime)
 }
 
 func (h HttpFs) Mkdir(name string, perm os.FileMode) error {

@@ -16,6 +16,10 @@ type RegexpFs struct {
 	source Fs
 }
 
+func NewRegexpFs(source Fs, re *regexp.Regexp) Fs {
+	return &RegexpFs{source: source, re: re}
+}
+
 type RegexpFile struct {
 	f  File
 	re *regexp.Regexp

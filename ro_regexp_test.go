@@ -20,7 +20,7 @@ func TestFilterReadonlyRemoveAndRead(t *testing.T) {
 	fh.Write([]byte("content here"))
 	fh.Close()
 
-	fs := &ReadOnlyFs{source: mfs}
+	fs := NewReadOnlyFs(mfs)
 	err = fs.Remove("/file.txt")
 	if err == nil {
 		t.Errorf("Did not fail to remove file")
@@ -51,7 +51,7 @@ func TestFilterReadonlyRemoveAndRead(t *testing.T) {
 }
 
 func TestFilterRegexp(t *testing.T) {
-	fs := &RegexpFs{re: regexp.MustCompile(`\.txt$`), source: &MemMapFs{}}
+	fs := NewRegexpFs(&MemMapFs{}, regexp.MustCompile(`\.txt$`))
 	_, err := fs.Create("/file.html")
 	if err == nil {
 

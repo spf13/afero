@@ -31,6 +31,10 @@ type MemMapFs struct {
 	init sync.Once
 }
 
+func NewMemMapFs() Fs {
+	return &MemMapFs{}
+}
+
 var memfsInit sync.Once
 
 func (m *MemMapFs) getData() map[string]*mem.FileData {

@@ -21,8 +21,8 @@ import (
 // successful read in the overlay will move the cursor position in the base layer
 // by the number of bytes read.
 type UnionFile struct {
-	layer File
 	base  File
+	layer File
 	off   int
 	files []os.FileInfo
 }

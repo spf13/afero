@@ -7,7 +7,7 @@ import (
 func TestBasePath(t *testing.T) {
 	baseFs := &MemMapFs{}
 	baseFs.MkdirAll("/base/path/tmp", 0777)
-	bp := &BasePathFs{source: baseFs, path: "/base/path"}
+	bp := NewBasePathFs(baseFs, "/base/path")
 
 	if _, err := bp.Create("/tmp/foo"); err != nil {
 		t.Errorf("Failed to set real path")

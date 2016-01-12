@@ -34,7 +34,7 @@ func TestNormalizePath(t *testing.T) {
 func TestPathErrors(t *testing.T) {
 	path := filepath.Join(".", "some", "path")
 	path2 := filepath.Join(".", "different", "path")
-	fs := &MemMapFs{}
+	fs := NewMemMapFs()
 	perm := os.FileMode(0755)
 
 	// relevant functions:

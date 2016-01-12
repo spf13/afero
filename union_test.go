@@ -11,7 +11,7 @@ func TestUnionCreateExisting(t *testing.T) {
 	base := &MemMapFs{}
 	roBase := &ReadOnlyFs{source: base}
 
-	ufs := &CopyOnWriteFs{base: roBase, layer: &MemMapFs{}}
+	ufs := NewCopyOnWriteFs(roBase, &MemMapFs{})
 
 	base.MkdirAll("/home/test", 0777)
 	fh, _ := base.Create("/home/test/file.txt")
@@ -86,7 +86,7 @@ func TestUnionCacheWrite(t *testing.T) {
 	base := &MemMapFs{}
 	layer := &MemMapFs{}
 
-	ufs := &CacheOnReadFs{base: base, layer: layer, cacheTime: 0}
+	ufs := NewCacheOnReadFs(base, layer, 0)
 
 	base.Mkdir("/data", 0777)
 

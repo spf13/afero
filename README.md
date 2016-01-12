@@ -61,11 +61,11 @@ import "github.com/spf13/afero"
 
 First define a package variable and set it to a pointer to a filesystem.
 ```go
-var AppFs afero.Fs = &afero.MemMapFs{}
+var AppFs afero.Fs = afero.NewMemMapFs()
 
 or
 
-var AppFs afero.Fs = &afero.OsFs{}
+var AppFs afero.Fs = afero.NewOsFs()
 ```
 It is important to note that if you repeat the composite literal you
 will be using a completely new and isolated filesystem. In the case of
@@ -166,7 +166,7 @@ f, err := afero.TempFile(fs,"", "ioutil-test")
 ### Calling via Afero
 
 ```go
-fs := new(afero.MemMapFs)
+fs := afero.NewMemMapFs
 afs := &Afero{Fs: fs}
 f, err := afs.TempFile("", "ioutil-test")
 ```
@@ -187,39 +187,28 @@ backend is perfect for testing.
 * No test cleanup needed
 
 One way to accomplish this is to define a variable as mentioned above.
-In your application this will be set to &afero.OsFs{} during testing you
-can set it to &afero.MemMapFs{}.
+In your application this will be set to afero.NewOsFs() during testing you
+can set it to afero.NewMemMapFs().
 
 It wouldn't be uncommon to have each test initialize a blank slate memory
-backend. To do this I would define my `appFS = &afero.OsFs{}` somewhere
+backend. To do this I would define my `appFS = afero.NewOsFs()` somewhere
 appropriate in my application code. This approach ensures that Tests are order
 independent, with no test relying on the state left by an earlier test.
 
 Then in my tests I would initialize a new MemMapFs for each test:
 ```go
 func TestExist(t *testing.T) {
-	appFS = &afero.MemMapFs{}
+	appFS = afero.NewMemMapFs()
 	// create test files and directories
 	appFS.MkdirAll("src/a", 0755))
 	appFS.WriteFile("src/a/b", []byte("file b"), 0644)
 	appFS.WriteFile("src/c", []byte("file c"), 0644)
-	testExistence("src/c", true, t)
-}
-
-func testExistence(name string, e bool, t *testing.T) {
-	_, err := appFS.Stat(name)
+	_, err := appFS.Stat("src/c")
 	if os.IsNotExist(err) {
-	    if e {
-	        t.Errorf("file \"%s\" does not exist.\n", name)
-    	}
-	} else if err != nil {
-    	panic(err)
-	} else {
-    	if !e {
-    	    t.Errorf("file \"%s\" exists.\n", name)
-    	}
+        t.Errorf("file \"%s\" does not exist.\n", name)
 	}
 }
+
 ```
 
 # Available Backends
@@ -233,6 +222,11 @@ very easy to use as all of the calls are the same as the existing OS
 calls. It also makes it trivial to have your code use the OS during
 operation and a mock filesystem during testing or as needed.
 
+```go
+appfs := NewOsFs()
+appfs.MkdirAll("src/a", 0755))
+```
+
 ## Memory Backed Storage
 
 ### MemMapFs
@@ -241,6 +235,11 @@ Afero also provides a fully atomic memory backed filesystem perfect for use in
 mocking and to speed up unnecessary disk io when persistence isn’t
 necessary. It is fully concurrent and will work within go routines
 safely.
+
+```go
+mm := NewMemMapFs()
+mm.MkdirAll("src/a", 0755))
+```
 
 #### InMemoryFile
 
@@ -265,7 +264,7 @@ The given file name to the operations on this Fs will be prepended with
 the base path before calling the source Fs.
 
 ```go
-bp := &BasePathFs{source: &OsFs{}, path: "/base/path"}
+bp := NewBasePathFs(NewOsFs(), "/base/path")
 ```
 
 ### ReadOnlyFs
@@ -273,7 +272,7 @@ bp := &BasePathFs{source: &OsFs{}, path: "/base/path"}
 A thin wrapper around the source Fs providing a read only view.
 
 ```go
-fs := &ReadOnlyFs{source: &OsFs{}}
+fs := NewReadOnlyFs(NewOsFs())
 _, err := fs.Create("/file.txt")
 // err = syscall.EPERM
 ```
@@ -286,7 +285,7 @@ Files not matching the regexp provided will not be created.
 Directories are not filtered.
 
 ```go
-fs := &RegexpFs{re: regexp.MustCompile(`\.txt$`), source: &MemMapFs{}}
+fs := NewRegexpFs(NewMemMapFs(), regexp.MustCompile(`\.txt$`))
 _, err := fs.Create("/file.html")
 // err = syscall.ENOENT
 ```
@@ -303,7 +302,7 @@ Afero provides an httpFs file system which satisfies this requirement.
 Any Afero FileSystem can be used as an httpFs.
 
 ```go
-httpFs := &afero.HttpFs{source: <ExistingFS>}
+httpFs := afero.NewHttpFs(<ExistingFS>)
 fileserver := http.FileServer(httpFs.Dir(<PATH>)))
 http.Handle("/", fileserver)
 ```
@@ -335,9 +334,9 @@ from the base to the overlay when they're not present (or outdated) in the
 caching layer.
 
 ```go
-base := &OsFs{}
-layer := &MemMapFs{}
-ufs := &CacheOnReadFs{base: base, layer: layer, cacheTime: 100 * time.Second}
+base := NewOsFs()
+layer := NewMemMapFs()
+ufs := NewCacheOnReadFs(base, layer, 100 * time.Second)
 ```
 
 ### CopyOnWriteFs()
@@ -361,17 +360,17 @@ overlay will be removed/renamed.
 The writable overlay layer is currently limited to MemMapFs.
 
 ```go
-	base := &OsFs{}
-	roBase := &ReadOnlyFs{source: base}
-	ufs := &CopyOnWriteFs{base: roBase, layer: &MemMapFs{}}
+	base := NewOsFs()
+	roBase := NewReadOnlyFs(base)
+	ufs := NewCopyOnWriteFs(roBase, NewMemMapFs())
 
 	fh, _ = ufs.Create("/home/test/file2.txt")
 	fh.WriteString("This is a test")
 	fh.Close()
 ```
 
-In this example all write operations will only occur in memory (&MemMapFs{})
-leaving the base filesystem (&OsFs) untouched.
+In this example all write operations will only occur in memory (MemMapFs)
+leaving the base filesystem (OsFs) untouched.
 
 
 ## Desired/possible backends
