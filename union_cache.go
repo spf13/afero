@@ -19,7 +19,7 @@ import (
 // system first. To prevent writing to the base Fs, wrap it in a read-only
 // filter - Note: this will also make the overlay read-only, for writing files
 // in the overlay, use the overlay Fs directly, not via the union Fs.
-type CacheUnionFs struct {
+type CacheOnReadFs struct {
 	base      Fs
 	layer     Fs
 	cacheTime time.Duration
@@ -42,7 +42,7 @@ const (
 	cacheLocal
 )
 
-func (u *CacheUnionFs) cacheStatus(name string) (state cacheState, fi os.FileInfo, err error) {
+func (u *CacheOnReadFs) cacheStatus(name string) (state cacheState, fi os.FileInfo, err error) {
 	var lfi, bfi os.FileInfo
 	lfi, err = u.layer.Stat(name)
 	if err == nil {
@@ -73,11 +73,11 @@ func (u *CacheUnionFs) cacheStatus(name string) (state cacheState, fi os.FileInf
 	return cacheMiss, nil, err
 }
 
-func (u *CacheUnionFs) copyToLayer(name string) error {
+func (u *CacheOnReadFs) copyToLayer(name string) error {
 	return copyToLayer(u.base, u.layer, name)
 }
 
-func (u *CacheUnionFs) Chtimes(name string, atime, mtime time.Time) error {
+func (u *CacheOnReadFs) Chtimes(name string, atime, mtime time.Time) error {
 	st, _, err := u.cacheStatus(name)
 	if err != nil {
 		return err
@@ -98,7 +98,7 @@ func (u *CacheUnionFs) Chtimes(name string, atime, mtime time.Time) error {
 	return u.layer.Chtimes(name, atime, mtime)
 }
 
-func (u *CacheUnionFs) Chmod(name string, mode os.FileMode) error {
+func (u *CacheOnReadFs) Chmod(name string, mode os.FileMode) error {
 	st, _, err := u.cacheStatus(name)
 	if err != nil {
 		return err
@@ -119,7 +119,7 @@ func (u *CacheUnionFs) Chmod(name string, mode os.FileMode) error {
 	return u.layer.Chmod(name, mode)
 }
 
-func (u *CacheUnionFs) Stat(name string) (os.FileInfo, error) {
+func (u *CacheOnReadFs) Stat(name string) (os.FileInfo, error) {
 	st, fi, err := u.cacheStatus(name)
 	if err != nil {
 		return nil, err
@@ -132,7 +132,7 @@ func (u *CacheUnionFs) Stat(name string) (os.FileInfo, error) {
 	}
 }
 
-func (u *CacheUnionFs) Rename(oldname, newname string) error {
+func (u *CacheOnReadFs) Rename(oldname, newname string) error {
 	st, _, err := u.cacheStatus(oldname)
 	if err != nil {
 		return err
@@ -153,7 +153,7 @@ func (u *CacheUnionFs) Rename(oldname, newname string) error {
 	return u.layer.Rename(oldname, newname)
 }
 
-func (u *CacheUnionFs) Remove(name string) error {
+func (u *CacheOnReadFs) Remove(name string) error {
 	st, _, err := u.cacheStatus(name)
 	if err != nil {
 		return err
@@ -169,7 +169,7 @@ func (u *CacheUnionFs) Remove(name string) error {
 	return u.layer.Remove(name)
 }
 
-func (u *CacheUnionFs) RemoveAll(name string) error {
+func (u *CacheOnReadFs) RemoveAll(name string) error {
 	st, _, err := u.cacheStatus(name)
 	if err != nil {
 		return err
@@ -185,7 +185,7 @@ func (u *CacheUnionFs) RemoveAll(name string) error {
 	return u.layer.RemoveAll(name)
 }
 
-func (u *CacheUnionFs) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
+func (u *CacheOnReadFs) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
 	st, _, err := u.cacheStatus(name)
 	if err != nil {
 		return nil, err
@@ -212,7 +212,7 @@ func (u *CacheUnionFs) OpenFile(name string, flag int, perm os.FileMode) (File, 
 	return u.layer.OpenFile(name, flag, perm)
 }
 
-func (u *CacheUnionFs) Open(name string) (File, error) {
+func (u *CacheOnReadFs) Open(name string) (File, error) {
 	st, fi, err := u.cacheStatus(name)
 	if err != nil {
 		return nil, err
@@ -256,7 +256,7 @@ func (u *CacheUnionFs) Open(name string) (File, error) {
 	return &UnionFile{base: bfile, layer: lfile}, nil
 }
 
-func (u *CacheUnionFs) Mkdir(name string, perm os.FileMode) error {
+func (u *CacheOnReadFs) Mkdir(name string, perm os.FileMode) error {
 	err := u.base.Mkdir(name, perm)
 	if err != nil {
 		return err
@@ -264,11 +264,11 @@ func (u *CacheUnionFs) Mkdir(name string, perm os.FileMode) error {
 	return u.layer.MkdirAll(name, perm) // yes, MkdirAll... we cannot assume it exists in the cache
 }
 
-func (u *CacheUnionFs) Name() string {
-	return "CacheUnionFs"
+func (u *CacheOnReadFs) Name() string {
+	return "CacheOnReadFs"
 }
 
-func (u *CacheUnionFs) MkdirAll(name string, perm os.FileMode) error {
+func (u *CacheOnReadFs) MkdirAll(name string, perm os.FileMode) error {
 	err := u.base.MkdirAll(name, perm)
 	if err != nil {
 		return err
@@ -276,7 +276,7 @@ func (u *CacheUnionFs) MkdirAll(name string, perm os.FileMode) error {
 	return u.layer.MkdirAll(name, perm)
 }
 
-func (u *CacheUnionFs) Create(name string) (File, error) {
+func (u *CacheOnReadFs) Create(name string) (File, error) {
 	bfh, err := u.base.Create(name)
 	if err != nil {
 		return nil, err

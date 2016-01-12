@@ -86,7 +86,7 @@ func TestUnionCacheWrite(t *testing.T) {
 	base := &MemMapFs{}
 	layer := &MemMapFs{}
 
-	ufs := &CacheUnionFs{base: base, layer: layer, cacheTime: 0}
+	ufs := &CacheOnReadFs{base: base, layer: layer, cacheTime: 0}
 
 	base.Mkdir("/data", 0777)
 
@@ -115,7 +115,7 @@ func TestUnionCacheWrite(t *testing.T) {
 func TestUnionCacheExpire(t *testing.T) {
 	base := &MemMapFs{}
 	layer := &MemMapFs{}
-	ufs := &CacheUnionFs{base: base, layer: layer, cacheTime: 1 * time.Second}
+	ufs := &CacheOnReadFs{base: base, layer: layer, cacheTime: 1 * time.Second}
 
 	base.Mkdir("/data", 0777)
 
