@@ -11,7 +11,7 @@ func TestUnionCreateExisting(t *testing.T) {
 	base := &MemMapFs{}
 	roBase := &ReadOnlyFs{source: base}
 
-	ufs := &CopyOnWriteUnionFs{base: roBase, layer: &MemMapFs{}}
+	ufs := &CopyOnWriteFs{base: roBase, layer: &MemMapFs{}}
 
 	base.MkdirAll("/home/test", 0777)
 	fh, _ := base.Create("/home/test/file.txt")
@@ -61,7 +61,7 @@ func TestUnionMergeReaddir(t *testing.T) {
 	base := &MemMapFs{}
 	roBase := &ReadOnlyFs{source: base}
 
-	ufs := &CopyOnWriteUnionFs{base: roBase, layer: &MemMapFs{}}
+	ufs := &CopyOnWriteFs{base: roBase, layer: &MemMapFs{}}
 
 	base.MkdirAll("/home/test", 0777)
 	fh, _ := base.Create("/home/test/file.txt")
