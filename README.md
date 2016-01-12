@@ -223,7 +223,7 @@ calls. It also makes it trivial to have your code use the OS during
 operation and a mock filesystem during testing or as needed.
 
 ```go
-appfs := NewOsFs()
+appfs := afero.NewOsFs()
 appfs.MkdirAll("src/a", 0755))
 ```
 
@@ -237,7 +237,7 @@ necessary. It is fully concurrent and will work within go routines
 safely.
 
 ```go
-mm := NewMemMapFs()
+mm := afero.NewMemMapFs()
 mm.MkdirAll("src/a", 0755))
 ```
 
@@ -264,7 +264,7 @@ The given file name to the operations on this Fs will be prepended with
 the base path before calling the source Fs.
 
 ```go
-bp := NewBasePathFs(NewOsFs(), "/base/path")
+bp := afero.NewBasePathFs(afero.NewOsFs(), "/base/path")
 ```
 
 ### ReadOnlyFs
@@ -272,7 +272,7 @@ bp := NewBasePathFs(NewOsFs(), "/base/path")
 A thin wrapper around the source Fs providing a read only view.
 
 ```go
-fs := NewReadOnlyFs(NewOsFs())
+fs := afero.NewReadOnlyFs(afero.NewOsFs())
 _, err := fs.Create("/file.txt")
 // err = syscall.EPERM
 ```
@@ -285,7 +285,7 @@ Files not matching the regexp provided will not be created.
 Directories are not filtered.
 
 ```go
-fs := NewRegexpFs(NewMemMapFs(), regexp.MustCompile(`\.txt$`))
+fs := afero.NewRegexpFs(afero.NewMemMapFs(), regexp.MustCompile(`\.txt$`))
 _, err := fs.Create("/file.html")
 // err = syscall.ENOENT
 ```
@@ -334,9 +334,9 @@ from the base to the overlay when they're not present (or outdated) in the
 caching layer.
 
 ```go
-base := NewOsFs()
-layer := NewMemMapFs()
-ufs := NewCacheOnReadFs(base, layer, 100 * time.Second)
+base := afero.NewOsFs()
+layer := afero.NewMemMapFs()
+ufs := afero.NewCacheOnReadFs(base, layer, 100 * time.Second)
 ```
 
 ### CopyOnWriteFs()
@@ -360,9 +360,9 @@ overlay will be removed/renamed.
 The writable overlay layer is currently limited to MemMapFs.
 
 ```go
-	base := NewOsFs()
-	roBase := NewReadOnlyFs(base)
-	ufs := NewCopyOnWriteFs(roBase, NewMemMapFs())
+	base := afero.NewOsFs()
+	roBase := afero.NewReadOnlyFs(base)
+	ufs := afero.NewCopyOnWriteFs(roBase, afero.NewMemMapFs())
 
 	fh, _ = ufs.Create("/home/test/file2.txt")
 	fh.WriteString("This is a test")
