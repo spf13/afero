@@ -229,6 +229,7 @@ func copyToLayer(base Fs, layer Fs, name string) error {
 	}
 	defer bfh.Close()
 
+	// First make sure the directory exists
 	exists, err := Exists(layer, filepath.Dir(name))
 	if err != nil {
 		return err
@@ -240,12 +241,14 @@ func copyToLayer(base Fs, layer Fs, name string) error {
 		}
 	}
 
+	// Create the file on the overlay
 	lfh, err := layer.Create(name)
 	if err != nil {
 		return err
 	}
 	n, err := io.Copy(lfh, bfh)
 	if err != nil {
+		// If anything fails, clean up the file
 		layer.Remove(name)
 		lfh.Close()
 		return err

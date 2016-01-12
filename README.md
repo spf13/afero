@@ -30,10 +30,8 @@ filesystem for full interoperability.
 * Interoperation between a variety of file system types
 * A set of interfaces to encourage and enforce interoperability between backends
 * An atomic cross platform memory backed file system
-* Support for compositional file systems by joining various different file systems (see httpFs)
-* Filtering of calls to intercept opening / modifying files, several filters
-may be stacked.
-* Unions of filesystems to overlay two filesystems. These may be stacked.
+* Support for compositional (union) file systems by combining multiple file systems acting as one
+* Specialized backends which modify existing filesystems (Read Only, Regexp filtered)
 * A set of utility functions ported from io, ioutil & hugo to be afero aware
 
 
@@ -224,7 +222,76 @@ func testExistence(name string, e bool, t *testing.T) {
 }
 ```
 
-## Using Afero with Http
+# Available Backends
+
+## Operating System Native
+
+### OsFs
+
+The first is simply a wrapper around the native OS calls. This makes it
+very easy to use as all of the calls are the same as the existing OS
+calls. It also makes it trivial to have your code use the OS during
+operation and a mock filesystem during testing or as needed.
+
+## Memory Backed Storage
+
+### MemMapFs
+
+Afero also provides a fully atomic memory backed filesystem perfect for use in
+mocking and to speed up unnecessary disk io when persistence isn’t
+necessary. It is fully concurrent and will work within go routines
+safely.
+
+#### InMemoryFile
+
+As part of MemMapFs, Afero also provides an atomic, fully concurrent memory
+backed file implementation. This can be used in other memory backed file
+systems with ease. Plans are to add a radix tree memory stored file
+system using InMemoryFile.
+
+## Network Interfaces
+
+### SftpFs
+
+Afero has experimental support for secure file transfer protocol (sftp). Which can
+be used to perform file operations over a encrypted channel.
+
+## Filtering Backends
+
+### BasePathFs
+
+The BasePathFs restricts all operations to a given path within an Fs.
+The given file name to the operations on this Fs will be prepended with
+the base path before calling the source Fs.
+
+```go
+bp := &BasePathFs{source: &OsFs{}, path: "/base/path"}
+```
+
+### ReadOnlyFs
+
+A thin wrapper around the source Fs providing a read only view.
+
+```go
+fs := &ReadOnlyFs{source: &OsFs{}}
+_, err := fs.Create("/file.txt")
+// err = syscall.EPERM
+```
+
+# RegexpFs
+
+A filtered view on file names, any file NOT matching
+the passed regexp will be treated as non-existing.
+Files not matching the regexp provided will not be created.
+Directories are not filtered.
+
+```go
+fs := &RegexpFs{re: regexp.MustCompile(`\.txt$`), source: &MemMapFs{}}
+_, err := fs.Create("/file.html")
+// err = syscall.ENOENT
+```
+
+### HttpFs
 
 Afero provides an http compatible backend which can wrap any of the existing
 backends.
@@ -236,38 +303,76 @@ Afero provides an httpFs file system which satisfies this requirement.
 Any Afero FileSystem can be used as an httpFs.
 
 ```go
-httpFs := &afero.HttpFs{SourceFs: <ExistingFS>}
+httpFs := &afero.HttpFs{source: <ExistingFS>}
 fileserver := http.FileServer(httpFs.Dir(<PATH>)))
 http.Handle("/", fileserver)
 ```
 
-# Available Backends
+## Composite Backends
 
-## OsFs
+Afero provides the ability have two filesystems (or more) act as a single
+file system.
 
-The first is simply a wrapper around the native OS calls. This makes it
-very easy to use as all of the calls are the same as the existing OS
-calls. It also makes it trivial to have your code use the OS during
-operation and a mock filesystem during testing or as needed.
+### CacheOnReadFs
 
-## MemMapFs
+The CacheOnReadFs will lazily make copies of any accessed files from the base
+layer into the overlay. Subsequent reads will be pulled from the overlay
+directly permitting the request is within the cache duration of when it was
+created in the overlay.
 
-Afero also provides a fully atomic memory backed filesystem perfect for use in
-mocking and to speed up unnecessary disk io when persistence isn’t
-necessary. It is fully concurrent and will work within go routines
-safely.
+If the base filesystem is writeable, any changes to files will be
+done first to the base, then to the overlay layer. Write calls to open file
+handles like `Write()` or `Truncate()` to the overlay first.
 
-### InMemoryFile
+To writing files to the overlay only, you can use the overlay Fs directly (not
+via the union Fs).
 
-As part of MemMapFs, Afero also provides an atomic, fully concurrent memory
-backed file implementation. This can be used in other memory backed file
-systems with ease. Plans are to add a radix tree memory stored file
-system using InMemoryFile.
+Cache files in the layer for the given time.Duration, a cache duration of 0
+means "forever" meaning the file will not be re-requested from the base ever.
 
-## SftpFs
+A read-only base will make the overlay also read-only but still copy files
+from the base to the overlay when they're not present (or outdated) in the
+caching layer.
 
-Afero has experimental support for secure file transfer protocol (sftp). Which can
-be used to perform file operations over a encrypted channel.
+```go
+base := &OsFs{}
+layer := &MemMapFs{}
+ufs := &CacheOnReadFs{base: base, layer: layer, cacheTime: 100 * time.Second}
+```
+
+### CopyOnWriteFs()
+
+The CopyOnWriteFs is a read only base file system with a potentially
+writeable layer on top.
+
+Read operations will first look in the overlay and if not found there, will
+serve the file from the base.
+
+Changes to the file system will only be made in the overlay.
+
+Any attempt to modify a file found only in the base will copy the file to the
+overlay layer before modification (including opening a file with a writable
+handle).
+
+Removing and Renaming files present only in the base layer is not currently
+permitted. If a file is present in the base layer and the overlay, only the
+overlay will be removed/renamed.
+
+The writable overlay layer is currently limited to MemMapFs.
+
+```go
+	base := &OsFs{}
+	roBase := &ReadOnlyFs{source: base}
+	ufs := &CopyOnWriteFs{base: roBase, layer: &MemMapFs{}}
+
+	fh, _ = ufs.Create("/home/test/file2.txt")
+	fh.WriteString("This is a test")
+	fh.Close()
+```
+
+In this example all write operations will only occur in memory (&MemMapFs{})
+leaving the base filesystem (&OsFs) untouched.
+
 
 ## Desired/possible backends
 
@@ -278,71 +383,6 @@ implement:
 * ZIP
 * TAR
 * S3
-* Mem buffering to disk/network
-
-# Filters
-
-You can add "filtering" to an Fs by adding a FilterFs to an existing Afero Fs
-like
-```go
-    ROFs := afero.NewFilter(AppFs)
-    ROFs.AddFilter(afero.NewReadonlyFilter())
-```
-The ROFs behaves like a normal afero.Fs now, with the only exception, that it
-provides a readonly view of the underlying AppFs.
-
-The FilterFs is run before the source Fs and may intercept the call to the
-underlying source Fs and can modify the returned data. If it does not wish to
-do so, it just returns the data from the source.
-
-The `AddFilter` adds a new FilterFs before any existing filters.
-
-## Available filters
-
-# NewBasePathFs(Fs, path)
-
-The BasePathFs restricts all operations to a given path within an Fs.
-The given file name to the operations on this Fs will be prepended with
-the base path before calling the base Fs.
-
-# NewReadonlyFilter()
-
-provide a read only view of the source Fs
-
-# NewRegexpFilter(\*regexp.Regexp)
-
-provide a filtered view on file names, any file (not directory) NOT matching
-the passed regexp will be treated as non-existing
-
-## Unions
-
-Afero has the possibilty to overlay two filesystems as a union, these are
-special types of filters. To create a new union Fs use the `NewUnionFs()`. The
-example below creates an memory cache for the OsFs:
-```go
-    ufs := NewUnionFs(&OsFs{}, &MemMapFs{}, NewCacheUnionFs(1 * time.Minute))
-```
-
-Available UnionFs are:
-
-### NewCacheUnionFs(time.Duration)
-
-Cache files in the layer for the given time.Duration, a cache duration of 0
-means "forever".
-
-If the base filesystem is writeable, any changes to files will be done first
-to the base, then to the overlay layer. Write calls to open file handles
-like `Write()` or `Truncate()` to the overlay first.
-
-A read-only base will make the overlay also read-only but still copy files
-from the base to the overlay when they're not present (or outdated) in the
-caching layer.
-
-### NewCoWUnionFs()
-
-A CopyOnWrite union: any attempt to modify a file in the base will copy
-the file to the overlay layer before modification. This overlay layer is
-currently limited to MemMapFs.
 
 # About the project
 
