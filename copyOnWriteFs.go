@@ -26,6 +26,8 @@ func NewCopyOnWriteFs(base Fs, layer Fs) Fs {
 	return &CopyOnWriteFs{base: base, layer: layer}
 }
 
+// isBaseFile Returns true if the given file is only found in the base layer
+// will return true if file is not found in either layer
 func (u *CopyOnWriteFs) isBaseFile(name string) (bool, error) {
 	if _, err := u.layer.Stat(name); err == nil {
 		return false, nil
@@ -144,7 +146,9 @@ func (u *CopyOnWriteFs) Open(name string) (File, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if b {
+		// If it's only in the base (not overlay) return that File
 		return u.base.Open(name)
 	}
 
@@ -153,6 +157,7 @@ func (u *CopyOnWriteFs) Open(name string) (File, error) {
 		return nil, err
 	}
 	if !dir {
+		// If it's in the overlay and not a directory, return that file
 		return u.layer.Open(name)
 	}
 
@@ -161,6 +166,7 @@ func (u *CopyOnWriteFs) Open(name string) (File, error) {
 	if err != nil && bfile == nil {
 		return nil, err
 	}
+	// If it's a directory in both, return a unionFile
 	return &UnionFile{base: bfile, layer: lfile}, nil
 }
 

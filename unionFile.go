@@ -123,6 +123,8 @@ func (f *UnionFile) Name() string {
 	return f.base.Name()
 }
 
+// Readdir will weave the two directories together and
+// return a single view of the overlayed directories
 func (f *UnionFile) Readdir(c int) (ofi []os.FileInfo, err error) {
 	if f.off == 0 {
 		var files = make(map[string]os.FileInfo)
@@ -136,6 +138,7 @@ func (f *UnionFile) Readdir(c int) (ofi []os.FileInfo, err error) {
 				files[fi.Name()] = fi
 			}
 		}
+
 		if f.base != nil {
 			rfi, err = f.base.Readdir(-1)
 			if err != nil {

@@ -1,14 +1,51 @@
 package afero
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
 	"time"
-	"fmt"
 )
 
 var tempDirs []string
+
+func NewTempOsBaseFs(t *testing.T) Fs {
+	name, err := TempDir(NewOsFs(), "", "")
+	if err != nil {
+		t.Error("error creating tempDir", err)
+	}
+
+	tempDirs = append(tempDirs, name)
+
+	return NewBasePathFs(NewOsFs(), name)
+}
+
+func CleanupTempDirs(t *testing.T) {
+	osfs := NewOsFs()
+	type ev struct{
+		path string
+		e error
+	}
+
+	errs := []ev{}
+
+	for _, x := range tempDirs {
+		err := osfs.RemoveAll(x)
+		if err != nil {
+			errs = append(errs, ev{path:x,e: err})
+		}
+	}
+
+	for _, e := range errs {
+		fmt.Println("error removing tempDir", e.path, e.e)
+	}
+
+	if len(errs) > 0 {
+		t.Error("error cleaning up tempDirs")
+	}
+	tempDirs = []string{}
+}
 
 func TestUnionCreateExisting(t *testing.T) {
 	base := &MemMapFs{}
@@ -125,31 +162,110 @@ func TestExistingDirectoryCollisionReaddir(t *testing.T) {
 	}
 }
 
-func NewTempOsBaseFs(t *testing.T) Fs {
-	name, err := TempDir(NewOsFs(), "", "")
+func TestNestedDirBaseReaddir(t *testing.T) {
+	base := &MemMapFs{}
+	roBase := &ReadOnlyFs{source: base}
+	overlay := &MemMapFs{}
+
+	ufs := &CopyOnWriteFs{base: roBase, layer: overlay}
+
+	base.MkdirAll("/home/test/foo/bar", 0777)
+	fh, _ := base.Create("/home/test/file.txt")
+	fh.WriteString("This is a test")
+	fh.Close()
+
+	fh, _ = base.Create("/home/test/foo/file2.txt")
+	fh.WriteString("This is a test")
+	fh.Close()
+	fh, _ = base.Create("/home/test/foo/bar/file3.txt")
+	fh.WriteString("This is a test")
+	fh.Close()
+
+	overlay.MkdirAll("/", 0777)
+
+	// Opening something only in the base
+	fh, _ = ufs.Open("/home/test/foo")
+	list, err := fh.Readdir(-1)
 	if err != nil {
-		t.Error("error creating tempDir", err)
+		t.Errorf("Readdir failed", err)
 	}
-
-	fmt.Println("created tempdir", name)
-	tempDirs = append(tempDirs, name)
-
-	return NewBasePathFs(NewOsFs(), name)
+	if len(list) != 2 {
+		for _, x := range list {
+			fmt.Println(x.Name())
+		}
+		t.Errorf("Got wrong number of files in union: %v", len(list))
+	}
 }
 
-func CleanupTempDirs() {
-	osfs := NewOsFs()
-	for _, x := range tempDirs {
-		err := osfs.RemoveAll(x)
-		if err != nil {
-			fmt.Println("error removing tempDir", x, err)
-		}
+func TestNestedDirOverlayReaddir(t *testing.T) {
+	base := &MemMapFs{}
+	roBase := &ReadOnlyFs{source: base}
+	overlay := &MemMapFs{}
+
+	ufs := &CopyOnWriteFs{base: roBase, layer: overlay}
+
+	base.MkdirAll("/", 0777)
+	overlay.MkdirAll("/home/test/foo/bar", 0777)
+	fh, _ := overlay.Create("/home/test/file.txt")
+	fh.WriteString("This is a test")
+	fh.Close()
+	fh, _ = overlay.Create("/home/test/foo/file2.txt")
+	fh.WriteString("This is a test")
+	fh.Close()
+	fh, _ = overlay.Create("/home/test/foo/bar/file3.txt")
+	fh.WriteString("This is a test")
+	fh.Close()
+
+	// Opening nested dir only in the overlay
+	fh, _ = ufs.Open("/home/test/foo")
+	list, err := fh.Readdir(-1)
+	if err != nil {
+		t.Errorf("Readdir failed", err)
 	}
-	tempDirs = []string{}
+	if len(list) != 2 {
+		for _, x := range list {
+			fmt.Println(x.Name())
+		}
+		t.Errorf("Got wrong number of files in union: %v", len(list))
+	}
+}
+
+func TestNestedDirOverlayOsFsReaddir(t *testing.T) {
+	defer CleanupTempDirs(t)
+	base := NewTempOsBaseFs(t)
+	roBase := &ReadOnlyFs{source: base}
+	overlay := NewTempOsBaseFs(t)
+
+	ufs := &CopyOnWriteFs{base: roBase, layer: overlay}
+
+	base.MkdirAll("/", 0777)
+	overlay.MkdirAll("/home/test/foo/bar", 0777)
+	fh, _ := overlay.Create("/home/test/file.txt")
+	fh.WriteString("This is a test")
+	fh.Close()
+	fh, _ = overlay.Create("/home/test/foo/file2.txt")
+	fh.WriteString("This is a test")
+	fh.Close()
+	fh, _ = overlay.Create("/home/test/foo/bar/file3.txt")
+	fh.WriteString("This is a test")
+	fh.Close()
+
+	// Opening nested dir only in the overlay
+	fh, _ = ufs.Open("/home/test/foo")
+	list, err := fh.Readdir(-1)
+	if err != nil {
+		t.Errorf("Readdir failed", err)
+	}
+	if len(list) != 2 {
+		for _, x := range list {
+			fmt.Println(x.Name())
+		}
+		t.Errorf("Got wrong number of files in union: %v", len(list))
+	}
 }
 
 func TestCopyOnWriteFsWithOsFs(t *testing.T) {
-	defer CleanupTempDirs()
+	defer CleanupTempDirs(t)
 	base := NewTempOsBaseFs(t)
 	roBase := &ReadOnlyFs{source: base}
 	overlay := NewTempOsBaseFs(t)
