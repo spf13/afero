@@ -5,7 +5,10 @@ import (
 	"os"
 	"testing"
 	"time"
+	"fmt"
 )
+
+var tempDirs []string
 
 func TestUnionCreateExisting(t *testing.T) {
 	base := &MemMapFs{}
@@ -79,6 +82,110 @@ func TestUnionMergeReaddir(t *testing.T) {
 	}
 	if len(files) != 2 {
 		t.Errorf("Got wrong number of files: %v", files)
+	}
+}
+
+func TestExistingDirectoryCollisionReaddir(t *testing.T) {
+	base := &MemMapFs{}
+	roBase := &ReadOnlyFs{source: base}
+	overlay := &MemMapFs{}
+
+	ufs := &CopyOnWriteFs{base: roBase, layer: overlay}
+
+	base.MkdirAll("/home/test", 0777)
+	fh, _ := base.Create("/home/test/file.txt")
+	fh.WriteString("This is a test")
+	fh.Close()
+
+	overlay.MkdirAll("home/test", 0777)
+	fh, _ = overlay.Create("/home/test/file2.txt")
+	fh.WriteString("This is a test")
+	fh.Close()
+
+	fh, _ = ufs.Create("/home/test/file3.txt")
+	fh.WriteString("This is a test")
+	fh.Close()
+
+	fh, _ = ufs.Open("/home/test")
+	files, err := fh.Readdirnames(-1)
+	if err != nil {
+		t.Errorf("Readdirnames failed")
+	}
+	if len(files) != 3 {
+		t.Errorf("Got wrong number of files in union: %v", files)
+	}
+
+	fh, _ = overlay.Open("/home/test")
+	files, err = fh.Readdirnames(-1)
+	if err != nil {
+		t.Errorf("Readdirnames failed")
+	}
+	if len(files) != 2 {
+		t.Errorf("Got wrong number of files in overlay: %v", files)
+	}
+}
+
+func NewTempOsBaseFs(t *testing.T) Fs {
+	name, err := TempDir(NewOsFs(), "", "")
+	if err != nil {
+		t.Error("error creating tempDir", err)
+	}
+
+	fmt.Println("created tempdir", name)
+	tempDirs = append(tempDirs, name)
+
+	return NewBasePathFs(NewOsFs(), name)
+}
+
+func CleanupTempDirs() {
+	osfs := NewOsFs()
+	for _, x := range tempDirs {
+		err := osfs.RemoveAll(x)
+		if err != nil {
+			fmt.Println("error removing tempDir", x, err)
+		}
+	}
+	tempDirs = []string{}
+}
+
+func TestCopyOnWriteFsWithOsFs(t *testing.T) {
+	defer CleanupTempDirs()
+	base := NewTempOsBaseFs(t)
+	roBase := &ReadOnlyFs{source: base}
+	overlay := NewTempOsBaseFs(t)
+
+	ufs := &CopyOnWriteFs{base: roBase, layer: overlay}
+
+	base.MkdirAll("/home/test", 0777)
+	fh, _ := base.Create("/home/test/file.txt")
+	fh.WriteString("This is a test")
+	fh.Close()
+
+	overlay.MkdirAll("home/test", 0777)
+	fh, _ = overlay.Create("/home/test/file2.txt")
+	fh.WriteString("This is a test")
+	fh.Close()
+
+	fh, _ = ufs.Create("/home/test/file3.txt")
+	fh.WriteString("This is a test")
+	fh.Close()
+
+	fh, _ = ufs.Open("/home/test")
+	files, err := fh.Readdirnames(-1)
+	if err != nil {
+		t.Errorf("Readdirnames failed")
+	}
+	if len(files) != 3 {
+		t.Errorf("Got wrong number of files in union: %v", files)
+	}
+
+	fh, _ = overlay.Open("/home/test")
+	files, err = fh.Readdirnames(-1)
+	if err != nil {
+		t.Errorf("Readdirnames failed")
+	}
+	if len(files) != 2 {
+		t.Errorf("Got wrong number of files in overlay: %v", files)
 	}
 }
 
