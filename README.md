@@ -357,8 +357,6 @@ Removing and Renaming files present only in the base layer is not currently
 permitted. If a file is present in the base layer and the overlay, only the
 overlay will be removed/renamed.
 
-The writable overlay layer is currently limited to MemMapFs.
-
 ```go
 	base := afero.NewOsFs()
 	roBase := afero.NewReadOnlyFs(base)
