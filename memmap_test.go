@@ -241,8 +241,8 @@ func TestWriteCloseTime(t *testing.T) {
 			time.Sleep(2 * time.Second)
 		case "darwin":
 			time.Sleep(1 * time.Second)
-		default:
-			time.Sleep(10 * time.Millisecond)
+		default: // depending on the FS, this may work with < 1 second, on my old ext3 it does not
+			time.Sleep(1 * time.Second)
 		}
 
 		_, err = f.Write([]byte("test"))
