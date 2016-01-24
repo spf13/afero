@@ -30,6 +30,16 @@ func (u *CopyOnWriteFs) isBaseFile(name string) (bool, error) {
 		return false, nil
 	}
 	_, err := u.base.Stat(name)
+	if err != nil {
+		if oerr, ok := err.(*os.PathError); ok {
+			if oerr.Err == os.ErrNotExist || oerr.Err == syscall.ENOENT {
+				return false, nil
+			}
+		}
+		if err == syscall.ENOENT {
+			return false, nil
+		}
+	}
 	return true, err
 }
 
@@ -236,5 +246,5 @@ func (u *CopyOnWriteFs) MkdirAll(name string, perm os.FileMode) error {
 }
 
 func (u *CopyOnWriteFs) Create(name string) (File, error) {
-	return u.OpenFile(name, os.O_TRUNC|os.O_RDWR, 0666)
+	return u.OpenFile(name, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0666)
 }
