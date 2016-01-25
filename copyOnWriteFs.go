@@ -2,6 +2,7 @@ package afero
 
 import (
 	"os"
+	"path/filepath"
 	"syscall"
 	"time"
 	"fmt"
@@ -12,10 +13,6 @@ import (
 // be made in the overlay: Changing an existing file in the base layer which
 // is not present in the overlay will copy the file to the overlay ("changing"
 // includes also calls to e.g. Chtimes() and Chmod()).
-// The overlay is currently limited to MemMapFs:
-//  - missing MkdirAll() calls in the code below, MemMapFs creates them
-//    implicitly (or better: records the full path and afero.Readdir()
-//    can handle this).
 //
 // Reading directories is currently only supported via Open(), not OpenFile().
 type CopyOnWriteFs struct {
@@ -33,6 +30,16 @@ func (u *CopyOnWriteFs) isBaseFile(name string) (bool, error) {
 		return false, nil
 	}
 	_, err := u.base.Stat(name)
+	if err != nil {
+		if oerr, ok := err.(*os.PathError); ok {
+			if oerr.Err == os.ErrNotExist || oerr.Err == syscall.ENOENT {
+				return false, nil
+			}
+		}
+		if err == syscall.ENOENT {
+			return false, nil
+		}
+	}
 	return true, err
 }
 
@@ -132,8 +139,30 @@ func (u *CopyOnWriteFs) OpenFile(name string, flag int, perm os.FileMode) (File,
 			if err = u.copyToLayer(name); err != nil {
 				return nil, err
 			}
+			return u.layer.OpenFile(name, flag, perm)
 		}
-		return u.layer.OpenFile(name, flag, perm)
+
+		dir := filepath.Dir(name)
+		isaDir, err := IsDir(u.base, dir)
+		if err != nil {
+			return nil, err
+		}
+		if isaDir {
+			if err = u.layer.MkdirAll(dir, 0777); err != nil {
+				return nil, err
+			}
+			return u.layer.OpenFile(name, flag, perm)
+		}
+
+		isaDir, err = IsDir(u.layer, dir)
+		if err != nil {
+			return nil, err
+		}
+		if isaDir {
+			return u.layer.OpenFile(name, flag, perm)
+		}
+
+		return nil, &os.PathError{Op: "open", Path: name, Err: syscall.ENOTDIR} // ...or os.ErrNotExist?
 	}
 	if b {
 		return u.base.OpenFile(name, flag, perm)
@@ -217,11 +246,5 @@ func (u *CopyOnWriteFs) MkdirAll(name string, perm os.FileMode) error {
 }
 
 func (u *CopyOnWriteFs) Create(name string) (File, error) {
-	b, err := u.isBaseFile(name)
-	if err == nil && b {
-		if err = u.copyToLayer(name); err != nil {
-			return nil, err
-		}
-	}
-	return u.layer.Create(name)
+	return u.OpenFile(name, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0666)
 }
