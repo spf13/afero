@@ -4,6 +4,7 @@ import (
 	"os"
 	"syscall"
 	"time"
+	"fmt"
 )
 
 // The CopyOnWriteFs is a union filesystem: a read only base file system with
@@ -26,8 +27,7 @@ func NewCopyOnWriteFs(base Fs, layer Fs) Fs {
 	return &CopyOnWriteFs{base: base, layer: layer}
 }
 
-// isBaseFile Returns true if the given file is only found in the base layer
-// will return true if file is not found in either layer
+// Returns true if the file is not in the overlay
 func (u *CopyOnWriteFs) isBaseFile(name string) (bool, error) {
 	if _, err := u.layer.Stat(name); err == nil {
 		return false, nil
@@ -141,32 +141,52 @@ func (u *CopyOnWriteFs) OpenFile(name string, flag int, perm os.FileMode) (File,
 	return u.layer.OpenFile(name, flag, perm)
 }
 
+// This function handles the 9 different possibilities caused
+// by the union which are the intersection of the following...
+//  layer: doesn't exist, exists as a file, and exists as a directory
+//  base:  doesn't exist, exists as a file, and exists as a directory
 func (u *CopyOnWriteFs) Open(name string) (File, error) {
+	// Since the overlay overrides the base we check that first
 	b, err := u.isBaseFile(name)
 	if err != nil {
 		return nil, err
 	}
 
+	// If overlay doesn't exist, return the base (base state irrelevant)
 	if b {
-		// If it's only in the base (not overlay) return that File
 		return u.base.Open(name)
 	}
 
+	// If overlay is a file, return it (base state irrelevant)
 	dir, err := IsDir(u.layer, name)
 	if err != nil {
 		return nil, err
 	}
 	if !dir {
-		// If it's in the overlay and not a directory, return that file
 		return u.layer.Open(name)
 	}
 
-	bfile, _ := u.base.Open(name)
-	lfile, err := u.layer.Open(name)
-	if err != nil && bfile == nil {
-		return nil, err
+	// Overlay is a directory, base state now matters.
+	// Base state has 3 states to check but 2 outcomes:
+	// A. It's a file or non-readable in the base (return just the overlay)
+	// B. It's an accessible directory in the base (return a UnionFile)
+
+	// If base is file or nonreadable, return overlay
+	dir, err = IsDir(u.base, name)
+	if !dir || err != nil {
+		return u.layer.Open(name)
 	}
-	// If it's a directory in both, return a unionFile
+
+	// Both base & layer are directories
+	// Return union file (if opens are without error)
+	bfile, bErr := u.base.Open(name)
+	lfile, lErr := u.layer.Open(name)
+
+	// If either have errors at this point something is very wrong. Return nil and the errors
+	if bErr != nil || lErr != nil {
+		return nil, fmt.Errorf("BaseErr: %v\nOverlayErr: %v", bErr, lErr)
+	}
+
 	return &UnionFile{base: bfile, layer: lfile}, nil
 }
 
