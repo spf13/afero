@@ -75,14 +75,17 @@ func (u *CopyOnWriteFs) Chmod(name string, mode os.FileMode) error {
 
 func (u *CopyOnWriteFs) Stat(name string) (os.FileInfo, error) {
 	fi, err := u.layer.Stat(name)
-	switch err {
-	case nil:
-		return fi, nil
-	case syscall.ENOENT:
-		return u.base.Stat(name)
-	default:
-		return nil, err
+	if err != nil {
+		origErr := err
+		if e, ok := err.(*os.PathError); ok {
+			err = e.Err
+		}
+		if err == syscall.ENOENT {
+			return u.base.Stat(name)
+		}
+		return nil, origErr
 	}
+	return fi, nil
 }
 
 // Renaming files present only in the base layer is not permitted
