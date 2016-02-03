@@ -12,6 +12,7 @@
 // limitations under the License.
 // +build !darwin
 // +build !openbsd
+// +build !freebsd
 
 package afero
 
