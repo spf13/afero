@@ -253,6 +253,7 @@ func TestNestedDirOverlayOsFsReaddir(t *testing.T) {
 	// Opening nested dir only in the overlay
 	fh, _ = ufs.Open("/home/test/foo")
 	list, err := fh.Readdir(-1)
+	fh.Close()
 	if err != nil {
 		t.Errorf("Readdir failed", err)
 	}
@@ -288,6 +289,7 @@ func TestCopyOnWriteFsWithOsFs(t *testing.T) {
 
 	fh, _ = ufs.Open("/home/test")
 	files, err := fh.Readdirnames(-1)
+	fh.Close()
 	if err != nil {
 		t.Errorf("Readdirnames failed")
 	}
@@ -297,6 +299,7 @@ func TestCopyOnWriteFsWithOsFs(t *testing.T) {
 
 	fh, _ = overlay.Open("/home/test")
 	files, err = fh.Readdirnames(-1)
+	fh.Close()
 	if err != nil {
 		t.Errorf("Readdirnames failed")
 	}
