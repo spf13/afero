@@ -139,6 +139,35 @@ func TestIsEmpty(t *testing.T) {
 	}
 }
 
+func TestReaderContains(t *testing.T) {
+	for i, this := range []struct {
+		v1     string
+		v2     []byte
+		expect bool
+	}{
+		{"abc", []byte("a"), true},
+		{"abc", []byte("b"), true},
+		{"abcdefg", []byte("efg"), true},
+		{"abc", []byte("d"), false},
+		{"", nil, false},
+		{"", []byte("a"), false},
+		{"a", []byte(""), false},
+		{"", []byte(""), false}} {
+		result := readerContains(strings.NewReader(this.v1), this.v2)
+		if result != this.expect {
+			t.Errorf("[%d] readerContains: got %t but expected %t", i, result, this.expect)
+		}
+	}
+
+	if readerContains(nil, []byte("a")) {
+		t.Error("readerContains with nil reader")
+	}
+
+	if readerContains(nil, nil) {
+		t.Error("readerContains with nil arguments")
+	}
+}
+
 func createZeroSizedFileInTempDir() (File, error) {
 	filePrefix := "_path_test_"
 	f, e := TempFile(testFS, "", filePrefix) // dir is os.TempDir()
