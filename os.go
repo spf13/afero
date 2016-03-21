@@ -85,6 +85,10 @@ func (OsFs) Stat(name string) (os.FileInfo, error) {
 	return os.Stat(name)
 }
 
+func (OsFs) Lstat(name string) (os.FileInfo, error) {
+	return os.Lstat(name)
+}
+
 func (OsFs) Chmod(name string, mode os.FileMode) error {
 	return os.Chmod(name, mode)
 }

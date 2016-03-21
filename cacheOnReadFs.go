@@ -136,6 +136,19 @@ func (u *CacheOnReadFs) Stat(name string) (os.FileInfo, error) {
 	}
 }
 
+func (u *CacheOnReadFs) Lstat(name string) (os.FileInfo, error) {
+	st, fi, err := u.cacheStatus(name)
+	if err != nil {
+		return nil, err
+	}
+	switch st {
+	case cacheMiss:
+		return u.base.Lstat(name)
+	default: // cacheStale has base, cacheHit and cacheLocal the layer os.FileInfo
+		return fi, nil
+	}
+}
+
 func (u *CacheOnReadFs) Rename(oldname, newname string) error {
 	st, _, err := u.cacheStatus(oldname)
 	if err != nil {

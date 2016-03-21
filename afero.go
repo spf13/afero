@@ -88,6 +88,8 @@ type Fs interface {
 	// happens.
 	Stat(name string) (os.FileInfo, error)
 
+	Lstat(name string) (os.FileInfo, error)
+
 	// The name of this FileSystem
 	Name() string
 
