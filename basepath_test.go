@@ -119,7 +119,7 @@ func TestNestedBasePaths(t *testing.T) {
 		}
 
 		for _, s := range specs {
-			if actualPath, err := s.BaseFs.(*BasePathFs).RealPath(s.FileName); err != nil {
+			if actualPath, err := s.BaseFs.(*BasePathFs).fullPath(s.FileName); err != nil {
 				t.Errorf("Got error %s", err.Error())
 			} else if actualPath != s.ExpectedPath {
 				t.Errorf("Expected \n%s got \n%s", s.ExpectedPath, actualPath)
