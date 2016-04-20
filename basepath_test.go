@@ -99,6 +99,7 @@ func TestNestedBasePaths(t *testing.T) {
 		dirSpec{Dir1: "/", Dir2: "/", Dir3: "/"},
 		dirSpec{Dir1: "/", Dir2: "/path2", Dir3: "/"},
 		dirSpec{Dir1: "/path1/dir", Dir2: "/path2/dir/", Dir3: "/path3/dir"},
+		dirSpec{Dir1: "C:/path1", Dir2: "path2/dir", Dir3: "/path3/dir/"},
 	}
 
 	for _, ds := range dirSpecs {
@@ -119,10 +120,23 @@ func TestNestedBasePaths(t *testing.T) {
 		}
 
 		for _, s := range specs {
-			if actualPath, err := s.BaseFs.(*BasePathFs).fullPath(s.FileName); err != nil {
+			if err := s.BaseFs.MkdirAll(s.FileName, 0755); err != nil {
 				t.Errorf("Got error %s", err.Error())
-			} else if actualPath != s.ExpectedPath {
-				t.Errorf("Expected \n%s got \n%s", s.ExpectedPath, actualPath)
+			}
+			if _, err := s.BaseFs.Stat(s.FileName); err != nil {
+				t.Errorf("Got error %s", err.Error())
+			}
+
+			if s.BaseFs == level3Fs {
+				pathToExist := filepath.Join(ds.Dir3, s.FileName)
+				if _, err := level2Fs.Stat(pathToExist); err != nil {
+					t.Errorf("Got error %s (path %s)", err.Error(), pathToExist)
+				}
+			} else if s.BaseFs == level2Fs {
+				pathToExist := filepath.Join(ds.Dir2, ds.Dir3, s.FileName)
+				if _, err := level1Fs.Stat(pathToExist); err != nil {
+					t.Errorf("Got error %s (path %s)", err.Error(), pathToExist)
+				}
 			}
 		}
 	}
