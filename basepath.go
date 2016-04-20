@@ -42,24 +42,6 @@ func (b *BasePathFs) RealPath(name string) (path string, err error) {
 	return path, nil
 }
 
-func (b *BasePathFs) fullPath(name string) (path string, err error) {
-	if err := validateBasePathName(name); err != nil {
-		return "", err
-	}
-
-	bpath := filepath.Clean(b.path)
-	path = filepath.Clean(filepath.Join(bpath, name))
-	if !strings.HasPrefix(path, bpath) {
-		return name, os.ErrNotExist
-	}
-
-	if parentBasePathFs, ok := b.source.(*BasePathFs); ok {
-		return parentBasePathFs.fullPath(path)
-	}
-
-	return path, nil
-}
-
 func validateBasePathName(name string) error {
 	if runtime.GOOS != "windows" {
 		// Not much to do here;
@@ -77,14 +59,14 @@ func validateBasePathName(name string) error {
 }
 
 func (b *BasePathFs) Chtimes(name string, atime, mtime time.Time) (err error) {
-	if name, err = b.fullPath(name); err != nil {
+	if name, err = b.RealPath(name); err != nil {
 		return &os.PathError{"chtimes", name, err}
 	}
 	return b.source.Chtimes(name, atime, mtime)
 }
 
 func (b *BasePathFs) Chmod(name string, mode os.FileMode) (err error) {
-	if name, err = b.fullPath(name); err != nil {
+	if name, err = b.RealPath(name); err != nil {
 		return &os.PathError{"chmod", name, err}
 	}
 	return b.source.Chmod(name, mode)
@@ -95,66 +77,66 @@ func (b *BasePathFs) Name() string {
 }
 
 func (b *BasePathFs) Stat(name string) (fi os.FileInfo, err error) {
-	if name, err = b.fullPath(name); err != nil {
+	if name, err = b.RealPath(name); err != nil {
 		return nil, &os.PathError{"stat", name, err}
 	}
 	return b.source.Stat(name)
 }
 
 func (b *BasePathFs) Rename(oldname, newname string) (err error) {
-	if oldname, err = b.fullPath(oldname); err != nil {
+	if oldname, err = b.RealPath(oldname); err != nil {
 		return &os.PathError{"rename", oldname, err}
 	}
-	if newname, err = b.fullPath(newname); err != nil {
+	if newname, err = b.RealPath(newname); err != nil {
 		return &os.PathError{"rename", newname, err}
 	}
 	return b.source.Rename(oldname, newname)
 }
 
 func (b *BasePathFs) RemoveAll(name string) (err error) {
-	if name, err = b.fullPath(name); err != nil {
+	if name, err = b.RealPath(name); err != nil {
 		return &os.PathError{"remove_all", name, err}
 	}
 	return b.source.RemoveAll(name)
 }
 
 func (b *BasePathFs) Remove(name string) (err error) {
-	if name, err = b.fullPath(name); err != nil {
+	if name, err = b.RealPath(name); err != nil {
 		return &os.PathError{"remove", name, err}
 	}
 	return b.source.Remove(name)
 }
 
 func (b *BasePathFs) OpenFile(name string, flag int, mode os.FileMode) (f File, err error) {
-	if name, err = b.fullPath(name); err != nil {
+	if name, err = b.RealPath(name); err != nil {
 		return nil, &os.PathError{"openfile", name, err}
 	}
 	return b.source.OpenFile(name, flag, mode)
 }
 
 func (b *BasePathFs) Open(name string) (f File, err error) {
-	if name, err = b.fullPath(name); err != nil {
+	if name, err = b.RealPath(name); err != nil {
 		return nil, &os.PathError{"open", name, err}
 	}
 	return b.source.Open(name)
 }
 
 func (b *BasePathFs) Mkdir(name string, mode os.FileMode) (err error) {
-	if name, err = b.fullPath(name); err != nil {
+	if name, err = b.RealPath(name); err != nil {
 		return &os.PathError{"mkdir", name, err}
 	}
 	return b.source.Mkdir(name, mode)
 }
 
 func (b *BasePathFs) MkdirAll(name string, mode os.FileMode) (err error) {
-	if name, err = b.fullPath(name); err != nil {
+	if name, err = b.RealPath(name); err != nil {
 		return &os.PathError{"mkdir", name, err}
 	}
 	return b.source.MkdirAll(name, mode)
 }
 
 func (b *BasePathFs) Create(name string) (f File, err error) {
-	if name, err = b.fullPath(name); err != nil {
+	if name, err = b.RealPath(name); err != nil {
 		return nil, &os.PathError{"create", name, err}
 	}
 	return b.source.Create(name)
