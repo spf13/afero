@@ -109,14 +109,13 @@ func TestNestedBasePaths(t *testing.T) {
 		level3Fs := NewBasePathFs(level2Fs, ds.Dir3)
 
 		type spec struct {
-			BaseFs       Fs
-			FileName     string
-			ExpectedPath string
+			BaseFs   Fs
+			FileName string
 		}
 		specs := []spec{
-			spec{BaseFs: level3Fs, FileName: "f.txt", ExpectedPath: filepath.Join(ds.Dir1, ds.Dir2, ds.Dir3, "f.txt")},
-			spec{BaseFs: level2Fs, FileName: "f.txt", ExpectedPath: filepath.Join(ds.Dir1, ds.Dir2, "f.txt")},
-			spec{BaseFs: level1Fs, FileName: "f.txt", ExpectedPath: filepath.Join(ds.Dir1, "f.txt")},
+			spec{BaseFs: level3Fs, FileName: "f.txt"},
+			spec{BaseFs: level2Fs, FileName: "f.txt"},
+			spec{BaseFs: level1Fs, FileName: "f.txt"},
 		}
 
 		for _, s := range specs {
