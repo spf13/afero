@@ -320,3 +320,12 @@ func Exists(fs Fs, path string) (bool, error) {
 	}
 	return false, err
 }
+
+func FullBaseFsPath(basePathFs *BasePathFs, relativePath string) string {
+	combinedPath := filepath.Join(basePathFs.path, relativePath)
+	if parent, ok := basePathFs.source.(*BasePathFs); ok {
+		return FullBaseFsPath(parent, combinedPath)
+	}
+
+	return combinedPath
+}
