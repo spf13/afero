@@ -1,11 +1,11 @@
 package afero
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"syscall"
 	"time"
-	"fmt"
 )
 
 // The CopyOnWriteFs is a union filesystem: a read only base file system with
@@ -147,7 +147,7 @@ func (u *CopyOnWriteFs) OpenFile(name string, flag int, perm os.FileMode) (File,
 
 		dir := filepath.Dir(name)
 		isaDir, err := IsDir(u.base, dir)
-		if err != nil {
+		if err != nil && !os.IsNotExist(err) {
 			return nil, err
 		}
 		if isaDir {
