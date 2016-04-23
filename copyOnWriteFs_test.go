@@ -5,7 +5,7 @@ import "testing"
 func TestCopyOnWrite(t *testing.T) {
 	var fs Fs
 	var err error
-	base := NewOsFs()
+	base := NewMemMapFs()
 	roBase := NewReadOnlyFs(base)
 	ufs := NewCopyOnWriteFs(roBase, NewMemMapFs())
 	fs = ufs
