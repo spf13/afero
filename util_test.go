@@ -448,3 +448,96 @@ func TestFullBaseFsPath(t *testing.T) {
 		}
 	}
 }
+
+func TestCopyFile(t *testing.T) {
+	var err error
+
+	files := []string{
+		"/file1",
+		"/dir1/file2",
+		"/dir1/dir2/file3",
+	}
+
+	srcFs := NewMemMapFs()
+	destFs := NewMemMapFs()
+
+	for _, f := range files {
+		if err = WriteFile(srcFs, f, []byte("Dummy file content"), 0655); err != nil {
+			t.Error(err.Error())
+		}
+	}
+
+	for _, f := range files {
+		if destExists, err := Exists(destFs, f); err != nil {
+			t.Error(err.Error())
+		} else if destExists {
+			t.Errorf("Dest file '%s' should not exist", f)
+		}
+	}
+
+	for _, f := range files {
+		if err = CopyFile(srcFs, f, destFs, f); err != nil {
+			t.Error(err.Error())
+		}
+	}
+
+	for _, f := range files {
+		if destExists, err := Exists(destFs, f); err != nil {
+			t.Error(err.Error())
+		} else if !destExists {
+			t.Errorf("Dest file '%s' should exist", f)
+		}
+	}
+}
+
+func TestCopyDir(t *testing.T) {
+	var err error
+	type pathSpec struct {
+		path string
+		dir  bool
+	}
+
+	paths := []*pathSpec{
+		{"/file1", false},
+		{"/dir1", true},
+		{"/dir1/file1", false},
+		{"/dir1/dir2", true},
+		{"/dir1/dir2/file2", false},
+	}
+
+	srcFs := NewMemMapFs()
+	destFs := NewMemMapFs()
+
+	for _, p := range paths {
+		if p.dir {
+			if err = srcFs.MkdirAll(p.path, 0755); err != nil {
+				t.Error(err.Error())
+			}
+		} else {
+			if err = WriteFile(srcFs, p.path, []byte("Dummy file content"), 0655); err != nil {
+				t.Error(err.Error())
+			}
+		}
+	}
+
+	destDirPrefix := "/subdir1"
+	for _, p := range paths {
+		if destExists, err := Exists(destFs, filepath.Join(destDirPrefix, p.path)); err != nil {
+			t.Error(err.Error())
+		} else if destExists {
+			t.Errorf("Dest path '%s' should not exist", p.path)
+		}
+	}
+
+	if err = CopyDir(srcFs, "/", destFs, destDirPrefix); err != nil {
+		t.Error(err.Error())
+	}
+
+	for _, p := range paths {
+		if destExists, err := Exists(destFs, filepath.Join(destDirPrefix, p.path)); err != nil {
+			t.Error(err.Error())
+		} else if !destExists {
+			t.Errorf("Dest path '%s' should exist", p.path)
+		}
+	}
+}
