@@ -224,7 +224,7 @@ func TestRename(t *testing.T) {
 		if err != nil {
 			t.Errorf("%s: rename %q, %q failed: %v", fs.Name(), exists, from, err)
 		}
-		names, err := readDirNames(fs, tDir)
+		names, err := ReadDirNames(fs, tDir)
 		if err != nil {
 			t.Errorf("%s: readDirNames error: %v", fs.Name(), err)
 		}

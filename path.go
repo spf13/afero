@@ -24,7 +24,7 @@ import (
 // readDirNames reads the directory named by dirname and returns
 // a sorted list of directory entries.
 // adapted from https://golang.org/src/path/filepath/path.go
-func readDirNames(fs Fs, dirname string) ([]string, error) {
+func ReadDirNames(fs Fs, dirname string) ([]string, error) {
 	f, err := fs.Open(dirname)
 	if err != nil {
 		return nil, err
@@ -53,7 +53,7 @@ func walk(fs Fs, path string, info os.FileInfo, walkFn filepath.WalkFunc) error 
 		return nil
 	}
 
-	names, err := readDirNames(fs, path)
+	names, err := ReadDirNames(fs, path)
 	if err != nil {
 		return walkFn(path, info, err)
 	}
