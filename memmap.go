@@ -66,7 +66,7 @@ func (m *MemMapFs) unRegisterWithParent(fileName string) error {
 	}
 	parent := m.findParent(f)
 	if parent == nil {
-		log.Fatal("parent of ", f.Name(), " is nil")
+		log.Panic("parent of ", f.Name(), " is nil")
 	}
 	mem.RemoveFromMemDir(parent, f)
 	return nil

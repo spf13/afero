@@ -46,7 +46,7 @@ func WriteReader(fs Fs, path string, r io.Reader) (err error) {
 		err = fs.MkdirAll(ospath, 0777) // rwx, rw, r
 		if err != nil {
 			if err != os.ErrExist {
-				log.Fatalln(err)
+				log.Panicln(err)
 			}
 		}
 	}
