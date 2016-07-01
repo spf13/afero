@@ -394,13 +394,13 @@ func TestWriteAt(t *testing.T) {
 		}
 
 		f2, err := fs.Open(f.Name())
+		if err != nil {
+			t.Fatalf("%v: ReadFile %s: %v", fs.Name(), f.Name(), err)
+		}
 		defer f2.Close()
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(f2)
 		b := buf.Bytes()
-		if err != nil {
-			t.Fatalf("%v: ReadFile %s: %v", fs.Name(), f.Name(), err)
-		}
 		if string(b) != "hello, WORLD\n" {
 			t.Fatalf("after write: have %q want %q", string(b), "hello, WORLD\n")
 		}
