@@ -201,8 +201,8 @@ func TestExist(t *testing.T) {
 	appFS = afero.NewMemMapFs()
 	// create test files and directories
 	appFS.MkdirAll("src/a", 0755))
-	appFS.WriteFile("src/a/b", []byte("file b"), 0644)
-	appFS.WriteFile("src/c", []byte("file c"), 0644)
+	afero.WriteFile(appFS, "src/a/b", []byte("file b"), 0644)
+	afero.WriteFile(appFS, "src/c", []byte("file c"), 0644)
 	_, err := appFS.Stat("src/c")
 	if os.IsNotExist(err) {
         t.Errorf("file \"%s\" does not exist.\n", name)
