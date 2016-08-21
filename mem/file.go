@@ -107,6 +107,8 @@ func (f *File) Close() error {
 }
 
 func (f *File) Name() string {
+	f.fileData.Lock()
+	defer f.fileData.Unlock()
 	return f.fileData.name
 }
 
