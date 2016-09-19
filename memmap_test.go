@@ -259,3 +259,26 @@ func TestWriteCloseTime(t *testing.T) {
 		}
 	}
 }
+
+// This test should be run with the race detector on:
+// go test -race -v -timeout 10s -run TestRacingDeleteAndClose
+func TestRacingDeleteAndClose(t *testing.T) {
+	fs := NewMemMapFs()
+	pathname := "testfile"
+	f, err := fs.Create(pathname)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	in := make(chan bool)
+
+	go func() {
+		<-in
+		f.Close()
+	}()
+	go func() {
+		<-in
+		fs.Remove(pathname)
+	}()
+	close(in)
+}
