@@ -35,8 +35,6 @@ func NewMemMapFs() Fs {
 	return &MemMapFs{}
 }
 
-var memfsInit sync.Once
-
 func (m *MemMapFs) getData() map[string]*mem.FileData {
 	m.init.Do(func() {
 		m.data = make(map[string]*mem.FileData)
@@ -342,8 +340,8 @@ func (m *MemMapFs) List() {
 	}
 }
 
-func debugMemMapList(fs Fs) {
-	if x, ok := fs.(*MemMapFs); ok {
-		x.List()
-	}
-}
+// func debugMemMapList(fs Fs) {
+// 	if x, ok := fs.(*MemMapFs); ok {
+// 		x.List()
+// 	}
+// }
