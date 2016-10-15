@@ -168,30 +168,50 @@ func normalizePath(path string) string {
 }
 
 func (m *MemMapFs) Open(name string) (File, error) {
-	f, err := m.open(name)
+	f, err := m.open(name, 0, 0)
 	if f != nil {
 		return mem.NewReadOnlyFileHandle(f), err
 	}
 	return nil, err
 }
 
-func (m *MemMapFs) openWrite(name string) (File, error) {
-	f, err := m.open(name)
+func (m *MemMapFs) openWrite(name string, flag int, perm os.FileMode) (File, error) {
+	f, err := m.open(name, flag, perm)
 	if f != nil {
 		return mem.NewFileHandle(f), err
 	}
 	return nil, err
 }
 
-func (m *MemMapFs) open(name string) (*mem.FileData, error) {
+func (m *MemMapFs) open(name string, flag int, perm os.FileMode) (*mem.FileData, error) {
 	name = normalizePath(name)
 
-	m.mu.RLock()
-	f, ok := m.getData()[name]
-	m.mu.RUnlock()
-	if !ok {
-		return nil, &os.PathError{Op: "open", Path: name, Err: ErrFileNotFound}
+	if flag&os.O_CREATE == 0 {
+		m.mu.RLock()
+		f, ok := m.getData()[name]
+		m.mu.RUnlock()
+		if !ok {
+			return nil, &os.PathError{"open", name, ErrFileNotFound}
+		}
+		return f, nil
 	}
+
+	isExcl := (flag & os.O_EXCL) > 0
+
+	m.mu.Lock()
+	f, ok := m.getData()[name]
+	if ok && isExcl {
+		m.mu.Unlock()
+		return nil, &os.PathError{"open", name, ErrFileExists}
+	}
+	if !ok {
+		f = mem.CreateFile(name)
+		m.getData()[name] = f
+		m.registerWithParent(f)
+	}
+	m.mu.Unlock()
+
+	m.Chmod(name, perm)
 	return f, nil
 }
 
@@ -206,12 +226,7 @@ func (m *MemMapFs) lockfreeOpen(name string) (*mem.FileData, error) {
 }
 
 func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
-	chmod := false
-	file, err := m.openWrite(name)
-	if os.IsNotExist(err) && (flag&os.O_CREATE > 0) {
-		file, err = m.Create(name)
-		chmod = true
-	}
+	file, err := m.openWrite(name, flag, perm)
 	if err != nil {
 		return nil, err
 	}
@@ -231,9 +246,6 @@ func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, erro
 			file.Close()
 			return nil, err
 		}
-	}
-	if chmod {
-		m.Chmod(name, perm)
 	}
 	return file, nil
 }

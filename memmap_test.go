@@ -343,3 +343,55 @@ func TestRacingDeleteAndClose(t *testing.T) {
 	}()
 	close(in)
 }
+
+func TestRacingOpenFileWithOCreate(t *testing.T) {
+	fs := NewMemMapFs()
+	pathname := "testfile"
+
+	done := make(chan bool)
+	errs := make(chan error)
+
+	mkfile := func() {
+		_, err := fs.OpenFile(pathname, os.O_CREATE|os.O_EXCL, 0644)
+		if err != nil {
+			errs <- err
+		} else {
+			done <- true
+		}
+	}
+
+	n := 100
+	c := 0
+	e := 0
+
+	for i := 0; i < n; i++ {
+		go mkfile()
+	}
+
+	for i := 0; i < n; i++ {
+		select {
+		case err := <-errs:
+			errp, ok := err.(*os.PathError)
+			if ok {
+				if errp.Op != "open" {
+					t.Error(fs.Name() + ": error should have op open")
+				}
+				if errp.Err != ErrFileExists {
+					t.Error(fs.Name() + ": error should have reason be ErrFileExists")
+				}
+				if errp.Path != "testfile" {
+					t.Error(fs.Name() + ": error should have path 'testfile'")
+				}
+			} else {
+				t.Error(fs.Name() + ": should be an os.PathError")
+			}
+			e = e + 1
+		case <-done:
+			c = c + 1
+		}
+	}
+
+	if c != 1 || e != n-1 {
+		t.Error(fs.Name() + ": should have created only one file")
+	}
+}
