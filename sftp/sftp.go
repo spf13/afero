@@ -11,30 +11,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package afero
+package sftpfs
 
 import (
 	"os"
 	"time"
 
-	"github.com/spf13/afero/sftp"
-
 	"github.com/pkg/sftp"
+	"github.com/spf13/afero"
 )
 
 // SftpFs is a Fs implementation that uses functions provided by the sftp package.
 //
 // For details in any method, check the documentation of the sftp package
 // (github.com/pkg/sftp).
-type SftpFs struct{
-	SftpClient  *sftp.Client
+type SftpFs struct {
+	SftpClient *sftp.Client
 }
 
 func (s SftpFs) Name() string { return "SftpFs" }
 
-func (s SftpFs) Create(name string) (File, error) {
-	f, err := sftpfs.FileCreate(s.SftpClient, name)
-	return f, err
+func (s SftpFs) Create(name string) (afero.File, error) {
+	return FileCreate(s.SftpClient, name)
 }
 
 func (s SftpFs) Mkdir(name string, perm os.FileMode) error {
@@ -88,13 +86,12 @@ func (s SftpFs) MkdirAll(path string, perm os.FileMode) error {
 	return nil
 }
 
-func (s SftpFs) Open(name string) (File, error) {
-	f, err := sftpfs.FileOpen(s.SftpClient, name)
-	return f, err
+func (s SftpFs) Open(name string) (afero.File, error) {
+	return FileOpen(s.SftpClient, name)
 }
 
-func (s SftpFs) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
-	return nil,nil
+func (s SftpFs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error) {
+	return nil, nil
 }
 
 func (s SftpFs) Remove(name string) error {
