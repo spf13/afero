@@ -282,3 +282,58 @@ func TestRacingDeleteAndClose(t *testing.T) {
 	}()
 	close(in)
 }
+
+func TestMixedAbsoluteAndRelativePaths(t *testing.T) {
+	fs := NewMemMapFs()
+	perm := os.FileMode(0755)
+	err := fs.Mkdir("/tmp", perm)
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = fs.MkdirAll("src/a", perm)
+	if err != nil {
+		t.Error(err)
+	}
+
+	fs.Create("f1")
+	if err != nil {
+		t.Error(err)
+	}
+	fs.Create("/tmp/f2")
+	if err != nil {
+		t.Error(err)
+	}
+
+	fs.Create("/tmp/../../f3")
+	if err != nil {
+		t.Error(err)
+	}
+	fs.Create("../../f4")
+	if err != nil {
+		t.Error(err)
+	}
+
+	// All these dirs should exist
+	data := []string{
+		"f1",
+		"/f1",
+		"/tmp",
+		"tmp",
+		"/tmp/f2",
+		"tmp/f2",
+		"/src",
+		"/src/a",
+		"f3",
+		"/f3",
+		"f4",
+		"/f4",
+	}
+
+	for i, d := range data {
+		_, err = fs.Stat(d)
+		if err != nil {
+			t.Errorf("Test %d failed. Expected no erro got %q", i, err)
+		}
+	}
+}
