@@ -23,9 +23,9 @@ func NewTempOsBaseFs(t *testing.T) Fs {
 
 func CleanupTempDirs(t *testing.T) {
 	osfs := NewOsFs()
-	type ev struct{
+	type ev struct {
 		path string
-		e error
+		e    error
 	}
 
 	errs := []ev{}
@@ -33,7 +33,7 @@ func CleanupTempDirs(t *testing.T) {
 	for _, x := range tempDirs {
 		err := osfs.RemoveAll(x)
 		if err != nil {
-			errs = append(errs, ev{path:x,e: err})
+			errs = append(errs, ev{path: x, e: err})
 		}
 	}
 
