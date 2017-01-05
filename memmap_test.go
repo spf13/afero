@@ -105,8 +105,8 @@ func checkPathError(t *testing.T, err error, op string) {
 // Ensure Permissions are set on OpenFile/Mkdir/MkdirAll
 func TestPermSet(t *testing.T) {
 	const fileName = "/myFileTest"
-	const dirPath =  "/myDirTest"
-	const dirPathAll =  "/my/path/to/dir"
+	const dirPath = "/myDirTest"
+	const dirPathAll = "/my/path/to/dir"
 
 	const fileMode = os.FileMode(0765)
 
