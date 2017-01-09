@@ -187,7 +187,7 @@ func TestNestedDirBaseReaddir(t *testing.T) {
 	fh, _ = ufs.Open("/home/test/foo")
 	list, err := fh.Readdir(-1)
 	if err != nil {
-		t.Errorf("Readdir failed", err)
+		t.Errorf("Readdir failed %s", err)
 	}
 	if len(list) != 2 {
 		for _, x := range list {
@@ -220,7 +220,7 @@ func TestNestedDirOverlayReaddir(t *testing.T) {
 	fh, _ = ufs.Open("/home/test/foo")
 	list, err := fh.Readdir(-1)
 	if err != nil {
-		t.Errorf("Readdir failed", err)
+		t.Errorf("Readdir failed %s", err)
 	}
 	if len(list) != 2 {
 		for _, x := range list {
@@ -255,7 +255,7 @@ func TestNestedDirOverlayOsFsReaddir(t *testing.T) {
 	list, err := fh.Readdir(-1)
 	fh.Close()
 	if err != nil {
-		t.Errorf("Readdir failed", err)
+		t.Errorf("Readdir failed %s", err)
 	}
 	if len(list) != 2 {
 		for _, x := range list {
