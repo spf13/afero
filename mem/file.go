@@ -29,6 +29,8 @@ import "time"
 const FilePathSeparator = string(filepath.Separator)
 
 type File struct {
+	io.WriterTo
+
 	// atomic requires 64-bit alignment for struct field access
 	at           int64
 	readDirCount int64
@@ -249,6 +251,12 @@ func (f *File) WriteAt(b []byte, off int64) (n int, err error) {
 
 func (f *File) WriteString(s string) (ret int, err error) {
 	return f.Write([]byte(s))
+}
+
+func (f *File) WriteTo(w io.Writer) (n int64, err error) {
+	ni, err := w.Write(f.data)
+	n = int64(ni)
+	return
 }
 
 func (f *File) Info() *FileInfo {
