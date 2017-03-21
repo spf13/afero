@@ -2,7 +2,6 @@ package afero
 
 import (
 	"os"
-	"syscall"
 	"time"
 )
 
@@ -64,7 +63,7 @@ func (u *CacheOnReadFs) cacheStatus(name string) (state cacheState, fi os.FileIn
 		return cacheHit, lfi, nil
 	}
 
-	if err == syscall.ENOENT {
+	if err == ENOENT {
 		return cacheMiss, nil, nil
 	}
 	var ok bool
@@ -200,7 +199,7 @@ func (u *CacheOnReadFs) OpenFile(name string, flag int, perm os.FileMode) (File,
 			return nil, err
 		}
 	}
-	if flag&(os.O_WRONLY|syscall.O_RDWR|os.O_APPEND|os.O_CREATE|os.O_TRUNC) != 0 {
+	if flag&(os.O_WRONLY|O_RDWR|os.O_APPEND|os.O_CREATE|os.O_TRUNC) != 0 {
 		bfi, err := u.base.OpenFile(name, flag, perm)
 		if err != nil {
 			return nil, err

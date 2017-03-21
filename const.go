@@ -10,11 +10,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-// +build !darwin
-// +build !openbsd
-// +build !freebsd
-// +build !dragonfly
-// +build !netbsd
+
 // +build !appengine
 
 package afero
@@ -23,4 +19,11 @@ import (
 	"syscall"
 )
 
-const BADFD = syscall.EBADFD
+const EPERM = syscall.EPERM
+const ENOENT = syscall.ENOENT
+const EIO = syscall.EIO
+const EEXIST = syscall.EEXIST
+const ENOTDIR = syscall.ENOTDIR
+const EINVAL = syscall.EINVAL
+
+const O_RDWR = syscall.O_RDWR

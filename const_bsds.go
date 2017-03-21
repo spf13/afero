@@ -12,6 +12,7 @@
 // limitations under the License.
 
 // +build darwin openbsd freebsd netbsd dragonfly
+// +build !appengine
 
 package afero
 

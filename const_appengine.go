@@ -10,17 +10,34 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-// +build !darwin
-// +build !openbsd
-// +build !freebsd
-// +build !dragonfly
-// +build !netbsd
-// +build !appengine
+
+// +build appengine
 
 package afero
 
 import (
-	"syscall"
+	"strconv"
 )
 
-const BADFD = syscall.EBADFD
+// An Errno is an unsigned number describing an error condition.
+// It implements the error interface. The zero Errno is by convention
+// a non-error, so code to convert from Errno to error should use:
+//	err = nil
+//	if errno != 0 {
+//		err = errno
+//	}
+type Errno uintptr
+
+func (e Errno) Error() string {
+	return "errno " + strconv.Itoa(int(e))
+}
+
+const EPERM = Errno(0x1)
+const ENOENT = Errno(0x2)
+const EIO = Errno(0x5)
+const EEXIST = Errno(0x11)
+const ENOTDIR = Errno(0x14)
+const EINVAL = Errno(0x16)
+const BADFD = Errno(0x4d)
+
+const O_RDWR = 0x2

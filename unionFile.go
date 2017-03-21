@@ -4,7 +4,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"syscall"
 )
 
 // The UnionFile implements the afero.File interface and will be returned
@@ -261,7 +260,7 @@ func copyToLayer(base Fs, layer Fs, name string) error {
 	if err != nil || bfi.Size() != n {
 		layer.Remove(name)
 		lfh.Close()
-		return syscall.EIO
+		return EIO
 	}
 
 	err = lfh.Close()

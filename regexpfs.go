@@ -3,7 +3,6 @@ package afero
 import (
 	"os"
 	"regexp"
-	"syscall"
 	"time"
 )
 
@@ -32,7 +31,7 @@ func (r *RegexpFs) matchesName(name string) error {
 	if r.re.MatchString(name) {
 		return nil
 	}
-	return syscall.ENOENT
+	return ENOENT
 }
 
 func (r *RegexpFs) dirOrMatches(name string) error {

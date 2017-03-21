@@ -23,7 +23,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"syscall"
 	"testing"
 )
 
@@ -345,7 +344,7 @@ func TestSeek(t *testing.T) {
 		for i, tt := range tests {
 			off, err := f.Seek(tt.in, tt.whence)
 			if off != tt.out || err != nil {
-				if e, ok := err.(*os.PathError); ok && e.Err == syscall.EINVAL && tt.out > 1<<32 {
+				if e, ok := err.(*os.PathError); ok && e.Err == EINVAL && tt.out > 1<<32 {
 					// Reiserfs rejects the big seeks.
 					// http://code.google.com/p/go/issues/detail?id=91
 					break
