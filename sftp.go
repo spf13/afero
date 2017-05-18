@@ -17,7 +17,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/spf13/afero/sftp"
+	"github.com/spf13/afero/sftpfs"
 
 	"github.com/pkg/sftp"
 )
@@ -26,8 +26,8 @@ import (
 //
 // For details in any method, check the documentation of the sftp package
 // (github.com/pkg/sftp).
-type SftpFs struct{
-	SftpClient  *sftp.Client
+type SftpFs struct {
+	SftpClient *sftp.Client
 }
 
 func (s SftpFs) Name() string { return "SftpFs" }
@@ -94,7 +94,7 @@ func (s SftpFs) Open(name string) (File, error) {
 }
 
 func (s SftpFs) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
-	return nil,nil
+	return nil, nil
 }
 
 func (s SftpFs) Remove(name string) error {
