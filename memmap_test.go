@@ -343,3 +343,23 @@ func TestRacingDeleteAndClose(t *testing.T) {
 	}()
 	close(in)
 }
+
+func TestCaseIndependence(t *testing.T) {
+	fs := NewMemMapFs()
+	fs.(*MemMapFs).CaseIndependent(true)
+
+	file, err := fs.Create("foO")
+	if err != nil {
+		t.Fatal(err)
+	}
+	file.Close()
+
+	fileInfo, err := fs.Stat("FOO")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if fileInfo.Name() != "foo" {
+		t.Error(fileInfo.Name() + " should have been lower case")
+	}
+}

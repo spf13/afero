@@ -21,14 +21,16 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/spf13/afero/mem"
 )
 
 type MemMapFs struct {
-	mu   sync.RWMutex
-	data map[string]*mem.FileData
-	init sync.Once
+	mu              sync.RWMutex
+	caseIndependent bool
+	data            map[string]*mem.FileData
+	init            sync.Once
 }
 
 func NewMemMapFs() Fs {
@@ -47,8 +49,23 @@ func (m *MemMapFs) getData() map[string]*mem.FileData {
 
 func (*MemMapFs) Name() string { return "MemMapFS" }
 
+func (m *MemMapFs) CaseIndependent(v bool) {
+	m.caseIndependent = v
+}
+
+func lowerString(input string) string {
+	result := make([]rune, len(input))
+	for idx, val := range []rune(input) {
+		result[idx] = unicode.ToLower(val)
+	}
+	return string(result)
+}
+
 func (m *MemMapFs) Create(name string) (File, error) {
 	name = normalizePath(name)
+	if m.caseIndependent {
+		name = lowerString(name)
+	}
 	m.mu.Lock()
 	file := mem.CreateFile(name)
 	m.getData()[name] = file
@@ -105,6 +122,9 @@ func (m *MemMapFs) registerWithParent(f *mem.FileData) {
 
 func (m *MemMapFs) lockfreeMkdir(name string, perm os.FileMode) error {
 	name = normalizePath(name)
+	if m.caseIndependent {
+		name = lowerString(name)
+	}
 	x, ok := m.getData()[name]
 	if ok {
 		// Only return ErrFileExists if it's a file, not a directory.
@@ -122,6 +142,9 @@ func (m *MemMapFs) lockfreeMkdir(name string, perm os.FileMode) error {
 
 func (m *MemMapFs) Mkdir(name string, perm os.FileMode) error {
 	name = normalizePath(name)
+	if m.caseIndependent {
+		name = lowerString(name)
+	}
 
 	m.mu.RLock()
 	_, ok := m.getData()[name]
@@ -185,6 +208,9 @@ func (m *MemMapFs) openWrite(name string) (File, error) {
 
 func (m *MemMapFs) open(name string) (*mem.FileData, error) {
 	name = normalizePath(name)
+	if m.caseIndependent {
+		name = lowerString(name)
+	}
 
 	m.mu.RLock()
 	f, ok := m.getData()[name]
@@ -197,6 +223,9 @@ func (m *MemMapFs) open(name string) (*mem.FileData, error) {
 
 func (m *MemMapFs) lockfreeOpen(name string) (*mem.FileData, error) {
 	name = normalizePath(name)
+	if m.caseIndependent {
+		name = lowerString(name)
+	}
 	f, ok := m.getData()[name]
 	if ok {
 		return f, nil
@@ -240,6 +269,9 @@ func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, erro
 
 func (m *MemMapFs) Remove(name string) error {
 	name = normalizePath(name)
+	if m.caseIndependent {
+		name = lowerString(name)
+	}
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -315,6 +347,9 @@ func (m *MemMapFs) Stat(name string) (os.FileInfo, error) {
 
 func (m *MemMapFs) Chmod(name string, mode os.FileMode) error {
 	name = normalizePath(name)
+	if m.caseIndependent {
+		name = lowerString(name)
+	}
 
 	m.mu.RLock()
 	f, ok := m.getData()[name]
@@ -332,6 +367,9 @@ func (m *MemMapFs) Chmod(name string, mode os.FileMode) error {
 
 func (m *MemMapFs) Chtimes(name string, atime time.Time, mtime time.Time) error {
 	name = normalizePath(name)
+	if m.caseIndependent {
+		name = lowerString(name)
+	}
 
 	m.mu.RLock()
 	f, ok := m.getData()[name]
