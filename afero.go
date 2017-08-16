@@ -91,11 +91,14 @@ type Fs interface {
 	// The name of this FileSystem
 	Name() string
 
-	//Chmod changes the mode of the named file to mode.
+	// Chmod changes the mode of the named file to mode.
 	Chmod(name string, mode os.FileMode) error
 
-	//Chtimes changes the access and modification times of the named file
+	// Chtimes changes the access and modification times of the named file
 	Chtimes(name string, atime time.Time, mtime time.Time) error
+
+	// Chown changes the numeric uid and gid of the named file.
+	Chown(name string, uid, gid int) error
 }
 
 var (

@@ -73,6 +73,19 @@ func (u *CopyOnWriteFs) Chmod(name string, mode os.FileMode) error {
 	return u.layer.Chmod(name, mode)
 }
 
+func (u *CopyOnWriteFs) Chown(name string, uid, gid int) error {
+	b, err := u.isBaseFile(name)
+	if err != nil {
+		return err
+	}
+	if b {
+		if err := u.copyToLayer(name); err != nil {
+			return err
+		}
+	}
+	return u.layer.Chown(name, uid, gid)
+}
+
 func (u *CopyOnWriteFs) Stat(name string) (os.FileInfo, error) {
 	fi, err := u.layer.Stat(name)
 	if err != nil {

@@ -127,3 +127,7 @@ func (s Fs) Chmod(name string, mode os.FileMode) error {
 func (s Fs) Chtimes(name string, atime time.Time, mtime time.Time) error {
 	return s.client.Chtimes(name, atime, mtime)
 }
+
+func (s Fs) Chown(name string, uid, gid int) error {
+	return s.client.Chown(name, uid, gid int)
+}

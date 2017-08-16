@@ -347,6 +347,24 @@ func (m *MemMapFs) Chtimes(name string, atime time.Time, mtime time.Time) error 
 	return nil
 }
 
+func (m *MemMapFs) Chown(name string, uid, gid int) error {
+	name = normalizePath(name)
+
+	m.mu.RLock()
+	f, ok := m.getData()[name]
+	m.mu.RUnlock()
+	if !ok {
+		return &os.PathError{Op: "chown", Path: name, Err: ErrFileNotFound}
+	}
+
+	m.mu.Lock()
+	mem.SetUID(f, uid)
+	mem.SetGID(f, gid)
+	m.mu.Unlock()
+
+	return nil
+}
+
 func (m *MemMapFs) List() {
 	for _, x := range m.data {
 		y := mem.FileInfo{FileData: x}

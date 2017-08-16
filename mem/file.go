@@ -57,6 +57,8 @@ type FileData struct {
 	dir     bool
 	mode    os.FileMode
 	modtime time.Time
+	uid     int
+	gid     int
 }
 
 func (d *FileData) Name() string {
@@ -79,6 +81,14 @@ func ChangeFileName(f *FileData, newname string) {
 
 func SetMode(f *FileData, mode os.FileMode) {
 	f.mode = mode
+}
+
+func SetUID(f *FileData, uid int) {
+	f.uid = uid
+}
+
+func SetGID(f *FileData, gid int) {
+	f.gid = gid
 }
 
 func SetModTime(f *FileData, mtime time.Time) {

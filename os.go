@@ -92,3 +92,7 @@ func (OsFs) Chmod(name string, mode os.FileMode) error {
 func (OsFs) Chtimes(name string, atime time.Time, mtime time.Time) error {
 	return os.Chtimes(name, atime, mtime)
 }
+
+func (OsFs) Chown(name string, uid, gid int) error {
+	return os.Chown(name, uid, gid)
+}
