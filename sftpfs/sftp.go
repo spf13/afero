@@ -129,5 +129,5 @@ func (s Fs) Chtimes(name string, atime time.Time, mtime time.Time) error {
 }
 
 func (s Fs) Chown(name string, uid, gid int) error {
-	return s.client.Chown(name, uid, gid int)
+	return s.client.Chown(name, uid, gid)
 }
