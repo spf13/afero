@@ -16,5 +16,5 @@ matrix:
   fast_finish: true
 
 script:
-  - go test -v ./...
+  - go test -race -v ./...
   - go build
