@@ -137,6 +137,7 @@ func (m *MemMapFs) lockfreeMkdir(name string, perm os.FileMode) error {
 		m.getData()[name] = item
 		m.registerWithParent(item)
 	}
+	m.lockfreeChmod(name, perm|os.ModeDir)
 	return nil
 }
 
@@ -157,23 +158,27 @@ func (m *MemMapFs) Mkdir(name string, perm os.FileMode) error {
 	item := mem.CreateDir(name)
 	m.getData()[name] = item
 	m.registerWithParent(item)
+	m.lockfreeChmod(name, perm|os.ModeDir)
 	m.mu.Unlock()
-
-	m.Chmod(name, perm)
 
 	return nil
 }
 
-func (m *MemMapFs) MkdirAll(path string, perm os.FileMode) error {
-	err := m.Mkdir(path, perm)
-	if err != nil {
-		if err.(*os.PathError).Err == ErrFileExists {
-			return nil
-		} else {
+func (m *MemMapFs) makeParentPaths(path string, perm os.FileMode) error {
+	dir := filepath.Dir(path)
+	if _, err := m.Stat(dir); err != nil {
+		if err := m.makeParentPaths(dir, perm); err != nil {
+			return err
+		}
+		if err := m.Mkdir(path, perm); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (m *MemMapFs) MkdirAll(path string, perm os.FileMode) error {
+	return m.makeParentPaths(path, perm)
 }
 
 // Handle some relative paths
@@ -362,6 +367,20 @@ func (m *MemMapFs) Chmod(name string, mode os.FileMode) error {
 	mem.SetMode(f, mode)
 	m.mu.Unlock()
 
+	return nil
+}
+
+func (m *MemMapFs) lockfreeChmod(name string, mode os.FileMode) error {
+	name = normalizePath(name)
+	if m.caseIndependent {
+		name = lowerString(name)
+	}
+
+	f, ok := m.getData()[name]
+	if !ok {
+		return &os.PathError{Op: "chmod", Path: name, Err: ErrFileNotFound}
+	}
+	mem.SetMode(f, mode)
 	return nil
 }
 

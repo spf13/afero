@@ -363,3 +363,29 @@ func TestCaseIndependence(t *testing.T) {
 		t.Error(fileInfo.Name() + " should have been lower case")
 	}
 }
+
+func TestMkdirCreatesDir(t *testing.T) {
+	fs := NewMemMapFs()
+
+	fs.Mkdir("foo", 0755)
+	fileinfo, _ := fs.Stat("foo")
+	if !fileinfo.Mode().IsDir() {
+		t.Error("Directory should be a directory")
+	}
+}
+
+func TestMkdirAllCreatesDir(t *testing.T) {
+	fs := NewMemMapFs()
+
+	fs.MkdirAll("/foo/bar/baz", 0755)
+	paths := []string{"/foo", "/foo/bar", "/foo/bar/baz"}
+	for _, p := range paths {
+		fileinfo, err := fs.Stat(p)
+		if err != nil {
+			t.Fatalf("Unable to get stat for %s: %v", p, err)
+		}
+		if !fileinfo.Mode().IsDir() {
+			t.Errorf("Directory %s should be a directory", p)
+		}
+	}
+}
