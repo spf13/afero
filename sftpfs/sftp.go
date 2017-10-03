@@ -29,7 +29,10 @@ type Fs struct {
 	client *sftp.Client
 }
 
-func New(client *sftp.Client) afero.Fs {
+// Check if Fs implements afero.Fs
+var _ afero.Fs = &Fs{}
+
+func New(client *sftp.Client) *Fs {
 	return &Fs{client: client}
 }
 

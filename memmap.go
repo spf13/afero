@@ -31,7 +31,10 @@ type MemMapFs struct {
 	init sync.Once
 }
 
-func NewMemMapFs() Fs {
+// Check if MemMapFs implements Fs
+var _ Fs = &MemMapFs{}
+
+func NewMemMapFs() *MemMapFs {
 	return &MemMapFs{}
 }
 

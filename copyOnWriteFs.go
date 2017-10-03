@@ -20,7 +20,10 @@ type CopyOnWriteFs struct {
 	layer Fs
 }
 
-func NewCopyOnWriteFs(base Fs, layer Fs) Fs {
+// Check if CopyOnWriteFs implements Fs
+var _ Fs = &CopyOnWriteFs{}
+
+func NewCopyOnWriteFs(base Fs, layer Fs) *CopyOnWriteFs {
 	return &CopyOnWriteFs{base: base, layer: layer}
 }
 

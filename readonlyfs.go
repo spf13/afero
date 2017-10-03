@@ -10,7 +10,10 @@ type ReadOnlyFs struct {
 	source Fs
 }
 
-func NewReadOnlyFs(source Fs) Fs {
+// Check if ReadOnlyFs implements Fs
+var _ Fs = &ReadOnlyFs{}
+
+func NewReadOnlyFs(source Fs) *ReadOnlyFs {
 	return &ReadOnlyFs{source: source}
 }
 
