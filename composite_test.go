@@ -368,7 +368,7 @@ func TestUnionCacheExpire(t *testing.T) {
 	}
 }
 
-func TestCacheOnReadFs_Open_NotInLayer(t *testing.T) {
+func TestCacheOnReadFsNotInLayer(t *testing.T) {
 	base := NewMemMapFs()
 	layer := NewMemMapFs()
 	fs := NewCacheOnReadFs(base, layer, 0)

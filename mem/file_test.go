@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func Test_FileData_Name_withConcurrence(t *testing.T) {
+func TestFileDataNameRace(t *testing.T) {
 	t.Parallel()
 	const someName = "someName"
 	const someOtherName = "someOtherName"
@@ -31,7 +31,7 @@ func Test_FileData_Name_withConcurrence(t *testing.T) {
 	}
 }
 
-func Test_FileData_ModTime_withConcurrence(t *testing.T) {
+func TestFileDataModTimeRace(t *testing.T) {
 	t.Parallel()
 	someTime := time.Now()
 	someOtherTime := someTime.Add(1 * time.Minute)
@@ -62,7 +62,7 @@ func Test_FileData_ModTime_withConcurrence(t *testing.T) {
 	}
 }
 
-func Test_FileData_Mode_withConcurrence(t *testing.T) {
+func TestFileDataModeRace(t *testing.T) {
 	t.Parallel()
 	const someMode = 0777
 	const someOtherMode = 0660
@@ -93,7 +93,7 @@ func Test_FileData_Mode_withConcurrence(t *testing.T) {
 	}
 }
 
-func Test_FileData_IsDir_withConcurrence(t *testing.T) {
+func TestFileDataIsDirRace(t *testing.T) {
 	t.Parallel()
 
 	d := FileData{
@@ -118,7 +118,7 @@ func Test_FileData_IsDir_withConcurrence(t *testing.T) {
 	t.Logf("Value is %v", s.IsDir())
 }
 
-func Test_FileData_Size_withConcurrence(t *testing.T) {
+func TestFileDataSizeRace(t *testing.T) {
 	t.Parallel()
 
 	const someData = "Hello"
