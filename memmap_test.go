@@ -384,3 +384,35 @@ loop:
 		}
 	}
 }
+
+func TestMemFsDirMode(t *testing.T) {
+	fs := NewMemMapFs()
+	err := fs.Mkdir("/testDir1", 0644)
+	if err != nil {
+		t.Error(err)
+	}
+	err = fs.MkdirAll("/sub/testDir2", 0644)
+	if err != nil {
+		t.Error(err)
+	}
+	info, err := fs.Stat("/testDir1")
+	if err != nil {
+		t.Error(err)
+	}
+	if !info.IsDir() {
+		t.Error("should be a directory")
+	}
+	if info.Mode()&os.ModeDir == 0 {
+		t.Error("FileMode is not directory")
+	}
+	info, err = fs.Stat("/sub/testDir2")
+	if err != nil {
+		t.Error(err)
+	}
+	if !info.IsDir() {
+		t.Error("should be a directory")
+	}
+	if info.Mode()&os.ModeDir == 0 {
+		t.Error("FileMode is not directory")
+	}
+}
