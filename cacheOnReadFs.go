@@ -67,9 +67,8 @@ func (u *CacheOnReadFs) cacheStatus(name string) (state cacheState, fi os.FileIn
 	if err == syscall.ENOENT {
 		return cacheMiss, nil, nil
 	}
-	var ok bool
-	if err, ok = err.(*os.PathError); ok {
-		if err == os.ErrNotExist {
+	if err, ok := err.(*os.PathError); ok {
+		if err.Err == os.ErrNotExist {
 			return cacheMiss, nil, nil
 		}
 	}
