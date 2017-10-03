@@ -61,11 +61,11 @@ import "github.com/spf13/afero"
 
 First define a package variable and set it to a pointer to a filesystem.
 ```go
-var AppFs afero.Fs = afero.NewMemMapFs()
+var AppFs = afero.NewMemMapFs()
 
 or
 
-var AppFs afero.Fs = afero.NewOsFs()
+var AppFs = afero.NewOsFs()
 ```
 It is important to note that if you repeat the composite literal you
 will be using a completely new and isolated filesystem. In the case of
