@@ -81,7 +81,10 @@ So if my application before had:
 ```go
 os.Open('/tmp/foo')
 ```
-We would replace it with a call to `AppFs.Open('/tmp/foo')`.
+We would replace it with:
+```go
+AppFs.Open('/tmp/foo')
+```
 
 `AppFs` being the variable we defined above.
 
