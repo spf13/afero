@@ -169,8 +169,8 @@ f, err := afero.TempFile(fs,"", "ioutil-test")
 ### Calling via Afero
 
 ```go
-fs := afero.NewMemMapFs
-afs := &Afero{Fs: fs}
+fs := afero.NewMemMapFs()
+afs := &afero.Afero{Fs: fs}
 f, err := afs.TempFile("", "ioutil-test")
 ```
 
