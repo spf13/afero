@@ -14,15 +14,14 @@
 package sftpfs
 
 import (
-	"github.com/pkg/sftp"
 	"os"
 )
 
 type File struct {
-	fd *sftp.File
+	fd SFTPFile
 }
 
-func FileOpen(s *sftp.Client, name string) (*File, error) {
+func FileOpen(s SFTPClient, name string) (*File, error) {
 	fd, err := s.Open(name)
 	if err != nil {
 		return &File{}, err
@@ -30,7 +29,7 @@ func FileOpen(s *sftp.Client, name string) (*File, error) {
 	return &File{fd: fd}, nil
 }
 
-func FileCreate(s *sftp.Client, name string) (*File, error) {
+func FileCreate(s SFTPClient, name string) (*File, error) {
 	fd, err := s.Create(name)
 	if err != nil {
 		return &File{}, err

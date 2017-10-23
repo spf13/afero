@@ -17,7 +17,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/pkg/sftp"
 	"github.com/spf13/afero"
 )
 
@@ -26,10 +25,10 @@ import (
 // For details in any method, check the documentation of the sftp package
 // (github.com/pkg/sftp).
 type Fs struct {
-	client *sftp.Client
+	client SFTPClient
 }
 
-func New(client *sftp.Client) afero.Fs {
+func New(client SFTPClient) afero.Fs {
 	return &Fs{client: client}
 }
 
