@@ -380,21 +380,23 @@ MountableFs allows afero.Fs instances to be mounted at specific paths over the
 top of any existing afero.Fs, similar to a bind mount on a Unix filesystem. 
 
 ```go
-    base := afero.NewOsFs("/tmp")
+    base := afero.NewBasePathFs(afero.NewOsFs(), "/tmp")
     fs := afero.NewMountableFs(base)
 
     // mount child fs at path /child
     child := afero.NewMemMapFs()
     _ = fs.Mount("/child", child)
 
+    in := []byte("1")
+
     // write file to /child/test of mountable filesystem
-    afero.WriteFile(fs, "/child/test", []byte("1"), 0644)
+    afero.WriteFile(fs, "/child/test", in, 0644)
 
     // read file from /test of mounted filesystem
     out, _ := afero.ReadFile(child, "/test")
 
     // should print true
-    fmt.Println(reflect.DeepEqual(in, out))
+    fmt.Println(bytes.Equal(in, out))
 ```
 
 If a nil `Fs` is passed to the constructor (`NewMountableFs(nil)`), an
