@@ -374,6 +374,58 @@ In this example all write operations will only occur in memory (MemMapFs)
 leaving the base filesystem (OsFs) untouched.
 
 
+### MountableFs
+
+MountableFs allows afero.Fs instances to be mounted at specific paths over the
+top of any existing afero.Fs, similar to a bind mount on a Unix filesystem. 
+
+```go
+    base := afero.NewOsFs("/tmp")
+    fs := afero.NewMountableFs(base)
+
+    // mount child fs at path /child
+    child := afero.NewMemMapFs()
+    _ = fs.Mount("/child", child)
+
+    // write file to /child/test of mountable filesystem
+    afero.WriteFile(fs, "/child/test", []byte("1"), 0644)
+
+    // read file from /test of mounted filesystem
+    out, _ := afero.ReadFile(child, "/test")
+
+    // should print true
+    fmt.Println(reflect.DeepEqual(in, out))
+```
+
+If a nil `Fs` is passed to the constructor (`NewMountableFs(nil)`), an
+`afero.MemMapFs` will be automatically created.
+
+Caveats and gotchas:
+
+* `afero.OsFs` must be wrapped in `afero.BasePathFs` in order to be mounted. Trying
+  to pass a bare `OsFs` will result in an error. This is to mask any root path
+  or Windows drive letters.
+
+* Cross-fs rename is not supported. It is possible to detect this error using 
+  `afero.IsErrCrossFsRename(err)` and perform a copy in response.
+
+* `RemoveAll()` can not remove folders masked by `Mount()`. `RemoveAll()` will
+  also not remove any directories that represent a mounted node or one of its
+  parents.
+
+* In the interests of sane defaults, recursive mounts are prevented, but they
+  can be enabled by setting `afero.MountableFs.AllowRecursiveMounts = true`.
+
+* Unlike traditional unix bind mounts, directories do not need to exist in the
+  underlying file system for mounting. This means that phantom directory nodes
+  will appear in the file system. When mounting, these nodes should behave
+  just like regular directories, with the exception that if you create them with
+  Mkdir or open a file for writing inside them, they will be created in the
+  underlying Fs.
+
+* This was built for convenience, not speed.
+
+
 ## Desired/possible backends
 
 The following is a short list of possible backends we hope someone will
