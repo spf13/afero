@@ -25,8 +25,6 @@ import (
 	"time"
 )
 
-// FIXME: not properly cleaning up temp
-
 func must(t *testing.T, errs ...error) {
 	// FIXME: afero may not accept Go 1.9 features
 	t.Helper()
@@ -43,9 +41,9 @@ func TestMountableFsChild(t *testing.T) {
 
 	child1 := NewMemMapFs()
 	must(t,
-		mfs.Mount("test", child1),
-		WriteFile(mfs, "/foo", []byte("1"), 0644),
-		WriteFile(mfs, "/test/bar", []byte("2"), 0644))
+		mfs.Mount(filepath.FromSlash("test"), child1),
+		WriteFile(mfs, filepath.FromSlash("/foo"), []byte("1"), 0644),
+		WriteFile(mfs, filepath.FromSlash("/test/bar"), []byte("2"), 0644))
 
 	if err := checkPaths([]string{"/", "/foo"}, base); err != nil {
 		t.Fatal(err)
@@ -64,9 +62,9 @@ func TestMountableFsNestedChild(t *testing.T) {
 
 	child := NewMemMapFs()
 	must(t,
-		mfs.Mount("test/a/b", child),
-		WriteFile(mfs, "/foo", []byte("1"), 0644),
-		WriteFile(mfs, "/test/a/b/baz", []byte("3"), 0644))
+		mfs.Mount(filepath.FromSlash("test/a/b"), child),
+		WriteFile(mfs, filepath.FromSlash("/foo"), []byte("1"), 0644),
+		WriteFile(mfs, filepath.FromSlash("/test/a/b/baz"), []byte("3"), 0644))
 
 	if err := checkPaths([]string{"/", "/foo"}, base); err != nil {
 		t.Fatal(err)
@@ -83,18 +81,18 @@ func TestMountableFsSameFsMultipleMounts(t *testing.T) {
 	mfs := NewMountableFs(nil)
 	child := NewMemMapFs()
 	must(t,
-		mfs.Mount("/foo", child),
-		mfs.Mount("/bar", child),
-		WriteFile(mfs, "/child/test", []byte("1"), 0644),
+		mfs.Mount(filepath.FromSlash("/foo"), child),
+		mfs.Mount(filepath.FromSlash("/bar"), child),
+		WriteFile(mfs, filepath.FromSlash("/child/test"), []byte("1"), 0644),
 	)
 
-	if err := WriteFile(mfs, "/foo/test", []byte("1"), 0644); err != nil {
+	if err := WriteFile(mfs, filepath.FromSlash("/foo/test"), []byte("1"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if exists, err := Exists(mfs, "/foo/test"); err != nil || !exists {
+	if exists, err := Exists(mfs, filepath.FromSlash("/foo/test")); err != nil || !exists {
 		t.Fatal(err, exists)
 	}
-	if exists, err := Exists(mfs, "/bar/test"); err != nil || !exists {
+	if exists, err := Exists(mfs, filepath.FromSlash("/bar/test")); err != nil || !exists {
 		t.Fatal(err, exists)
 	}
 }
@@ -103,8 +101,8 @@ func TestMountableFsRecursive(t *testing.T) {
 	{ // recursive mount should fail
 		mfs := NewMountableFs(nil)
 		child := NewMemMapFs()
-		must(t, mfs.Mount("/child", child))
-		if err := mfs.Mount("/child/nested", child); !IsErrRecursiveMount(err) {
+		must(t, mfs.Mount(filepath.FromSlash("/child"), child))
+		if err := mfs.Mount(filepath.FromSlash("/child/nested"), child); !IsErrRecursiveMount(err) {
 			t.Fatal(err)
 		}
 	}
@@ -112,17 +110,17 @@ func TestMountableFsRecursive(t *testing.T) {
 		mfs := NewMountableFs(nil)
 		mfs.AllowRecursiveMount = true
 		child := NewMemMapFs()
-		must(t, mfs.Mount("/child", child),
-			mfs.Mount("/child/nested", child),
-			WriteFile(mfs, "/child/foo", []byte("1"), 0644),
+		must(t, mfs.Mount(filepath.FromSlash("/child"), child),
+			mfs.Mount(filepath.FromSlash("/child/nested"), child),
+			WriteFile(mfs, filepath.FromSlash("/child/foo"), []byte("1"), 0644),
 		)
-		if err := WriteFile(mfs, "/child/nested/foo", []byte("1"), 0644); err != nil {
+		if err := WriteFile(mfs, filepath.FromSlash("/child/nested/foo"), []byte("1"), 0644); err != nil {
 			t.Fatal(err)
 		}
-		if exists, err := Exists(mfs, "/child/foo"); err != nil || !exists {
+		if exists, err := Exists(mfs, filepath.FromSlash("/child/foo")); err != nil || !exists {
 			t.Fatal(err, exists)
 		}
-		if exists, err := Exists(mfs, "/child/nested/foo"); err != nil || !exists {
+		if exists, err := Exists(mfs, filepath.FromSlash("/child/nested/foo")); err != nil || !exists {
 			t.Fatal(err, exists)
 		}
 	}
@@ -135,11 +133,11 @@ func TestMountableFsNestedChildInsideAnotherMount(t *testing.T) {
 	child1 := NewMemMapFs()
 	child2 := NewMemMapFs()
 	must(t,
-		mfs.Mount("test", child1),
-		mfs.Mount("test/a/b", child2),
-		WriteFile(mfs, "/foo", []byte("1"), 0644),
-		WriteFile(mfs, "/test/bar", []byte("2"), 0644),
-		WriteFile(mfs, "/test/a/b/baz", []byte("3"), 0644),
+		mfs.Mount(filepath.FromSlash("test"), child1),
+		mfs.Mount(filepath.FromSlash("test/a/b"), child2),
+		WriteFile(mfs, filepath.FromSlash("/foo"), []byte("1"), 0644),
+		WriteFile(mfs, filepath.FromSlash("/test/bar"), []byte("2"), 0644),
+		WriteFile(mfs, filepath.FromSlash("/test/a/b/baz"), []byte("3"), 0644),
 	)
 
 	if err := checkPaths([]string{"/", "/foo"}, base); err != nil {
@@ -161,33 +159,33 @@ func TestMountableFsUnmountFsMountedBetweenMounts(t *testing.T) {
 	mfs := NewMountableFs(base)
 
 	must(t,
-		mfs.Mount("test", NewMemMapFs()),
-		mfs.Mount("test/foo", NewMemMapFs()),
-		mfs.Mount("test/foo/bar", NewMemMapFs()),
-		mfs.Mount("test/bar", NewMemMapFs()),
+		mfs.Mount(filepath.FromSlash("test"), NewMemMapFs()),
+		mfs.Mount(filepath.FromSlash("test/foo"), NewMemMapFs()),
+		mfs.Mount(filepath.FromSlash("test/foo/bar"), NewMemMapFs()),
+		mfs.Mount(filepath.FromSlash("test/bar"), NewMemMapFs()),
 
-		WriteFile(mfs, "/test/a", []byte("1"), 0644),
-		WriteFile(mfs, "/test/foo/a", []byte("2"), 0644),
-		WriteFile(mfs, "/test/foo/bar/a", []byte("3"), 0644),
-		WriteFile(mfs, "/test/bar/a", []byte("4"), 0644),
+		WriteFile(mfs, filepath.FromSlash("/test/a"), []byte("1"), 0644),
+		WriteFile(mfs, filepath.FromSlash("/test/foo/a"), []byte("2"), 0644),
+		WriteFile(mfs, filepath.FromSlash("/test/foo/bar/a"), []byte("3"), 0644),
+		WriteFile(mfs, filepath.FromSlash("/test/bar/a"), []byte("4"), 0644),
 	)
 
 	if err := checkPaths([]string{"/", "/test", "/test/a", "/test/foo", "/test/foo/a", "/test/foo/bar", "/test/foo/bar/a", "/test/bar", "/test/bar/a"}, mfs); err != nil {
 		t.Fatal(err)
 	}
-	must(t, mfs.Umount("test"))
+	must(t, mfs.Umount(filepath.FromSlash("test")))
 	if err := checkPaths([]string{"/", "/test", "/test/foo", "/test/foo/a", "/test/foo/bar", "/test/foo/bar/a", "/test/bar", "/test/bar/a"}, mfs); err != nil {
 		t.Fatal(err)
 	}
-	must(t, mfs.Umount("test/foo"))
+	must(t, mfs.Umount(filepath.FromSlash("test/foo")))
 	if err := checkPaths([]string{"/", "/test", "/test/foo", "/test/foo/bar", "/test/foo/bar/a", "/test/bar", "/test/bar/a"}, mfs); err != nil {
 		t.Fatal(err)
 	}
-	must(t, mfs.Umount("test/bar"))
+	must(t, mfs.Umount(filepath.FromSlash("test/bar")))
 	if err := checkPaths([]string{"/", "/test", "/test/foo", "/test/foo/bar", "/test/foo/bar/a"}, mfs); err != nil {
 		t.Fatal(err)
 	}
-	must(t, mfs.Umount("test/foo/bar"))
+	must(t, mfs.Umount(filepath.FromSlash("test/foo/bar")))
 	if err := checkPaths([]string{"/"}, mfs); err != nil {
 		t.Fatal(err)
 	}
@@ -197,15 +195,15 @@ func TestMountableFsWriteFileOverNodeShouldFail(t *testing.T) {
 	base := NewMemMapFs()
 
 	mfs := NewMountableFs(base)
-	must(t, mfs.Mount("test", NewMemMapFs()))
-	if err := WriteFile(mfs, "/test", []byte("1"), 0644); err != nil {
+	must(t, mfs.Mount(filepath.FromSlash("test"), NewMemMapFs()))
+	if err := WriteFile(mfs, filepath.FromSlash("/test"), []byte("1"), 0644); err != nil {
 		t.Fatal(err)
 	}
 
 	// Intermediate nodes should fail too
 	mfs = NewMountableFs(base)
-	must(t, mfs.Mount("test/test", NewMemMapFs()))
-	if err := WriteFile(mfs, "/test", []byte("1"), 0644); err != nil {
+	must(t, mfs.Mount(filepath.FromSlash("test/test"), NewMemMapFs()))
+	if err := WriteFile(mfs, filepath.FromSlash("/test"), []byte("1"), 0644); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -214,10 +212,10 @@ func TestMountableFsMountErrors(t *testing.T) {
 	{ // Can not mount over an existing mount
 		base := NewMemMapFs()
 		mfs := NewMountableFs(base)
-		if err := mfs.Mount("test", NewMemMapFs()); err != nil {
+		if err := mfs.Mount(filepath.FromSlash("test"), NewMemMapFs()); err != nil {
 			t.Fatal(err)
 		}
-		if err := mfs.Mount("test", NewMemMapFs()); !IsErrAlreadyMounted(err) {
+		if err := mfs.Mount(filepath.FromSlash("test"), NewMemMapFs()); !IsErrAlreadyMounted(err) {
 			t.Fatal(err)
 		}
 	}
@@ -225,10 +223,10 @@ func TestMountableFsMountErrors(t *testing.T) {
 	{ // Can not mount over an existing dir
 		base := NewMemMapFs()
 		mfs := NewMountableFs(base)
-		if err := mfs.Mkdir("test", 0777); err != nil {
+		if err := mfs.Mkdir(filepath.FromSlash("test"), 0777); err != nil {
 			t.Fatal(err)
 		}
-		if err := mfs.Mount("test", NewMemMapFs()); !os.IsExist(err) {
+		if err := mfs.Mount(filepath.FromSlash("test"), NewMemMapFs()); !os.IsExist(err) {
 			t.Fatal(err)
 		}
 	}
@@ -236,10 +234,10 @@ func TestMountableFsMountErrors(t *testing.T) {
 	{ // Can not mount over an existing file
 		base := NewMemMapFs()
 		mfs := NewMountableFs(base)
-		if err := WriteFile(mfs, "test", []byte("1"), 0777); err != nil {
+		if err := WriteFile(mfs, filepath.FromSlash("test"), []byte("1"), 0777); err != nil {
 			t.Fatal(err)
 		}
-		if err := mfs.Mount("test", NewMemMapFs()); !os.IsExist(err) {
+		if err := mfs.Mount(filepath.FromSlash("test"), NewMemMapFs()); !os.IsExist(err) {
 			t.Fatal(err)
 		}
 	}
@@ -250,20 +248,20 @@ func TestMountableFsMountOverIntermediateNode(t *testing.T) {
 	mfs := NewMountableFs(base)
 
 	child1 := NewMemMapFs()
-	if err := mfs.Mount("test/a/b", child1); err != nil {
+	if err := mfs.Mount(filepath.FromSlash("test/a/b"), child1); err != nil {
 		t.Fatal(err)
 	}
 
 	// intermediate node "test" already exists, but has no fs attached yet
 	// so this should still work.
 	child2 := NewMemMapFs()
-	if err := mfs.Mount("test", child2); err != nil {
+	if err := mfs.Mount(filepath.FromSlash("test"), child2); err != nil {
 		t.Fatal(err)
 	}
 
 	must(t,
-		WriteFile(mfs, "/foo", []byte("1"), 0644),
-		WriteFile(mfs, "/test/a/b/baz", []byte("3"), 0644))
+		WriteFile(mfs, filepath.FromSlash("/foo"), []byte("1"), 0644),
+		WriteFile(mfs, filepath.FromSlash("/test/a/b/baz"), []byte("3"), 0644))
 
 	if err := checkPaths([]string{"/", "/foo"}, base); err != nil {
 		t.Fatal(err)
@@ -285,11 +283,14 @@ func TestMountableFsWriteIntoIntermediateNode(t *testing.T) {
 	}()
 	var bases = []func() Fs{
 		func() Fs { return NewMemMapFs() },
-		func() Fs {
+	}
+
+	if osSupportsPerms() {
+		bases = append(bases, func() Fs {
 			tfs := newTempFs()
 			end = append(end, func() { tfs.Destroy() })
 			return tfs
-		},
+		})
 	}
 
 	for idx, base := range bases {
@@ -298,11 +299,11 @@ func TestMountableFsWriteIntoIntermediateNode(t *testing.T) {
 				base := base()
 				mfs := NewMountableFs(base)
 				child1 := NewMemMapFs()
-				must(t, mfs.Mount("/test/a/b", child1))
-				if exists, _ := Exists(base, "/test/a"); exists {
+				must(t, mfs.Mount(filepath.FromSlash("/test/a/b"), child1))
+				if exists, _ := Exists(base, filepath.FromSlash("/test/a")); exists {
 					t.Fatal()
 				}
-				must(t, WriteFile(mfs, "/test/a/yep", []byte("1"), 0755))
+				must(t, WriteFile(mfs, filepath.FromSlash("/test/a/yep"), []byte("1"), 0755))
 				mustStatRealDir(t, base, "/test", 0755)
 				mustStatRealDir(t, base, "/test/a", 0755)
 			}
@@ -311,15 +312,15 @@ func TestMountableFsWriteIntoIntermediateNode(t *testing.T) {
 				base := base()
 				mfs := NewMountableFs(base)
 				child1 := NewMemMapFs()
-				must(t, mfs.Mkdir("/test", 0755))
-				must(t, mfs.Mount("/test/a/b", child1))
-				if exists, _ := Exists(base, "/test"); !exists {
+				must(t, mfs.Mkdir(filepath.FromSlash("/test"), 0755))
+				must(t, mfs.Mount(filepath.FromSlash("/test/a/b"), child1))
+				if exists, _ := Exists(base, filepath.FromSlash("/test")); !exists {
 					t.Fatal()
 				}
-				if exists, _ := Exists(base, "/test/a"); exists {
+				if exists, _ := Exists(base, filepath.FromSlash("/test/a")); exists {
 					t.Fatal()
 				}
-				must(t, WriteFile(mfs, "/test/a/yep", []byte("1"), 0755))
+				must(t, WriteFile(mfs, filepath.FromSlash("/test/a/yep"), []byte("1"), 0755))
 				mustStatRealDir(t, base, "/test/a", 0755)
 			}
 		})
@@ -332,14 +333,14 @@ func TestMountableFsReadDir(t *testing.T) {
 	now := time.Now()
 	child := NewMemMapFs()
 	must(t,
-		child.Chmod("/", 0777),
-		child.Chtimes("/", now, now))
+		child.Chmod(filepath.FromSlash("/"), 0777),
+		child.Chtimes(filepath.FromSlash("/"), now, now))
 
 	mfs := NewMountableFs(base)
-	must(t, mfs.Mount("test/test", child))
+	must(t, mfs.Mount(filepath.FromSlash("test/test"), child))
 
 	{
-		read1, err := ReadDir(mfs, "/")
+		read1, err := ReadDir(mfs, filepath.FromSlash("/"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -358,7 +359,7 @@ func TestMountableFsReadDir(t *testing.T) {
 	}
 
 	{
-		read2, err := ReadDir(mfs, "/test")
+		read2, err := ReadDir(mfs, filepath.FromSlash("/test"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -382,18 +383,18 @@ func TestMountableFsRename(t *testing.T) {
 	mfs := NewMountableFs(base)
 
 	input := []byte("1")
-	if err := WriteFile(mfs, "/test/foo", input, 0644); err != nil {
+	if err := WriteFile(mfs, filepath.FromSlash("/test/foo"), input, 0644); err != nil {
 		t.Fatal(err)
 	}
-	err := mfs.Rename("/test/foo", "/bar")
+	err := mfs.Rename(filepath.FromSlash("/test/foo"), filepath.FromSlash("/bar"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = ReadFile(mfs, "/test/foo")
+	_, err = ReadFile(mfs, filepath.FromSlash("/test/foo"))
 	if !os.IsNotExist(err) {
 		t.Fatal(err)
 	}
-	result, err := ReadFile(mfs, "/bar")
+	result, err := ReadFile(mfs, filepath.FromSlash("/bar"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -407,13 +408,13 @@ func TestMountableFsCrossFsRename(t *testing.T) {
 	mfs := NewMountableFs(base)
 
 	child := NewMemMapFs()
-	if err := mfs.Mount("test", child); err != nil {
+	if err := mfs.Mount(filepath.FromSlash("test"), child); err != nil {
 		t.Fatal(err)
 	}
-	if err := WriteFile(mfs, "/test/foo", []byte("1"), 0644); err != nil {
+	if err := WriteFile(mfs, filepath.FromSlash("/test/foo"), []byte("1"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	err := mfs.Rename("/test/foo", "/bar")
+	err := mfs.Rename(filepath.FromSlash("/test/foo"), filepath.FromSlash("/bar"))
 	if err != errCrossFsRename {
 		t.Fatal(err)
 	}
@@ -425,14 +426,14 @@ func TestMountableFsMemMapFsOverOsFs(t *testing.T) {
 
 	mfs := NewMountableFs(tfs)
 	child := NewMemMapFs()
-	if err := mfs.Mount("/child", child); err != nil {
+	if err := mfs.Mount(filepath.FromSlash("/child"), child); err != nil {
 		t.Fatal(err)
 	}
 	in := []byte("1")
-	if err := WriteFile(mfs, "/child/foo", in, 0644); err != nil {
+	if err := WriteFile(mfs, filepath.FromSlash("/child/foo"), in, 0644); err != nil {
 		t.Fatal(err)
 	}
-	out, err := ReadFile(child, "/foo")
+	out, err := ReadFile(child, filepath.FromSlash("/foo"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -440,7 +441,7 @@ func TestMountableFsMemMapFsOverOsFs(t *testing.T) {
 		t.Fatal()
 	}
 
-	out, err = ReadFile(mfs, "/child/foo")
+	out, err = ReadFile(mfs, filepath.FromSlash("/child/foo"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -452,19 +453,19 @@ func TestMountableFsMemMapFsOverOsFs(t *testing.T) {
 func TestMountableFsRemove(t *testing.T) {
 	mfs := NewMountableFs(nil)
 	child := NewMemMapFs()
-	if err := mfs.Mount("/child", child); err != nil {
+	if err := mfs.Mount(filepath.FromSlash("/child"), child); err != nil {
 		t.Fatal(err)
 	}
-	if err := WriteFile(mfs, "/child/test", []byte("1"), 0644); err != nil {
+	if err := WriteFile(mfs, filepath.FromSlash("/child/test"), []byte("1"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if e, err := Exists(mfs, "/child/test"); !e || err != nil {
+	if e, err := Exists(mfs, filepath.FromSlash("/child/test")); !e || err != nil {
 		t.Fatal(e, err)
 	}
-	if err := mfs.Remove("/child/test"); err != nil {
+	if err := mfs.Remove(filepath.FromSlash("/child/test")); err != nil {
 		t.Fatal(err)
 	}
-	if e, err := Exists(mfs, "/child/test"); e || err != nil {
+	if e, err := Exists(mfs, filepath.FromSlash("/child/test")); e || err != nil {
 		t.Fatal(e, err)
 	}
 }
@@ -474,21 +475,21 @@ func TestMountableFsRemoveAll(t *testing.T) {
 	child1 := NewMemMapFs()
 	child2 := NewMemMapFs()
 	must(t,
-		mfs.Mount("/mntchild", child1),
-		mfs.Mount("/mntchild/nested", child2),
-		WriteFile(mfs, "/test", []byte("1"), 0644),
-		WriteFile(mfs, "/child/test", []byte("1"), 0644),
-		WriteFile(mfs, "/mntchild/foo", []byte("1"), 0644),
-		WriteFile(mfs, "/mntchild/bar", []byte("1"), 0644),
-		WriteFile(mfs, "/mntchild/baz/qux", []byte("1"), 0644),
-		WriteFile(mfs, "/mntchild/nested/a", []byte("1"), 0644),
-		WriteFile(mfs, "/mntchild/nested/b/c", []byte("1"), 0644),
+		mfs.Mount(filepath.FromSlash("/mntchild"), child1),
+		mfs.Mount(filepath.FromSlash("/mntchild/nested"), child2),
+		WriteFile(mfs, filepath.FromSlash("/test"), []byte("1"), 0644),
+		WriteFile(mfs, filepath.FromSlash("/child/test"), []byte("1"), 0644),
+		WriteFile(mfs, filepath.FromSlash("/mntchild/foo"), []byte("1"), 0644),
+		WriteFile(mfs, filepath.FromSlash("/mntchild/bar"), []byte("1"), 0644),
+		WriteFile(mfs, filepath.FromSlash("/mntchild/baz/qux"), []byte("1"), 0644),
+		WriteFile(mfs, filepath.FromSlash("/mntchild/nested/a"), []byte("1"), 0644),
+		WriteFile(mfs, filepath.FromSlash("/mntchild/nested/b/c"), []byte("1"), 0644),
 	)
-	if err := mfs.RemoveAll("/"); err != nil {
+	if err := mfs.RemoveAll(filepath.FromSlash("/")); err != nil {
 		t.Fatal(err)
 	}
 	paths := []string{}
-	err := Walk(mfs, "/", func(path string, info os.FileInfo, err error) error {
+	err := Walk(mfs, filepath.FromSlash("/"), func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -498,7 +499,7 @@ func TestMountableFsRemoveAll(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual([]string{"/", "/mntchild", "/mntchild/nested"}, paths) {
+	if !reflect.DeepEqual(slashifyAll([]string{"/", "/mntchild", "/mntchild/nested"}), paths) {
 		t.Fatal(paths)
 	}
 }
@@ -508,20 +509,20 @@ func TestMountableFsRemoveAllRecursiveMount(t *testing.T) {
 	mfs.AllowRecursiveMount = true
 	child1 := NewMemMapFs()
 	must(t,
-		mfs.Mount("/mntchild", child1),
-		mfs.Mount("/mntchild/nested", child1),
-		WriteFile(mfs, "/mntchild/foo", []byte("1"), 0644),
-		WriteFile(mfs, "/mntchild/nested/bar", []byte("1"), 0644),
+		mfs.Mount(filepath.FromSlash("/mntchild"), child1),
+		mfs.Mount(filepath.FromSlash("/mntchild/nested"), child1),
+		WriteFile(mfs, filepath.FromSlash("/mntchild/foo"), []byte("1"), 0644),
+		WriteFile(mfs, filepath.FromSlash("/mntchild/nested/bar"), []byte("1"), 0644),
 	)
-	if err := mfs.RemoveAll("/"); err != nil {
+	if err := mfs.RemoveAll(filepath.FromSlash("/")); err != nil {
 		t.Fatal(err)
 	}
 	paths := []string{}
-	err := Walk(mfs, "/", collectPaths(&paths))
+	err := Walk(mfs, filepath.FromSlash("/"), collectPaths(&paths))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual([]string{"/", "/mntchild", "/mntchild/nested"}, paths) {
+	if !reflect.DeepEqual(slashifyAll([]string{"/", "/mntchild", "/mntchild/nested"}), paths) {
 		t.Fatal(paths)
 	}
 }
@@ -532,33 +533,33 @@ func TestMountableFsStat(t *testing.T) {
 	child := NewMemMapFs()
 	child2 := NewMemMapFs()
 	must(t,
-		mfs.Mount("/child", child),
-		mfs.Mount("/child/nested", child2),
-		WriteFile(mfs, "/child/foo", []byte("1"), 0644),
-		WriteFile(mfs, "/child/nested/baz", []byte("1"), 0644))
+		mfs.Mount(filepath.FromSlash("/child"), child),
+		mfs.Mount(filepath.FromSlash("/child/nested"), child2),
+		WriteFile(mfs, filepath.FromSlash("/child/foo"), []byte("1"), 0644),
+		WriteFile(mfs, filepath.FromSlash("/child/nested/baz"), []byte("1"), 0644))
 
-	if i, err := mfs.Stat("/child/foo"); err != nil {
+	if i, err := mfs.Stat(filepath.FromSlash("/child/foo")); err != nil {
 		t.Fatal(err)
 	} else {
 		if i.Name() != "foo" || i.IsDir() {
 			t.Fatal()
 		}
 	}
-	if i, err := mfs.Stat("/child/nested/baz"); err != nil {
+	if i, err := mfs.Stat(filepath.FromSlash("/child/nested/baz")); err != nil {
 		t.Fatal(err)
 	} else {
 		if i.Name() != "baz" || i.IsDir() {
 			t.Fatal()
 		}
 	}
-	if i, err := mfs.Stat("/child/nested"); err != nil {
+	if i, err := mfs.Stat(filepath.FromSlash("/child/nested")); err != nil {
 		t.Fatal(err)
 	} else {
 		if i.Name() != "nested" || !i.IsDir() {
 			t.Fatal()
 		}
 	}
-	if i, err := mfs.Stat("/"); err != nil {
+	if i, err := mfs.Stat(filepath.FromSlash("/")); err != nil {
 		t.Fatal(err)
 	} else {
 		if i.Name() != "" || !i.IsDir() {
@@ -571,27 +572,27 @@ func TestMountableFsMkdirAll(t *testing.T) {
 	base := NewMemMapFs()
 	mfs := NewMountableFs(base)
 	child1 := NewMemMapFs()
-	child1.Chmod("/", 0777)
+	child1.Chmod(filepath.FromSlash("/"), 0777)
 	child2 := NewMemMapFs()
-	child2.Chmod("/", 0777)
+	child2.Chmod(filepath.FromSlash("/"), 0777)
 
 	must(t,
-		mfs.Mount("/child", child1),
-		mfs.Mount("/child/deeply/nested", child2))
+		mfs.Mount(filepath.FromSlash("/child"), child1),
+		mfs.Mount(filepath.FromSlash("/child/deeply/nested"), child2))
 
-	if err := mfs.MkdirAll("/child/deeply/nested/dir", 0755); err != nil {
+	if err := mfs.MkdirAll(filepath.FromSlash("/child/deeply/nested/dir"), 0755); err != nil {
 		t.Fatal(err)
 	}
 
-	mustStatLooseDir(t, mfs, "/child", 0777|os.ModeDir)
-	mustStatLooseDir(t, mfs, "/child/deeply", 0777|os.ModeDir)
-	mustStatLooseDir(t, mfs, "/child/deeply/nested", 0777|os.ModeDir)
-	mustStatLooseDir(t, mfs, "/child/deeply/nested/dir", 0755|os.ModeDir)
+	mustStatLooseDir(t, mfs, filepath.FromSlash("/child"), 0777|os.ModeDir)
+	mustStatLooseDir(t, mfs, filepath.FromSlash("/child/deeply"), 0777|os.ModeDir)
+	mustStatLooseDir(t, mfs, filepath.FromSlash("/child/deeply/nested"), 0777|os.ModeDir)
+	mustStatLooseDir(t, mfs, filepath.FromSlash("/child/deeply/nested/dir"), 0755|os.ModeDir)
 
 	// directories should be created under the mounts
-	mustStatLooseDir(t, base, "/child", 0755|os.ModeDir)
-	mustStatLooseDir(t, child1, "/deeply", 0755|os.ModeDir)
-	mustStatLooseDir(t, child1, "/deeply/nested", 0755|os.ModeDir)
+	mustStatLooseDir(t, base, filepath.FromSlash("/child"), 0755|os.ModeDir)
+	mustStatLooseDir(t, child1, filepath.FromSlash("/deeply"), 0755|os.ModeDir)
+	mustStatLooseDir(t, child1, filepath.FromSlash("/deeply/nested"), 0755|os.ModeDir)
 }
 
 func TestMountableFsChmod(t *testing.T) {
@@ -599,66 +600,66 @@ func TestMountableFsChmod(t *testing.T) {
 	child1 := NewMemMapFs()
 	child2 := NewMemMapFs()
 	must(t,
-		mfs.Mount("/child", child1),
+		mfs.Mount(filepath.FromSlash("/child"), child1),
 
 		// Ensure there is an intermediate node
-		mfs.Mount("/child/deeply/nested", child2),
+		mfs.Mount(filepath.FromSlash("/child/deeply/nested"), child2),
 
-		WriteFile(mfs, "/child/foo", []byte("1"), 0644),
-		mfs.Mkdir("/child/dir", 0755))
+		WriteFile(mfs, filepath.FromSlash("/child/foo"), []byte("1"), 0644),
+		mfs.Mkdir(filepath.FromSlash("/child/dir"), 0755))
 
 	// sanity checks - make sure the initial state matches this test's expectation
-	mustStatLooseDir(t, mfs, "/child", os.ModeDir)
-	mustStat(t, mfs, "/child/foo", 0644)
-	mustStatLooseDir(t, mfs, "/child/dir", 0755|os.ModeDir)
-	mustStatLooseDir(t, mfs, "/child/deeply", 0777|os.ModeDir)
-	mustStatLooseDir(t, mfs, "/child/deeply/nested", os.ModeDir)
+	mustStatLooseDir(t, mfs, filepath.FromSlash("/child"), os.ModeDir)
+	mustStat(t, mfs, filepath.FromSlash("/child/foo"), 0644)
+	mustStatLooseDir(t, mfs, filepath.FromSlash("/child/dir"), 0755|os.ModeDir)
+	mustStatLooseDir(t, mfs, filepath.FromSlash("/child/deeply"), 0777|os.ModeDir)
+	mustStatLooseDir(t, mfs, filepath.FromSlash("/child/deeply/nested"), os.ModeDir)
 
-	if err := mfs.Chmod("/child", 0777|os.ModeDir); err != nil {
+	if err := mfs.Chmod(filepath.FromSlash("/child"), 0777|os.ModeDir); err != nil {
 		t.Fatal(err)
 	}
-	if err := mfs.Chmod("/child/foo", 0777); err != nil {
+	if err := mfs.Chmod(filepath.FromSlash("/child/foo"), 0777); err != nil {
 		t.Fatal(err)
 	}
 
 	// This seems weird about MemMapFs - it will return os.ModeDir if you call
 	// Mkdir, but it allows you to Chmod this flag away even though the entry
 	// remains a directory.
-	if err := mfs.Chmod("/child/dir", 0777|os.ModeDir); err != nil {
+	if err := mfs.Chmod(filepath.FromSlash("/child/dir"), 0777|os.ModeDir); err != nil {
 		t.Fatal(err)
 	}
 
-	mustStatLooseDir(t, mfs, "/child", 0777)
-	mustStat(t, mfs, "/child/foo", 0777)
-	mustStatLooseDir(t, mfs, "/child/dir", 0777)
+	mustStatLooseDir(t, mfs, filepath.FromSlash("/child"), 0777)
+	mustStat(t, mfs, filepath.FromSlash("/child/foo"), 0777)
+	mustStatLooseDir(t, mfs, filepath.FromSlash("/child/dir"), 0777)
 }
 
 func TestMountableFsChtimes(t *testing.T) {
 	mfs := NewMountableFs(nil)
 	child := NewMemMapFs()
 	must(t,
-		mfs.Mount("/child", child),
-		WriteFile(mfs, "/child/foo", []byte("1"), 0644),
-		mfs.Mkdir("/child/dir", 0755))
+		mfs.Mount(filepath.FromSlash("/child"), child),
+		WriteFile(mfs, filepath.FromSlash("/child/foo"), []byte("1"), 0644),
+		mfs.Mkdir(filepath.FromSlash("/child/dir"), 0755))
 
 	tm := time.Date(2017, 1, 1, 12, 0, 0, 0, time.UTC)
 
 	must(t,
-		mfs.Chtimes("/child", time.Time{}, tm),
-		mfs.Chtimes("/child/foo", time.Time{}, tm),
-		mfs.Chtimes("/child/dir", time.Time{}, tm))
+		mfs.Chtimes(filepath.FromSlash("/child"), time.Time{}, tm),
+		mfs.Chtimes(filepath.FromSlash("/child/foo"), time.Time{}, tm),
+		mfs.Chtimes(filepath.FromSlash("/child/dir"), time.Time{}, tm))
 
-	mustTime(t, mfs, "/child", tm)
-	mustTime(t, mfs, "/child/foo", tm)
-	mustTime(t, mfs, "/child/dir", tm)
+	mustTime(t, mfs, filepath.FromSlash("/child"), tm)
+	mustTime(t, mfs, filepath.FromSlash("/child/foo"), tm)
+	mustTime(t, mfs, filepath.FromSlash("/child/dir"), tm)
 }
 
 func TestMountableFsPathErrors(t *testing.T) {
 	mfs := NewMountableFs(nil)
 	child := NewMemMapFs()
-	must(t, mfs.Mount("/nested/child", child))
+	must(t, mfs.Mount(filepath.FromSlash("/nested/child"), child))
 
-	expected := "/nested/child/dir/file"
+	expected := filepath.FromSlash("/nested/child/dir/file")
 
 	funcs := []func() error{
 		func() error {
@@ -667,7 +668,7 @@ func TestMountableFsPathErrors(t *testing.T) {
 		},
 		func() error { return mfs.Chmod(expected, 0644) },
 		func() error { return mfs.Chtimes(expected, time.Time{}, time.Time{}) },
-		func() error { return mfs.Rename(expected, "/nested/child/flarg") },
+		func() error { return mfs.Rename(expected, filepath.FromSlash("/nested/child/flarg")) },
 		func() error { return mfs.Remove(expected) },
 		func() error { return mfs.RemoveAll(expected) },
 
@@ -696,6 +697,7 @@ func TestMountableFsPathErrors(t *testing.T) {
 
 func mustTime(t *testing.T, fs Fs, path string, tm time.Time) {
 	t.Helper()
+	path = filepath.FromSlash(path)
 	if i, err := fs.Stat(path); err != nil {
 		t.Fatal(err)
 	} else {
@@ -707,6 +709,7 @@ func mustTime(t *testing.T, fs Fs, path string, tm time.Time) {
 
 func mustStatLooseDir(t *testing.T, fs Fs, dir string, mode os.FileMode) {
 	t.Helper()
+	dir = filepath.FromSlash(dir)
 	mode |= os.ModeDir
 	if i, err := fs.Stat(dir); err != nil {
 		t.Fatal(err)
@@ -723,6 +726,7 @@ func mustStatLooseDir(t *testing.T, fs Fs, dir string, mode os.FileMode) {
 
 func mustStatRealDir(t *testing.T, fs Fs, dir string, mode os.FileMode) {
 	t.Helper()
+	dir = filepath.FromSlash(dir)
 	mustStatLooseDir(t, fs, dir, mode)
 	i, _ := fs.Stat(dir)
 	_, ok := i.(*mountedDirInfo)
@@ -733,6 +737,7 @@ func mustStatRealDir(t *testing.T, fs Fs, dir string, mode os.FileMode) {
 
 func mustStatMount(t *testing.T, fs Fs, dir string, mode os.FileMode) {
 	t.Helper()
+	dir = filepath.FromSlash(dir)
 	mustStatLooseDir(t, fs, dir, mode)
 	i, _ := fs.Stat(dir)
 	_, ok := i.(*mountedDirInfo)
@@ -743,6 +748,7 @@ func mustStatMount(t *testing.T, fs Fs, dir string, mode os.FileMode) {
 
 func mustStat(t *testing.T, fs Fs, file string, mode os.FileMode) {
 	t.Helper()
+	file = filepath.FromSlash(file)
 	if i, err := fs.Stat(file); err != nil {
 		t.Fatal(err)
 	} else {
@@ -758,9 +764,13 @@ func mustStat(t *testing.T, fs Fs, file string, mode os.FileMode) {
 
 func checkPaths(expected []string, fs Fs) error {
 	result := []string{}
-	if err := Walk(fs, "/", collectPaths(&result)); err != nil {
+	if err := Walk(fs, filepath.FromSlash("/"), collectPaths(&result)); err != nil {
 		return err
 	}
+	for i, p := range expected {
+		expected[i] = filepath.FromSlash(p)
+	}
+
 	sort.Strings(result)
 	sort.Strings(expected)
 	if !reflect.DeepEqual(expected, result) {
@@ -815,4 +825,41 @@ func newTempFs() *tempFs {
 	}
 	t := NewBasePathFs(NewOsFs(), td)
 	return &tempFs{Fs: t, path: td}
+}
+
+var osPermCheck = -1
+
+func osSupportsPerms() bool {
+	if osPermCheck < 0 {
+		osPermCheck = 0
+		tempFs := newTempFs()
+		defer tempFs.Destroy()
+
+		if err := WriteFile(tempFs, "test", []byte("1"), 0777); err != nil {
+			panic(err)
+		}
+		info, err := tempFs.Stat("test")
+		if err != nil {
+			panic(err)
+		}
+		origMode := info.Mode()
+		if err := tempFs.Chmod("test", 0666); err != nil {
+			panic(err)
+		}
+		info, err = tempFs.Stat("test")
+		if err != nil {
+			panic(err)
+		}
+		if info.Mode() != origMode {
+			osPermCheck = 1
+		}
+	}
+	return osPermCheck == 1
+}
+
+func slashifyAll(paths []string) []string {
+	for i, p := range paths {
+		paths[i] = filepath.FromSlash(p)
+	}
+	return paths
 }
