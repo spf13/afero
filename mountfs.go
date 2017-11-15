@@ -344,8 +344,6 @@ func wrapErrorPath(path string, err error) error {
 	switch err := err.(type) {
 	case *os.PathError:
 		err.Path = path
-	default:
-		err = &os.PathError{Err: err, Path: path}
 	}
 	return err
 }
