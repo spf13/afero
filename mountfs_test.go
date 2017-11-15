@@ -26,8 +26,8 @@ import (
 )
 
 func must(t *testing.T, errs ...error) {
-	// FIXME: afero may not accept Go 1.9 features
-	t.Helper()
+	// Re-enable when Go 1.9 is the minimum
+	// t.Helper()
 	for _, err := range errs {
 		if err != nil {
 			t.Fatal(err)
@@ -696,7 +696,8 @@ func TestMountableFsPathErrors(t *testing.T) {
 }
 
 func mustTime(t *testing.T, fs Fs, path string, tm time.Time) {
-	t.Helper()
+	// Re-enable when Go 1.9 is the minimum
+	// t.Helper()
 	path = filepath.FromSlash(path)
 	if i, err := fs.Stat(path); err != nil {
 		t.Fatal(err)
@@ -708,7 +709,8 @@ func mustTime(t *testing.T, fs Fs, path string, tm time.Time) {
 }
 
 func mustStatLooseDir(t *testing.T, fs Fs, dir string, mode os.FileMode) {
-	t.Helper()
+	// Re-enable when Go 1.9 is the minimum
+	// t.Helper()
 	dir = filepath.FromSlash(dir)
 	mode |= os.ModeDir
 	if i, err := fs.Stat(dir); err != nil {
@@ -725,7 +727,8 @@ func mustStatLooseDir(t *testing.T, fs Fs, dir string, mode os.FileMode) {
 }
 
 func mustStatRealDir(t *testing.T, fs Fs, dir string, mode os.FileMode) {
-	t.Helper()
+	// Re-enable when Go 1.9 is the minimum
+	// t.Helper()
 	dir = filepath.FromSlash(dir)
 	mustStatLooseDir(t, fs, dir, mode)
 	i, _ := fs.Stat(dir)
@@ -736,7 +739,8 @@ func mustStatRealDir(t *testing.T, fs Fs, dir string, mode os.FileMode) {
 }
 
 func mustStatMount(t *testing.T, fs Fs, dir string, mode os.FileMode) {
-	t.Helper()
+	// Re-enable when Go 1.9 is the minimum
+	// t.Helper()
 	dir = filepath.FromSlash(dir)
 	mustStatLooseDir(t, fs, dir, mode)
 	i, _ := fs.Stat(dir)
@@ -747,7 +751,8 @@ func mustStatMount(t *testing.T, fs Fs, dir string, mode os.FileMode) {
 }
 
 func mustStat(t *testing.T, fs Fs, file string, mode os.FileMode) {
-	t.Helper()
+	// Re-enable when Go 1.9 is the minimum
+	// t.Helper()
 	file = filepath.FromSlash(file)
 	if i, err := fs.Stat(file); err != nil {
 		t.Fatal(err)
