@@ -380,7 +380,6 @@ The following is a short list of possible backends we hope someone will
 implement:
 
 * SSH
-* ZIP
 * TAR
 * S3
 
