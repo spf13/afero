@@ -24,10 +24,20 @@ import (
 // MountableFs allows different paths in a hierarchy to be served by different
 // afero.Fs objects.
 type MountableFs struct {
-	node                *mountableNode
-	AllowCrossFsRename  bool
+	node *mountableNode
+
+	// If true, it is possible to mount an Fs over an existing file or directory.
+	// If false, attempting to do so will result in an error.
+	AllowMasking bool
+
+	// If true, the same Fs can be mounted inside an existing mount of the same Fs,
+	// for e.g:
+	//	child := afero.NewMemMapFs()
+	//	mfs.Mount("/yep", child)
+	//	mfs.Mount("/yep/yep", child)
 	AllowRecursiveMount bool
-	now                 func() time.Time
+
+	now func() time.Time
 }
 
 func NewMountableFs(base Fs) *MountableFs {
@@ -54,16 +64,14 @@ func (m *MountableFs) Mount(path string, fs Fs) error {
 		return errOsFs
 	}
 
-	// If there is already an entry at this path that is not a mount node,
-	// Mount should fail.
-	info, err := m.Stat(path)
-	if err != nil && !os.IsNotExist(err) {
-		return wrapErrorPath(path, err)
+	if info, err := m.Stat(path); err != nil {
+		if !os.IsNotExist(err) {
+			return err
+		}
 	} else {
-		err = nil
-	}
-	if info != nil && !IsMountNode(info) {
-		return &os.PathError{Err: os.ErrExist, Op: "Mount", Path: path}
+		if !m.AllowMasking && info != nil && !IsMountNode(info) {
+			return os.ErrExist
+		}
 	}
 
 	parts := splitPath(path)
