@@ -151,7 +151,7 @@ func TestBasePathOpenFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to open file: %v", err)
 	}
-	if filepath.Dir(f.Name()) != "/tmp" {
+	if filepath.Dir(f.Name()) != filepath.Clean("/tmp") {
 		t.Fatalf("realpath leaked: %s", f.Name())
 	}
 }
@@ -164,7 +164,7 @@ func TestBasePathCreate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create file: %v", err)
 	}
-	if filepath.Dir(f.Name()) != "/tmp" {
+	if filepath.Dir(f.Name()) != filepath.Clean("/tmp") {
 		t.Fatalf("realpath leaked: %s", f.Name())
 	}
 }
@@ -179,7 +179,7 @@ func TestBasePathTempFile(t *testing.T) {
 		t.Fatalf("Failed to TempDir: %v", err)
 	}
 	fmt.Println(tDir)
-	if filepath.Dir(tDir) != "/tmp" {
+	if filepath.Dir(tDir) != filepath.Clean("/tmp") {
 		t.Fatalf("Tempdir realpath leaked: %s", tDir)
 	}
 	tempFile, err := TempFile(bp, tDir, "")
