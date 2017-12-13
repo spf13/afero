@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
-	"fmt"
 )
 
 func TestBasePath(t *testing.T) {
@@ -142,7 +141,6 @@ func TestNestedBasePaths(t *testing.T) {
 	}
 }
 
-
 func TestBasePathOpenFile(t *testing.T) {
 	baseFs := &MemMapFs{}
 	baseFs.MkdirAll("/base/path/tmp", 0777)
@@ -178,7 +176,6 @@ func TestBasePathTempFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to TempDir: %v", err)
 	}
-	fmt.Println(tDir)
 	if filepath.Dir(tDir) != filepath.Clean("/tmp") {
 		t.Fatalf("Tempdir realpath leaked: %s", tDir)
 	}
