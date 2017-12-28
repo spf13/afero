@@ -406,6 +406,8 @@ Googles very well.
 
 ## Release Notes
 
+From **v1.0.0**, se release notes in [Releases](https://github.com/spf13/afero/releases).
+
 * **0.10.0** 2015.12.10
   * Full compatibility with Windows
   * Introduction of afero utilities
