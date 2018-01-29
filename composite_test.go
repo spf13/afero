@@ -3,6 +3,7 @@ package afero
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -228,6 +229,78 @@ func TestNestedDirOverlayReaddir(t *testing.T) {
 			fmt.Println(x.Name())
 		}
 		t.Errorf("Got wrong number of files in union: %v", len(list))
+	}
+}
+
+func TestNestedDirReaddirPaging(t *testing.T) {
+	base := &MemMapFs{}
+	roBase := &ReadOnlyFs{source: base}
+	overlay := &MemMapFs{}
+
+	ufs := &CopyOnWriteFs{base: roBase, layer: overlay}
+	base.MkdirAll("/test", 0777)
+	for i := 0; i < 10; i += 2 {
+		f, _ := base.Create(fmt.Sprintf("/test/Test%v", i))
+		f.WriteString("HelloTest")
+		f.Close()
+	}
+	for i := 1; i < 10; i += 2 {
+		f, _ := overlay.Create(fmt.Sprintf("/test/Test%v", i))
+		f.WriteString("HelloTest")
+		f.Close()
+	}
+	fh, _ := ufs.Open("/test")
+	list, err := fh.Readdir(5)
+	if err != nil {
+		t.Errorf("Readdir failed %s", err)
+	}
+	files := make(map[string]os.FileInfo)
+	for i := range list {
+		files[list[i].Name()] = list[i]
+	}
+	list2, err := fh.Readdir(5)
+	if err != nil {
+		t.Errorf("Readdir failed %s", err)
+	}
+	for i := range list2 {
+		if _, exists := files[list2[i].Name()]; exists {
+			t.Error("Readdir returned duplicated entries")
+		}
+	}
+	_, err = fh.Readdir(5)
+	if err != io.EOF {
+		t.Error("Readdir did not return EOF")
+	}
+}
+
+func TestNestedDirReaddirPaging2(t *testing.T) {
+	base := &MemMapFs{}
+	roBase := &ReadOnlyFs{source: base}
+	overlay := &MemMapFs{}
+
+	ufs := &CopyOnWriteFs{base: roBase, layer: overlay}
+	base.MkdirAll("/test", 0777)
+	for i := 0; i < 10; i += 2 {
+		f, _ := base.Create(fmt.Sprintf("/test/Test%v", i))
+		f.WriteString("HelloTest")
+		f.Close()
+	}
+	for i := 1; i < 10; i += 2 {
+		f, _ := overlay.Create(fmt.Sprintf("/test/Test%v", i))
+		f.WriteString("HelloTest")
+		f.Close()
+	}
+	fh, _ := ufs.Open("/test")
+	list, err := fh.Readdir(100)
+	if len(list) != 10 {
+		t.Error("Readdir did not return expected number of entries")
+	}
+	if err != nil {
+		t.Errorf("Readdir failed %s", err)
+	}
+	_, err = fh.Readdir(5)
+	if err != io.EOF {
+		t.Error("Readdir did not return EOF")
 	}
 }
 

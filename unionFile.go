@@ -153,11 +153,20 @@ func (f *UnionFile) Readdir(c int) (ofi []os.FileInfo, err error) {
 		for _, fi := range files {
 			f.files = append(f.files, fi)
 		}
+	} else if f.off >= len(f.files) {
+		return nil, io.EOF
 	}
-	if c == -1 {
+	if c <= 0 {
+		return f.files[:], nil
+	}
+	defer func() {
+		if c > 0 {
+			f.off += c
+		}
+	}()
+	if f.off+c > len(f.files) {
 		return f.files[f.off:], nil
 	}
-	defer func() { f.off += c }()
 	return f.files[f.off:c], nil
 }
 
