@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+var _ Lstater = (*BasePathFs)(nil)
+
 // The BasePathFs restricts all operations to a given path within an Fs.
 // The given file name to the operations on this Fs will be prepended with
 // the base path before calling the base Fs.
@@ -162,6 +164,18 @@ func (b *BasePathFs) Create(name string) (f File, err error) {
 		return nil, err
 	}
 	return &BasePathFile{File: sourcef, path: b.path}, nil
+}
+
+func (b *BasePathFs) LstatIfPossible(name string) (os.FileInfo, bool, error) {
+	name, err := b.RealPath(name)
+	if err != nil {
+		return nil, false, &os.PathError{Op: "lstat", Path: name, Err: err}
+	}
+	if lstater, ok := b.source.(Lstater); ok {
+		return lstater.LstatIfPossible(name)
+	}
+	fi, err := b.source.Stat(name)
+	return fi, false, err
 }
 
 // vim: ts=4 sw=4 noexpandtab nolist syn=go
