@@ -123,6 +123,24 @@ func (f *UnionFile) Name() string {
 	return f.base.Name()
 }
 
+// UnionKey can be implemented to use an alternate key than FileInfo.Name when
+// weaving the two directories together. The use case(s) are uncommon and special,
+// but this will allow a union file system with multiple files with the same filename.
+// This needs to be implemented by your own implementation of os.FileInfo as
+// returned in Readdir.
+type UnionKey interface {
+	AferoUnionKey() string
+}
+
+func (f *UnionFile) key(ofi os.FileInfo) string {
+	switch tp := ofi.(type) {
+	case UnionKey:
+		return tp.AferoUnionKey()
+	default:
+		return tp.Name()
+	}
+}
+
 // Readdir will weave the two directories together and
 // return a single view of the overlayed directories
 func (f *UnionFile) Readdir(c int) (ofi []os.FileInfo, err error) {
@@ -135,7 +153,7 @@ func (f *UnionFile) Readdir(c int) (ofi []os.FileInfo, err error) {
 				return nil, err
 			}
 			for _, fi := range rfi {
-				files[fi.Name()] = fi
+				files[f.key(fi)] = fi
 			}
 		}
 
@@ -146,7 +164,7 @@ func (f *UnionFile) Readdir(c int) (ofi []os.FileInfo, err error) {
 			}
 			for _, fi := range rfi {
 				if _, exists := files[fi.Name()]; !exists {
-					files[fi.Name()] = fi
+					files[f.key(fi)] = fi
 				}
 			}
 		}
