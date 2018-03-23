@@ -93,6 +93,13 @@ func (b *BasePathFs) Stat(name string) (fi os.FileInfo, err error) {
 	return b.source.Stat(name)
 }
 
+func (b *BasePathFs) Lstat(name string) (fi os.FileInfo, err error) {
+	if name, err = b.RealPath(name); err != nil {
+		return nil, &os.PathError{"lstat", name, err}
+	}
+	return b.source.Lstat(name)
+}
+
 func (b *BasePathFs) Rename(oldname, newname string) (err error) {
 	if oldname, err = b.RealPath(oldname); err != nil {
 		return &os.PathError{Op: "rename", Path: oldname, Err: err}

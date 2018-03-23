@@ -317,6 +317,15 @@ func (m *MemMapFs) Stat(name string) (os.FileInfo, error) {
 	return fi, nil
 }
 
+func (m *MemMapFs) Lstat(name string) (os.FileInfo, error) {
+	f, err := m.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	fi := mem.GetFileInfo(f.(*mem.File).Data())
+	return fi, nil
+}
+
 func (m *MemMapFs) Chmod(name string, mode os.FileMode) error {
 	name = normalizePath(name)
 

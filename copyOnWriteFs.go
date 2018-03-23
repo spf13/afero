@@ -88,6 +88,21 @@ func (u *CopyOnWriteFs) Stat(name string) (os.FileInfo, error) {
 	return fi, nil
 }
 
+func (u *CopyOnWriteFs) Lstat(name string) (os.FileInfo, error) {
+	fi, err := u.layer.Lstat(name)
+	if err != nil {
+		origErr := err
+		if e, ok := err.(*os.PathError); ok {
+			err = e.Err
+		}
+		if err == syscall.ENOENT {
+			return u.base.Lstat(name)
+		}
+		return nil, origErr
+	}
+	return fi, nil
+}
+
 // Renaming files present only in the base layer is not permitted
 func (u *CopyOnWriteFs) Rename(oldname, newname string) error {
 	b, err := u.isBaseFile(oldname)

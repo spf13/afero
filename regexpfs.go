@@ -71,6 +71,13 @@ func (r *RegexpFs) Stat(name string) (os.FileInfo, error) {
 	return r.source.Stat(name)
 }
 
+func (r *RegexpFs) Lstat(name string) (os.FileInfo, error) {
+	if err := r.dirOrMatches(name); err != nil {
+		return nil, err
+	}
+	return r.source.Lstat(name)
+}
+
 func (r *RegexpFs) Rename(oldname, newname string) error {
 	dir, err := IsDir(r.source, oldname)
 	if err != nil {

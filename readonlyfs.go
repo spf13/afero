@@ -34,6 +34,10 @@ func (r *ReadOnlyFs) Stat(name string) (os.FileInfo, error) {
 	return r.source.Stat(name)
 }
 
+func (r *ReadOnlyFs) Lstat(name string) (os.FileInfo, error) {
+	return r.source.Lstat(name)
+}
+
 func (r *ReadOnlyFs) Rename(o, n string) error {
 	return syscall.EPERM
 }
