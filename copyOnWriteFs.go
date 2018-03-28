@@ -258,7 +258,7 @@ func (u *CopyOnWriteFs) Open(name string) (File, error) {
 		return nil, fmt.Errorf("BaseErr: %v\nOverlayErr: %v", bErr, lErr)
 	}
 
-	return &UnionFile{base: bfile, layer: lfile}, nil
+	return &UnionFile{Base: bfile, Layer: lfile}, nil
 }
 
 func (u *CopyOnWriteFs) Mkdir(name string, perm os.FileMode) error {
