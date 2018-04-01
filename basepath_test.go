@@ -68,8 +68,8 @@ func TestRealPath(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		_, err = bp.RealPath(anotherDir)
 
-		if err == nil {
-			t.Errorf("Expected error")
+		if err != os.ErrNotExist {
+			t.Errorf("Expected os.ErrNotExist")
 		}
 
 	} else {
