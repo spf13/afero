@@ -1,7 +1,6 @@
 package afero
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -42,7 +41,7 @@ func NewBasePathFs(source Fs, path string) Fs {
 // else the given file with the base path prepended
 func (b *BasePathFs) RealPath(name string) (path string, err error) {
 	if err := validateBasePathName(name); err != nil {
-		return "", err
+		return name, err
 	}
 
 	bpath := filepath.Clean(b.path)
@@ -64,7 +63,7 @@ func validateBasePathName(name string) error {
 	// On Windows a common mistake would be to provide an absolute OS path
 	// We could strip out the base part, but that would not be very portable.
 	if filepath.IsAbs(name) {
-		return &os.PathError{Op: "realPath", Path: name, Err: errors.New("got a real OS path instead of a virtual")}
+		return os.ErrNotExist
 	}
 
 	return nil
