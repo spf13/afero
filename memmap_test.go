@@ -449,3 +449,13 @@ func TestMemFsUnexpectedEOF(t *testing.T) {
 		t.Fatal("Expected ErrUnexpectedEOF")
 	}
 }
+
+func TestStatEmptyPath(t *testing.T) {
+	t.Parallel()
+
+	fs := NewMemMapFs()
+
+	if _, err := fs.Stat(""); !os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+}
