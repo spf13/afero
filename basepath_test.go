@@ -27,14 +27,17 @@ func TestBasePathRoot(t *testing.T) {
 	baseFs.MkdirAll("/base/path/boo/", 0777)
 	bp := NewBasePathFs(baseFs, "/base/path")
 
-	rd, err := ReadDir(bp, string(os.PathSeparator))
+	for _, root := range []string{string(os.PathSeparator), ""} {
 
-	if len(rd) != 2 {
-		t.Errorf("base path doesn't respect root")
-	}
+		rd, err := ReadDir(bp, root)
 
-	if err != nil {
-		t.Error(err)
+		if len(rd) != 2 {
+			t.Errorf("base path doesn't respect root")
+		}
+
+		if err != nil {
+			t.Error(err)
+		}
 	}
 }
 
