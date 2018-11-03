@@ -185,11 +185,17 @@ func (f *UnionFile) Readdir(c int) (ofi []os.FileInfo, err error) {
 		}
 		f.files = append(f.files, merged...)
 	}
-	if c == -1 {
-		return f.files[f.off:], nil
+	if c <= 0 || f.off+c >= len(f.files) {
+		results := f.files[f.off:]
+		f.off = len(f.files)
+		if len(results) == 0 {
+			return nil, io.EOF
+		}
+		return results, nil
 	}
-	defer func() { f.off += c }()
-	return f.files[f.off:c], nil
+	results := f.files[f.off : f.off+c]
+	f.off += c
+	return results, nil
 }
 
 func (f *UnionFile) Readdirnames(c int) ([]string, error) {
