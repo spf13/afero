@@ -319,6 +319,18 @@ func (m *MemMapFs) Rename(oldname, newname string) error {
 	} else {
 		return &os.PathError{Op: "rename", Path: oldname, Err: ErrFileNotFound}
 	}
+
+	for p, fileData := range m.getData() {
+		if strings.HasPrefix(p, oldname+FilePathSeparator) {
+			m.mu.RUnlock()
+			m.mu.Lock()
+			delete(m.getData(), p)
+			p := strings.Replace(p, oldname, newname, 1)
+			m.getData()[p] = fileData
+			m.mu.Unlock()
+			m.mu.RLock()
+		}
+	}
 	return nil
 }
 
