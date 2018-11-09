@@ -683,3 +683,47 @@ func TestMemFsLstatIfPossible(t *testing.T) {
 		t.Fatalf("Function indicated lstat was called. This should never be true.")
 	}
 }
+
+func TestMemFsRenameDir(t *testing.T) {
+	const srcPath = "/src"
+	const dstPath = "/dst"
+	const subDir = "dir"
+
+	fs := NewMemMapFs()
+
+	err := fs.MkdirAll(srcPath+FilePathSeparator+subDir, 0777)
+	if err != nil {
+		t.Errorf("MkDirAll failed: %s", err)
+		return
+	}
+
+	err = fs.Rename(srcPath, dstPath)
+	if err != nil {
+		t.Errorf("Rename failed: %s", err)
+		return
+	}
+
+	_, err = fs.Stat(srcPath + FilePathSeparator + subDir)
+	if err == nil {
+		t.Errorf("SubDir still exists in the source dir")
+		return
+	}
+
+	_, err = fs.Stat(dstPath + FilePathSeparator + subDir)
+	if err != nil {
+		t.Errorf("SubDir stat in the destination dir: %s", err)
+		return
+	}
+
+	err = fs.Mkdir(srcPath, 0777)
+	if err != nil {
+		t.Errorf("Cannot recreate the source dir: %s", err)
+		return
+	}
+
+	err = fs.Mkdir(srcPath+FilePathSeparator+subDir, 0777)
+	if err != nil {
+		t.Errorf("Cannot recreate the subdir in the source dir: %s", err)
+		return
+	}
+}
