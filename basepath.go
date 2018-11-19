@@ -9,6 +9,7 @@ import (
 )
 
 var _ Lstater = (*BasePathFs)(nil)
+var _ Fs = (*BasePathFs)(nil)
 
 // The BasePathFs restricts all operations to a given path within an Fs.
 // The given file name to the operations on this Fs will be prepended with
@@ -33,7 +34,7 @@ func (f *BasePathFile) Name() string {
 	return strings.TrimPrefix(sourcename, filepath.Clean(f.path))
 }
 
-func NewBasePathFs(source Fs, path string) Fs {
+func NewBasePathFs(source Fs, path string) *BasePathFs {
 	return &BasePathFs{source: source, path: path}
 }
 

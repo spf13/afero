@@ -25,13 +25,15 @@ import (
 	"github.com/spf13/afero/mem"
 )
 
+var _ Fs = (*MemMapFs)(nil)
+
 type MemMapFs struct {
 	mu   sync.RWMutex
 	data map[string]*mem.FileData
 	init sync.Once
 }
 
-func NewMemMapFs() Fs {
+func NewMemMapFs() *MemMapFs {
 	return &MemMapFs{}
 }
 

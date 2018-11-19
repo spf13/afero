@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+var _ Fs = (*RegexpFs)(nil)
+
 // The RegexpFs filters files (not directories) by regular expression. Only
 // files matching the given regexp will be allowed, all others get a ENOENT error (
 // "No such file or directory").
@@ -16,7 +18,7 @@ type RegexpFs struct {
 	source Fs
 }
 
-func NewRegexpFs(source Fs, re *regexp.Regexp) Fs {
+func NewRegexpFs(source Fs, re *regexp.Regexp) *RegexpFs {
 	return &RegexpFs{source: source, re: re}
 }
 

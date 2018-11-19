@@ -7,12 +7,13 @@ import (
 )
 
 var _ Lstater = (*ReadOnlyFs)(nil)
+var _ Fs = (*ReadOnlyFs)(nil)
 
 type ReadOnlyFs struct {
 	source Fs
 }
 
-func NewReadOnlyFs(source Fs) Fs {
+func NewReadOnlyFs(source Fs) *ReadOnlyFs {
 	return &ReadOnlyFs{source: source}
 }
 

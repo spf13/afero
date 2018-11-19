@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+var _ Fs = (*CacheOnReadFs)(nil)
+
 // If the cache duration is 0, cache time will be unlimited, i.e. once
 // a file is in the layer, the base will never be read again for this file.
 //
@@ -25,7 +27,7 @@ type CacheOnReadFs struct {
 	cacheTime time.Duration
 }
 
-func NewCacheOnReadFs(base Fs, layer Fs, cacheTime time.Duration) Fs {
+func NewCacheOnReadFs(base Fs, layer Fs, cacheTime time.Duration) *CacheOnReadFs {
 	return &CacheOnReadFs{base: base, layer: layer, cacheTime: cacheTime}
 }
 

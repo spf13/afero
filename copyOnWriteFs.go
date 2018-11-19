@@ -9,6 +9,7 @@ import (
 )
 
 var _ Lstater = (*CopyOnWriteFs)(nil)
+var _ Fs = (*CopyOnWriteFs)(nil)
 
 // The CopyOnWriteFs is a union filesystem: a read only base file system with
 // a possibly writeable layer on top. Changes to the file system will only
@@ -22,7 +23,7 @@ type CopyOnWriteFs struct {
 	layer Fs
 }
 
-func NewCopyOnWriteFs(base Fs, layer Fs) Fs {
+func NewCopyOnWriteFs(base Fs, layer Fs) *CopyOnWriteFs {
 	return &CopyOnWriteFs{base: base, layer: layer}
 }
 
