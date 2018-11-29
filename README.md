@@ -258,6 +258,16 @@ system using InMemoryFile.
 Afero has experimental support for secure file transfer protocol (sftp). Which can
 be used to perform file operations over a encrypted channel.
 
+## Distributed Backends
+
+## EtcdFs
+
+Afero has experimental support for a simple `[etcd](https://github.com/coreos/etcd)`
+interface. It was built for distributing mostly read-only filesystems across a
+cluster. It is available in the [mgmt project](https://github.com/purpleidea/mgmt/tree/master/etcd/fs)
+and can be imported from there. Performance, large files, and concurrency have
+not been extensively tested. More tests and improved documentation are welcome.
+
 ## Filtering Backends
 
 ### BasePathFs
