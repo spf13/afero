@@ -18,7 +18,7 @@ and benefit of the os and ioutil packages.
 Afero provides significant improvements over using the os package alone, most
 notably the ability to create mock and testing filesystems without relying on the disk.
 
-It is suitable for use in a any situation where you would consider using the OS
+It is suitable for use in any situation where you would consider using the os
 package as it provides an additional abstraction that makes it easy to use a
 memory backed file system during testing. It also adds support for the http
 filesystem for full interoperability.
