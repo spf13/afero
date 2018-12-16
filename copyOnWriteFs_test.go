@@ -36,13 +36,12 @@ func TestCopyOnWrite(t *testing.T) {
 			t.Errorf("Mkdir: Got %q for %T", err, fs)
 		}
 
-		// https://github.com/spf13/afero/issues/191
-		if _, ok := fs.(*OsFs); !ok {
-			err = fs.MkdirAll(dir, 0744)
-			if err == nil || !os.IsExist(err) {
-				t.Errorf("MkdirAll:  Got %q for %T", err, fs)
-			}
+		// MkdirAll does not return an error when the directory already exists
+		err = fs.MkdirAll(dir, 0744)
+		if err != nil {
+			t.Errorf("MkdirAll:  Got %q for %T", err, fs)
 		}
+
 	}
 }
 
