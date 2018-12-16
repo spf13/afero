@@ -1,26 +1,49 @@
 package afero
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestCopyOnWrite(t *testing.T) {
-	var fs Fs
-	var err error
-	base := NewOsFs()
-	roBase := NewReadOnlyFs(base)
-	ufs := NewCopyOnWriteFs(roBase, NewMemMapFs())
-
-	fs = ufs
-	err = fs.MkdirAll("nonexistent/directory/", 0744)
+	osFs := NewOsFs()
+	writeDir, err := TempDir(osFs, "", "copy-on-write-test")
 	if err != nil {
-		t.Error(err)
-		return
+		t.Fatal("error creating tempDir", err)
 	}
-	_, err = fs.Create("nonexistent/directory/newfile")
+	defer osFs.RemoveAll(writeDir)
+
+	compositeFs := NewCopyOnWriteFs(NewReadOnlyFs(NewOsFs()), osFs)
+
+	var dir = filepath.Join(writeDir, "some/path")
+
+	err = compositeFs.MkdirAll(dir, 0744)
 	if err != nil {
-		t.Error(err)
-		return
+		t.Fatal(err)
+	}
+	_, err = compositeFs.Create(filepath.Join(dir, "newfile"))
+	if err != nil {
+		t.Fatal(err)
 	}
 
+	// https://github.com/spf13/afero/issues/189
+	// We want the composite file system to behave like the OS file system
+	// on Mkdir and MkdirAll
+	for _, fs := range []Fs{osFs, compositeFs} {
+		err = fs.Mkdir(dir, 0744)
+		if err == nil || !os.IsExist(err) {
+			t.Errorf("Mkdir: Got %q for %T", err, fs)
+		}
+
+		// https://github.com/spf13/afero/issues/191
+		if _, ok := fs.(*OsFs); !ok {
+			err = fs.MkdirAll(dir, 0744)
+			if err == nil || !os.IsExist(err) {
+				t.Errorf("MkdirAll:  Got %q for %T", err, fs)
+			}
+		}
+	}
 }
 
 func TestCopyOnWriteFileInMemMapBase(t *testing.T) {
