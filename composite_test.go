@@ -3,6 +3,7 @@ package afero
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -400,4 +401,73 @@ func TestCacheOnReadFsNotInLayer(t *testing.T) {
 		t.Fatal("could not open file from layer: ", err)
 	}
 	fh.Close()
+}
+
+// #194
+func TestUniontFileReaddirEmpty(t *testing.T) {
+	osFs := NewOsFs()
+
+	base := NewMemMapFs()
+	overlay := NewMemMapFs()
+	ufs := &CopyOnWriteFs{base: base, layer: overlay}
+	mem := NewMemMapFs()
+
+	// The OS file will return io.EOF on end of directory.
+	for _, fs := range []Fs{osFs, ufs, mem} {
+		baseDir, err := TempDir(fs, "", "empty-dir")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		f, err := fs.Open(baseDir)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		names, err := f.Readdirnames(1)
+		if err != io.EOF {
+			t.Fatal(err)
+		}
+
+		if len(names) != 0 {
+			t.Fatal("should be empty")
+		}
+
+		f.Close()
+
+		fs.RemoveAll(baseDir)
+	}
+}
+
+func TestUniontFileReaddirAskForTooMany(t *testing.T) {
+	base := &MemMapFs{}
+	overlay := &MemMapFs{}
+
+	for i := 0; i < 5; i++ {
+		WriteFile(base, fmt.Sprintf("file%d.txt", i), []byte("afero"), 0777)
+	}
+
+	ufs := &CopyOnWriteFs{base: base, layer: overlay}
+
+	f, err := ufs.Open("")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer f.Close()
+
+	names, err := f.Readdirnames(6)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(names) != 5 {
+		t.Fatal(names)
+	}
+
+	// End of directory
+	_, err = f.Readdirnames(3)
+	if err != io.EOF {
+		t.Fatal(err)
+	}
 }
