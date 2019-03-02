@@ -404,7 +404,7 @@ func TestCacheOnReadFsNotInLayer(t *testing.T) {
 }
 
 // #194
-func TestUniontFileReaddirEmpty(t *testing.T) {
+func TestUnionFileReaddirEmpty(t *testing.T) {
 	osFs := NewOsFs()
 
 	base := NewMemMapFs()
@@ -439,7 +439,41 @@ func TestUniontFileReaddirEmpty(t *testing.T) {
 	}
 }
 
-func TestUniontFileReaddirAskForTooMany(t *testing.T) {
+// #197
+func TestUnionFileReaddirDuplicateEmpty(t *testing.T) {
+	base := NewMemMapFs()
+	dir, err := TempDir(base, "", "empty-dir")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Overlay shares same empty directory as base
+	overlay := NewMemMapFs()
+	err = overlay.Mkdir(dir, 0700)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ufs := &CopyOnWriteFs{base: base, layer: overlay}
+
+	f, err := ufs.Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	names, err := f.Readdirnames(0)
+
+	if err == io.EOF {
+		t.Errorf("unexpected io.EOF error")
+	}
+
+	if len(names) != 0 {
+		t.Fatal("should be empty")
+	}
+}
+
+func TestUnionFileReaddirAskForTooMany(t *testing.T) {
 	base := &MemMapFs{}
 	overlay := &MemMapFs{}
 
