@@ -291,3 +291,48 @@ func (u *CopyOnWriteFs) MkdirAll(name string, perm os.FileMode) error {
 func (u *CopyOnWriteFs) Create(name string) (File, error) {
 	return u.OpenFile(name, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0666)
 }
+
+func (u *CopyOnWriteFs) SymlinkIfPossible(oldname, newname string) (bool, error) {
+	b, err := u.isBaseFile(oldname)
+	if err != nil {
+		return false, err
+	}
+	if b {
+		return false, syscall.EPERM
+	}
+
+	if symlinker, ok := u.layer.(Symlinker); ok {
+		return symlinker.SymlinkIfPossible(oldname, newname)
+	}
+	return false, nil
+}
+
+func (u *CopyOnWriteFs) EvalSymlinksIfPossible(path string) (string, bool, error) {
+	// Raining blood!
+	slayer, ok1 := u.layer.(Symlinker)
+	sbase, ok2 := u.base.(Symlinker)
+
+	if ok1 {
+		fi, b, err := slayer.EvalSymlinksIfPossible(path)
+		if err == nil {
+			return fi, b, nil
+		}
+
+		if !u.isNotExist(err) {
+			return "", b, err
+		}
+	}
+
+	if ok2 {
+		fi, b, err := sbase.EvalSymlinksIfPossible(path)
+		if err == nil {
+			return fi, b, nil
+		}
+		if !u.isNotExist(err) {
+			return "", b, err
+		}
+	}
+
+	_, err := u.Stat(path)
+	return path, false, err
+}

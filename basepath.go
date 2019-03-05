@@ -177,4 +177,47 @@ func (b *BasePathFs) LstatIfPossible(name string) (os.FileInfo, bool, error) {
 	return fi, false, err
 }
 
+func (b *BasePathFs) SymlinkIfPossible(oldname, newname string) (bool, error) {
+	oldname, err := b.RealPath(oldname)
+	if err != nil {
+		return false, &os.PathError{Op: "symlink", Path: oldname, Err: err}
+	}
+
+	newname, err = b.RealPath(newname)
+	if err != nil {
+		return false, &os.PathError{Op: "symlink", Path: newname, Err: err}
+	}
+
+	if symlinker, ok := b.source.(Symlinker); ok {
+		return symlinker.SymlinkIfPossible(oldname, newname)
+	}
+	return false, nil
+}
+
+func (b *BasePathFs) EvalSymlinksIfPossible(path string) (string, bool, error) {
+	if symlinker, ok := b.source.(Symlinker); ok {
+		path, err := b.RealPath(path)
+		if err != nil {
+			return "", false, &os.PathError{Op: "evalsymlinks", Path: path, Err: err}
+		}
+
+		resolved, ok, err := symlinker.EvalSymlinksIfPossible(path)
+		if err != nil {
+			return resolved, ok, err
+		}
+
+		resolved = filepath.Clean(resolved)
+		bpath := filepath.Clean(b.path)
+		if !strings.HasPrefix(resolved, bpath) {
+			return path, ok, os.ErrNotExist
+		}
+
+		resolved = strings.TrimPrefix(resolved, bpath)
+		return resolved, ok, err
+	}
+
+	_, err := b.Stat(path)
+	return path, false, err
+}
+
 // vim: ts=4 sw=4 noexpandtab nolist syn=go
