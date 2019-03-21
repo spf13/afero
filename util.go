@@ -32,7 +32,7 @@ import (
 // Filepath separator defined by os.Separator.
 const FilePathSeparator = string(filepath.Separator)
 
-// Takes a reader and a path and writes the content
+// WriteReader takes a reader and a path and writes the content
 func (a Afero) WriteReader(path string, r io.Reader) (err error) {
 	return WriteReader(a.Fs, path, r)
 }
@@ -172,7 +172,7 @@ func (a Afero) FileContainsBytes(filename string, subslice []byte) (bool, error)
 	return FileContainsBytes(a.Fs, filename, subslice)
 }
 
-// Check if a file contains a specified byte slice.
+// FileContainsBytes checks if a file contains a specified byte slice.
 func FileContainsBytes(fs Fs, filename string, subslice []byte) (bool, error) {
 	f, err := fs.Open(filename)
 	if err != nil {
@@ -187,7 +187,7 @@ func (a Afero) FileContainsAnyBytes(filename string, subslices [][]byte) (bool, 
 	return FileContainsAnyBytes(a.Fs, filename, subslices)
 }
 
-// Check if a file contains any of the specified byte slices.
+// FileContainsAnyBytes checks if a file contains any of the specified byte slices.
 func FileContainsAnyBytes(fs Fs, filename string, subslices [][]byte) (bool, error) {
 	f, err := fs.Open(filename)
 	if err != nil {
@@ -308,7 +308,7 @@ func (a Afero) Exists(path string) (bool, error) {
 	return Exists(a.Fs, path)
 }
 
-// Check if a file or directory exists.
+// Exists checks if a file or directory exists.
 func Exists(fs Fs, path string) (bool, error) {
 	_, err := fs.Stat(path)
 	if err == nil {
