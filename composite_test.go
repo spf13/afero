@@ -459,12 +459,7 @@ func TestUnionFileReaddirAskForTooMany(t *testing.T) {
 
 	ufs := &CopyOnWriteFs{base: base, layer: overlay}
 
-	f, err := ufs.Open("")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer f.Close()
+	f, _ := ufs.Open("")
 
 	names, err := f.Readdirnames(6)
 	if err != nil {
@@ -479,5 +474,20 @@ func TestUnionFileReaddirAskForTooMany(t *testing.T) {
 	_, err = f.Readdirnames(3)
 	if err != io.EOF {
 		t.Fatal(err)
+	}
+
+	f.Close()
+
+	// Get all
+	for i := -2; i <= 0; i++ {
+		f, _ := ufs.Open("")
+		_, err = f.Readdirnames(i)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(names) != 5 {
+			t.Fatal(names)
+		}
+		f.Close()
 	}
 }
