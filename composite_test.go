@@ -403,43 +403,53 @@ func TestCacheOnReadFsNotInLayer(t *testing.T) {
 	fh.Close()
 }
 
-// #194
-func TestUniontFileReaddirEmpty(t *testing.T) {
+// #194, #197
+func TestUnionFileReaddirEmpty(t *testing.T) {
 	osFs := NewOsFs()
 
-	base := NewMemMapFs()
-	overlay := NewMemMapFs()
-	ufs := &CopyOnWriteFs{base: base, layer: overlay}
-	mem := NewMemMapFs()
+	ufs := &CopyOnWriteFs{base: osFs, layer: osFs}
 
-	// The OS file will return io.EOF on end of directory.
-	for _, fs := range []Fs{osFs, ufs, mem} {
-		baseDir, err := TempDir(fs, "", "empty-dir")
-		if err != nil {
-			t.Fatal(err)
-		}
+	baseDir, err := TempDir(osFs, "", "empty-dir")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer osFs.RemoveAll(baseDir)
 
-		f, err := fs.Open(baseDir)
-		if err != nil {
-			t.Fatal(err)
-		}
+	for _, fs := range []Fs{osFs, ufs} {
+		t.Run(fmt.Sprintf("%T", fs), func(t *testing.T) {
+			f, err := fs.Open(baseDir)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-		names, err := f.Readdirnames(1)
-		if err != io.EOF {
-			t.Fatal(err)
-		}
+			if _, ok := fs.(*CopyOnWriteFs); ok {
+				// Make sure we test the right thing.
+				if _, ok := f.(*UnionFile); !ok {
+					t.Fatalf("not *UnionFile: %T", f)
+				}
+			}
 
-		if len(names) != 0 {
-			t.Fatal("should be empty")
-		}
+			for i := -3; i < 3; i++ {
+				names, err := f.Readdirnames(i)
+				expectedErr := io.EOF
+				if i <= 0 {
+					expectedErr = nil
+				}
+				if err != expectedErr {
+					t.Fatalf("[%d] expected %v, got %v", i, expectedErr, err)
+				}
 
-		f.Close()
+				if len(names) != 0 {
+					t.Fatal("should be empty")
+				}
+			}
 
-		fs.RemoveAll(baseDir)
+			f.Close()
+		})
 	}
 }
 
-func TestUniontFileReaddirAskForTooMany(t *testing.T) {
+func TestUnionFileReaddirAskForTooMany(t *testing.T) {
 	base := &MemMapFs{}
 	overlay := &MemMapFs{}
 

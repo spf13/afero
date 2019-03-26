@@ -188,6 +188,9 @@ func (f *UnionFile) Readdir(c int) (ofi []os.FileInfo, err error) {
 	}
 
 	if f.off >= len(f.files) {
+		if c <= 0 {
+			return nil, nil
+		}
 		return nil, io.EOF
 	}
 
