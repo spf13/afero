@@ -9,6 +9,8 @@ import (
 )
 
 var _ Lstater = (*BasePathFs)(nil)
+var _ Symlinker = (*BasePathFs)(nil)
+var _ Readlinker = (*BasePathFs)(nil)
 
 // The BasePathFs restricts all operations to a given path within an Fs.
 // The given file name to the operations on this Fs will be prepended with
@@ -175,6 +177,36 @@ func (b *BasePathFs) LstatIfPossible(name string) (os.FileInfo, bool, error) {
 	}
 	fi, err := b.source.Stat(name)
 	return fi, false, err
+}
+
+func (b *BasePathFs) SymlinkIfPossible(oldname, newname string) (bool, error) {
+	oldname, err := b.RealPath(oldname)
+	if err != nil {
+		return false, &os.PathError{Op: "symlink", Path: oldname, Err: err}
+	}
+	newname, err = b.RealPath(newname)
+	if err != nil {
+		return false, &os.PathError{Op: "symlink", Path: newname, Err: err}
+	}
+	if symlinker, ok := b.source.(Symlinker); ok {
+		return symlinker.SymlinkIfPossible(oldname, newname)
+	}
+	return false, nil
+}
+
+func (b *BasePathFs) ReadlinkIfPossible(name string) (string, bool, error) {
+	name, err := b.RealPath(name)
+	if err != nil {
+		return "", false, &os.PathError{Op: "readlink", Path: name, Err: err}
+	}
+	if readlinker, ok := b.source.(Readlinker); ok {
+		link, possible, err := readlinker.ReadlinkIfPossible(name)
+		link = filepath.Clean(link)
+		link = strings.TrimPrefix(link, filepath.Clean(b.path))
+		link = strings.TrimPrefix(link, string(os.PathSeparator))
+		return link, possible, err
+	}
+	return "", false, err
 }
 
 // vim: ts=4 sw=4 noexpandtab nolist syn=go

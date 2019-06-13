@@ -9,6 +9,8 @@ import (
 )
 
 var _ Lstater = (*CopyOnWriteFs)(nil)
+var _ Symlinker = (*CopyOnWriteFs)(nil)
+var _ Readlinker = (*CopyOnWriteFs)(nil)
 
 // The CopyOnWriteFs is a union filesystem: a read only base file system with
 // a possibly writeable layer on top. Changes to the file system will only
@@ -115,6 +117,62 @@ func (u *CopyOnWriteFs) LstatIfPossible(name string) (os.FileInfo, bool, error) 
 	fi, err := u.Stat(name)
 
 	return fi, false, err
+}
+
+func (u *CopyOnWriteFs) SymlinkIfPossible(oldname, newname string) (bool, error) {
+	slayer, ok1 := u.layer.(Symlinker)
+	sbase, ok2 := u.base.(Symlinker)
+
+	if ok1 {
+		b, err := slayer.SymlinkIfPossible(oldname, newname)
+		if err == nil {
+			return b, nil
+		}
+
+		if !u.isNotExist(err) {
+			return b, err
+		}
+	}
+
+	if ok2 {
+		b, err := sbase.SymlinkIfPossible(oldname, newname)
+		if err == nil {
+			return b, nil
+		}
+		if !u.isNotExist(err) {
+			return b, err
+		}
+	}
+
+	return false, nil
+}
+
+func (u *CopyOnWriteFs) ReadlinkIfPossible(name string) (string, bool, error) {
+	rlayer, ok1 := u.layer.(Readlinker)
+	rbase, ok2 := u.base.(Readlinker)
+
+	if ok1 {
+		link, b, err := rlayer.ReadlinkIfPossible(name)
+		if err == nil {
+			return link, b, nil
+		}
+
+		if !u.isNotExist(err) {
+			return "", b, err
+		}
+	}
+
+	if ok2 {
+		link, b, err := rbase.ReadlinkIfPossible(name)
+		if err == nil {
+			return link, b, nil
+		}
+		if !u.isNotExist(err) {
+			return "", b, err
+		}
+	}
+
+	return "", false, nil
 }
 
 func (u *CopyOnWriteFs) isNotExist(err error) bool {

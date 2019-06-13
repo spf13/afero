@@ -20,6 +20,8 @@ import (
 )
 
 var _ Lstater = (*OsFs)(nil)
+var _ Symlinker = (*OsFs)(nil)
+var _ Readlinker = (*OsFs)(nil)
 
 // OsFs is a Fs implementation that uses functions provided by the os package.
 //
@@ -98,4 +100,14 @@ func (OsFs) Chtimes(name string, atime time.Time, mtime time.Time) error {
 func (OsFs) LstatIfPossible(name string) (os.FileInfo, bool, error) {
 	fi, err := os.Lstat(name)
 	return fi, true, err
+}
+
+func (OsFs) SymlinkIfPossible(oldname, newname string) (bool, error) {
+	err := os.Symlink(oldname, newname)
+	return true, err
+}
+
+func (OsFs) ReadlinkIfPossible(name string) (string, bool, error) {
+	out, err := os.Readlink(name)
+	return out, true, err
 }

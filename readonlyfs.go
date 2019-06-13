@@ -7,6 +7,9 @@ import (
 )
 
 var _ Lstater = (*ReadOnlyFs)(nil)
+var _ Readlinker = (*ReadOnlyFs)(nil)
+
+// not a Symlinker since that implies write access
 
 type ReadOnlyFs struct {
 	source Fs
@@ -42,6 +45,13 @@ func (r *ReadOnlyFs) LstatIfPossible(name string) (os.FileInfo, bool, error) {
 	}
 	fi, err := r.Stat(name)
 	return fi, false, err
+}
+
+func (r *ReadOnlyFs) ReadlinkIfPossible(name string) (string, bool, error) {
+	if rlf, ok := r.source.(Readlinker); ok {
+		return rlf.ReadlinkIfPossible(name)
+	}
+	return "", false, nil
 }
 
 func (r *ReadOnlyFs) Rename(o, n string) error {
