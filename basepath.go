@@ -34,7 +34,7 @@ func (f *BasePathFile) Name() string {
 }
 
 func NewBasePathFs(source Fs, path string) Fs {
-	return &BasePathFs{source: source, path: path}
+	return &BasePathFs{source: source, path: filepath.Clean(path)}
 }
 
 // on a file outside the base path it returns the given file name and an error,
@@ -44,9 +44,8 @@ func (b *BasePathFs) RealPath(name string) (path string, err error) {
 		return name, err
 	}
 
-	bpath := filepath.Clean(b.path)
-	path = filepath.Clean(filepath.Join(bpath, name))
-	if !strings.HasPrefix(path, bpath) {
+	path = filepath.Join(b.path, name)
+	if !strings.HasPrefix(path, b.path) {
 		return name, os.ErrNotExist
 	}
 
