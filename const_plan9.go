@@ -10,17 +10,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-// +build !darwin
-// +build !openbsd
-// +build !freebsd
-// +build !dragonfly
-// +build !netbsd
-// +build !plan9
+
+// +build plan9
 
 package afero
 
-import (
-	"syscall"
-)
+import "syscall"
 
-const BADFD = syscall.EBADFD
+var BADFD = syscall.EINVAL
