@@ -255,7 +255,7 @@ func (m *MountableFs) Remove(name string) error {
 }
 
 func (m *MountableFs) RemoveAll(path string) error {
-	info, err := lstatIfOs(m, path)
+	info, err := lstatIfPossible(m, path)
 	if err != nil {
 		return wrapErrorPath(path, err)
 	}
@@ -644,7 +644,7 @@ func departWalk(fs Fs, path string, info os.FileInfo, walkFn filepath.WalkFunc) 
 
 		for _, name := range names {
 			filename := filepath.Join(path, name)
-			fileInfo, err := lstatIfOs(fs, filename)
+			fileInfo, err := lstatIfPossible(fs, filename)
 			if err != nil {
 				if err := walkFn(filename, fileInfo, err); err != nil {
 					return err
