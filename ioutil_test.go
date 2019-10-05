@@ -15,7 +15,11 @@
 
 package afero
 
-import "testing"
+import (
+	"path/filepath"
+	"strings"
+	"testing"
+)
 
 func checkSizePath(t *testing.T, path string, size int64) {
 	dir, err := testFS.Stat(path)
@@ -24,6 +28,36 @@ func checkSizePath(t *testing.T, path string, size int64) {
 	}
 	if dir.Size() != size {
 		t.Errorf("Stat %q: size %d want %d", path, dir.Size(), size)
+	}
+}
+
+func TestTempFile(t *testing.T) {
+	tests := []struct{ pattern, prefix, suffix string }{
+		{"ioutil-test", "ioutil-test", ""},
+		{"ioutil-test*", "ioutil-test", ""},
+		{"ioutil-test*.yaml", "ioutil-test", ".yaml"},
+		{"io*util-test*", "io*util-test", ""},
+	}
+	testFS = &MemMapFs{}
+	fsutil := &Afero{Fs: testFS}
+
+	for _, test := range tests {
+		f, err := fsutil.TempFile("", test.pattern)
+		if err != nil {
+			t.Errorf("error in creating TempFile: %+v", err)
+			continue
+		}
+		filename := f.Name()
+		base := filepath.Base(f.Name())
+
+		if !(strings.HasPrefix(base, test.prefix) &&
+			strings.HasSuffix(base, test.suffix)) {
+			t.Errorf("TempFile pattern %q created bad name %q; want prefix %q & suffix %q",
+				test.pattern, base, test.prefix, test.suffix)
+		}
+		// cleanup
+		f.Close()
+		testFS.Remove(filename) // ignore error
 	}
 }
 
