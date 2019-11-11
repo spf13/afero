@@ -191,7 +191,7 @@ func normalizePath(path string) (string, error) {
 	case FilePathSeparator:
 		return rootAbs, nil
 	default:
-		return path, nil
+		return filepath.Abs(path)
 	}
 }
 
