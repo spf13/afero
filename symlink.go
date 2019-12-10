@@ -12,6 +12,20 @@
 // limitations under the License.
 
 package afero
+
+// Symlinker is an optional interface in Afero. It is only implemented by the
+// filesystems saying so.
+// It indicates support for 3 symlink related interfaces that implement the
+// behaviors of the os methods:
+//    - Lstat
+//    - Symlink, and
+//    - Readlink
+type Symlinker interface {
+	Lstater
+	Linker
+	LinkReader
+}
+
 // Linker is an optional interface in Afero. It is only implemented by the
 // filesystems saying so.
 // It will call Symlink if the filesystem itself is, or it delegates to, the os filesystem,
