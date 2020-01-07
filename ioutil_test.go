@@ -15,7 +15,11 @@
 
 package afero
 
-import "testing"
+import (
+	"path/filepath"
+	"strings"
+	"testing"
+)
 
 func checkSizePath(t *testing.T, path string, size int64) {
 	dir, err := testFS.Stat(path)
@@ -108,5 +112,65 @@ func TestReadDir(t *testing.T) {
 	}
 	if !foundSubDir {
 		t.Fatalf("ReadDir %s: i-am-a-dir directory not found", dirname)
+	}
+}
+
+func TestTempFile(t *testing.T) {
+	type args struct {
+		dir     string
+		pattern string
+	}
+	tests := map[string]struct {
+		args args
+		want func(*testing.T, string)
+	}{
+		"foo": { // simple file name
+			args: args{
+				dir:     "",
+				pattern: "foo",
+			},
+			want: func(t *testing.T, base string) {
+				if !strings.HasPrefix(base, "foo") || len(base) <= len("foo") {
+					t.Errorf("TempFile() file = %s, invalid file name", base)
+				}
+			},
+		},
+		"foo.bar": { // file name w/ ext
+			args: args{
+				dir:     "",
+				pattern: "foo.bar",
+			},
+			want: func(t *testing.T, base string) {
+				if !strings.HasPrefix(base, "foo.bar") || len(base) <= len("foo.bar") {
+					t.Errorf("TempFile() file = %v, invalid file name", base)
+				}
+			},
+		},
+		"foo-*.bar": { // file name with wild card
+			args: args{
+				dir:     "",
+				pattern: "foo-*.bar",
+			},
+			want: func(t *testing.T, base string) {
+				if !(strings.HasPrefix(base, "foo-") || strings.HasPrefix(base, "bar")) ||
+					len(base) <= len("foo-*.bar") {
+					t.Errorf("TempFile() file = %v, invalid file name", base)
+				}
+			},
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			file, err := TempFile(NewMemMapFs(), tt.args.dir, tt.args.pattern)
+			if err != nil {
+				t.Errorf("TempFile() error = %v, none expected", err)
+				return
+			}
+			if file == nil {
+				t.Errorf("TempFile() file = %v, should not be nil", file)
+				return
+			}
+			tt.want(t, filepath.Base(file.Name()))
+		})
 	}
 }
