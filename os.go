@@ -99,3 +99,7 @@ func (OsFs) LstatIfPossible(name string) (os.FileInfo, bool, error) {
 	fi, err := os.Lstat(name)
 	return fi, true, err
 }
+
+func (OsFs) Chown(name string, uid, gid int) error {
+	return os.Chown(name, uid, gid)
+}

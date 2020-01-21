@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/spf13/afero/mem"
+	"github.com/bohdanlisovskyi/afero/mem"
 )
 
 type MemMapFs struct {
@@ -356,6 +356,22 @@ func (m *MemMapFs) List() {
 		y := mem.FileInfo{FileData: x}
 		fmt.Println(x.Name(), y.Size())
 	}
+}
+
+func (m *MemMapFs) Chown(name string, uid, gid int) error {
+	name = normalizePath(name)
+
+	m.mu.RLock()
+	f, ok := m.getData()[name]
+	m.mu.RUnlock()
+	if !ok {
+		return &os.PathError{Op: "chown", Path: name, Err: ErrFileNotFound}
+	}
+
+	mem.SetUID(f, uid)
+	mem.SetGID(f, gid)
+
+	return nil
 }
 
 // func debugMemMapList(fs Fs) {

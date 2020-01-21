@@ -288,3 +288,24 @@ func (u *CacheOnReadFs) Create(name string) (File, error) {
 	}
 	return &UnionFile{Base: bfh, Layer: lfh}, nil
 }
+
+func (u *CacheOnReadFs) Chown(name string, uid, gid int) error {
+	st, _, err := u.cacheStatus(name)
+	if err != nil {
+		return err
+	}
+	switch st {
+	case cacheLocal:
+	case cacheHit:
+		err = u.base.Chown(name, uid, gid)
+	case cacheStale, cacheMiss:
+		if err := u.copyToLayer(name); err != nil {
+			return err
+		}
+		err = u.base.Chown(name, uid, gid)
+	}
+	if err != nil {
+		return err
+	}
+	return u.layer.Chown(name, uid, gid)
+}

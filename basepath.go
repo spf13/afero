@@ -177,4 +177,11 @@ func (b *BasePathFs) LstatIfPossible(name string) (os.FileInfo, bool, error) {
 	return fi, false, err
 }
 
+func (b *BasePathFs) Chown(name string, uid, gid int) (err error) {
+	if name, err = b.RealPath(name); err != nil {
+		return &os.PathError{Op: "chown", Path: name, Err: err}
+	}
+	return b.source.Chown(name, uid, gid)
+}
+
 // vim: ts=4 sw=4 noexpandtab nolist syn=go
