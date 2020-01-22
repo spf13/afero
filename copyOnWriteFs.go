@@ -291,3 +291,16 @@ func (u *CopyOnWriteFs) MkdirAll(name string, perm os.FileMode) error {
 func (u *CopyOnWriteFs) Create(name string) (File, error) {
 	return u.OpenFile(name, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0666)
 }
+
+func (u *CopyOnWriteFs) Chown(name string, uid, gid int) error {
+	b, err := u.isBaseFile(name)
+	if err != nil {
+		return err
+	}
+	if b {
+		if err := u.copyToLayer(name); err != nil {
+			return err
+		}
+	}
+	return u.layer.Chown(name, uid, gid)
+}
