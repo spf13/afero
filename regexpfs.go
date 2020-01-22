@@ -212,3 +212,10 @@ func (f *RegexpFile) Truncate(s int64) error {
 func (f *RegexpFile) WriteString(s string) (int, error) {
 	return f.f.WriteString(s)
 }
+
+func (r *RegexpFs) Chown(name string, uid, gid int) error {
+	if err := r.dirOrMatches(name); err != nil {
+		return err
+	}
+	return r.source.Chown(name, uid, gid)
+}

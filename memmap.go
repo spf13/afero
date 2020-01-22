@@ -358,6 +358,21 @@ func (m *MemMapFs) List() {
 	}
 }
 
+func (m *MemMapFs) Chown(name string, uid, gid int) error {
+	name = normalizePath(name)
+
+	m.mu.RLock()
+	f, ok := m.getData()[name]
+	m.mu.RUnlock()
+	if !ok {
+		return &os.PathError{Op: "chown", Path: name, Err: ErrFileNotFound}
+	}
+
+	mem.SetUID(f, uid)
+	mem.SetGID(f, gid)
+
+	return nil
+}
 // func debugMemMapList(fs Fs) {
 // 	if x, ok := fs.(*MemMapFs); ok {
 // 		x.List()
