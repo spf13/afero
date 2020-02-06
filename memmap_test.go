@@ -449,3 +449,20 @@ func TestMemFsUnexpectedEOF(t *testing.T) {
 		t.Fatal("Expected ErrUnexpectedEOF")
 	}
 }
+
+func TestMemFsRemovePathError(t *testing.T) {
+	t.Parallel()
+
+	fs := NewMemMapFs()
+
+	if err := fs.Mkdir("foo", 0777); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := WriteFile(fs, "foo/file.txt", []byte("abc"), 0777); err != nil {
+		t.Fatal(err)
+	}
+
+	err := fs.Remove("foo")
+	checkPathError(t, err, "remove")
+}

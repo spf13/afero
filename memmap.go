@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/spf13/afero/mem"
@@ -35,7 +36,7 @@ func NewMemMapFs() Fs {
 	return &MemMapFs{}
 }
 
-func (m *MemMapFs) getData() map[string]*mem.FileData {
+func (m *MemMapFs) getData() mem.DirMap {
 	m.init.Do(func() {
 		m.data = make(map[string]*mem.FileData)
 		// Root should always exist, right?
@@ -248,7 +249,10 @@ func (m *MemMapFs) Remove(name string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if _, ok := m.getData()[name]; ok {
+	if d, ok := m.getData()[name]; ok {
+		if d.HasChildren() {
+			return &os.PathError{Op: "remove", Path: name, Err: syscall.ENOTEMPTY}
+		}
 		err := m.unRegisterWithParent(name)
 		if err != nil {
 			return &os.PathError{Op: "remove", Path: name, Err: err}
