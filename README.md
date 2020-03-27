@@ -6,7 +6,7 @@ A FileSystem Abstraction System for Go
 
 # Overview
 
-Afero is an filesystem framework providing a simple, uniform and universal API
+Afero is a filesystem framework providing a simple, uniform and universal API
 interacting with any filesystem, as an abstraction layer providing interfaces,
 types and methods. Afero has an exceptionally clean interface and simple design
 without needless constructors or initialization methods.
@@ -18,7 +18,7 @@ and benefit of the os and ioutil packages.
 Afero provides significant improvements over using the os package alone, most
 notably the ability to create mock and testing filesystems without relying on the disk.
 
-It is suitable for use in a any situation where you would consider using the OS
+It is suitable for use in any situation where you would consider using the OS
 package as it provides an additional abstraction that makes it easy to use a
 memory backed file system during testing. It also adds support for the http
 filesystem for full interoperability.
