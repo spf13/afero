@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	// "path/filepath"
 	"os"
 	"testing"
 	"time"
@@ -483,7 +482,7 @@ func TestUnionFileReaddirAskForTooMany(t *testing.T) {
 	}
 
 	ufs := &CopyOnWriteFs{base: base, layer: overlay}
-	
+
 	f, err := ufs.Open("")
 	if err != nil {
 		t.Fatal(err)
