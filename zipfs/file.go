@@ -33,9 +33,10 @@ func (f *File) fillBuffer(offset int64) (err error) {
 		return
 	}
 	buf := make([]byte, int(offset)-len(f.buf))
-	n, _ := io.ReadFull(f.reader, buf)
-	if n > 0 {
+	if n, readErr := io.ReadFull(f.reader, buf); n > 0 {
 		f.buf = append(f.buf, buf[:n]...)
+	} else if readErr != nil {
+		err = readErr
 	}
 	return
 }
