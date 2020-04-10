@@ -142,7 +142,7 @@ func (f *File) Readdirnames(count int) (names []string, err error) {
 	if err != nil {
 		return nil, err
 	}
-	for filename, _ := range zipfiles {
+	for filename := range zipfiles {
 		names = append(names, filename)
 		if count >= 0 && len(names) >= count {
 			break
