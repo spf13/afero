@@ -14,21 +14,21 @@
 package sftpfs
 
 import (
-	"testing"
-	"os"
-	"log"
-	"fmt"
-	"net"
-	"flag"
-	"time"
-	"io/ioutil"
-	"crypto/rsa"
 	_rand "crypto/rand"
-	"encoding/pem"
+	"crypto/rsa"
 	"crypto/x509"
+	"encoding/pem"
+	"flag"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net"
+	"os"
+	"testing"
+	"time"
 
-	"golang.org/x/crypto/ssh"
 	"github.com/pkg/sftp"
+	"golang.org/x/crypto/ssh"
 )
 
 type SftpFsContext struct {
@@ -40,25 +40,25 @@ type SftpFsContext struct {
 // TODO we only connect with hardcoded user+pass for now
 // it should be possible to use $HOME/.ssh/id_rsa to login into the stub sftp server
 func SftpConnect(user, password, host string) (*SftpFsContext, error) {
-/*
-	pemBytes, err := ioutil.ReadFile(os.Getenv("HOME") + "/.ssh/id_rsa")
-	if err != nil {
-		return nil,err
-	}
+	/*
+		pemBytes, err := ioutil.ReadFile(os.Getenv("HOME") + "/.ssh/id_rsa")
+		if err != nil {
+			return nil,err
+		}
 
-	signer, err := ssh.ParsePrivateKey(pemBytes)
-	if err != nil {
-		return nil,err
-	}
+		signer, err := ssh.ParsePrivateKey(pemBytes)
+		if err != nil {
+			return nil,err
+		}
 
-	sshcfg := &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{
-			ssh.Password(password),
-			ssh.PublicKeys(signer),
-		},
-	}
-*/
+		sshcfg := &ssh.ClientConfig{
+			User: user,
+			Auth: []ssh.AuthMethod{
+				ssh.Password(password),
+				ssh.PublicKeys(signer),
+			},
+		}
+	*/
 
 	sshcfg := &ssh.ClientConfig{
 		User: user,
@@ -70,21 +70,21 @@ func SftpConnect(user, password, host string) (*SftpFsContext, error) {
 
 	sshc, err := ssh.Dial("tcp", host, sshcfg)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	sftpc, err := sftp.NewClient(sshc)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	ctx := &SftpFsContext{
-		sshc: sshc,
+		sshc:   sshc,
 		sshcfg: sshcfg,
-		sftpc: sftpc,
+		sftpc:  sftpc,
 	}
 
-	return ctx,nil
+	return ctx, nil
 }
 
 func (ctx *SftpFsContext) Disconnect() error {
