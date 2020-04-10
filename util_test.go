@@ -415,10 +415,10 @@ func TestFullBaseFsPath(t *testing.T) {
 		Dir1, Dir2, Dir3 string
 	}
 	dirSpecs := []dirSpec{
-		dirSpec{Dir1: "/", Dir2: "/", Dir3: "/"},
-		dirSpec{Dir1: "/", Dir2: "/path2", Dir3: "/"},
-		dirSpec{Dir1: "/path1/dir", Dir2: "/path2/dir/", Dir3: "/path3/dir"},
-		dirSpec{Dir1: "C:/path1", Dir2: "path2/dir", Dir3: "/path3/dir/"},
+		{Dir1: "/", Dir2: "/", Dir3: "/"},
+		{Dir1: "/", Dir2: "/path2", Dir3: "/"},
+		{Dir1: "/path1/dir", Dir2: "/path2/dir/", Dir3: "/path3/dir"},
+		{Dir1: "C:/path1", Dir2: "path2/dir", Dir3: "/path3/dir/"},
 	}
 
 	for _, ds := range dirSpecs {
@@ -433,12 +433,12 @@ func TestFullBaseFsPath(t *testing.T) {
 			ExpectedPath string
 		}
 		specs := []spec{
-			spec{BaseFs: level3Fs, FileName: "f.txt", ExpectedPath: filepath.Join(ds.Dir1, ds.Dir2, ds.Dir3, "f.txt")},
-			spec{BaseFs: level3Fs, FileName: "", ExpectedPath: filepath.Join(ds.Dir1, ds.Dir2, ds.Dir3, "")},
-			spec{BaseFs: level2Fs, FileName: "f.txt", ExpectedPath: filepath.Join(ds.Dir1, ds.Dir2, "f.txt")},
-			spec{BaseFs: level2Fs, FileName: "", ExpectedPath: filepath.Join(ds.Dir1, ds.Dir2, "")},
-			spec{BaseFs: level1Fs, FileName: "f.txt", ExpectedPath: filepath.Join(ds.Dir1, "f.txt")},
-			spec{BaseFs: level1Fs, FileName: "", ExpectedPath: filepath.Join(ds.Dir1, "")},
+			{BaseFs: level3Fs, FileName: "f.txt", ExpectedPath: filepath.Join(ds.Dir1, ds.Dir2, ds.Dir3, "f.txt")},
+			{BaseFs: level3Fs, FileName: "", ExpectedPath: filepath.Join(ds.Dir1, ds.Dir2, ds.Dir3, "")},
+			{BaseFs: level2Fs, FileName: "f.txt", ExpectedPath: filepath.Join(ds.Dir1, ds.Dir2, "f.txt")},
+			{BaseFs: level2Fs, FileName: "", ExpectedPath: filepath.Join(ds.Dir1, ds.Dir2, "")},
+			{BaseFs: level1Fs, FileName: "f.txt", ExpectedPath: filepath.Join(ds.Dir1, "f.txt")},
+			{BaseFs: level1Fs, FileName: "", ExpectedPath: filepath.Join(ds.Dir1, "")},
 		}
 
 		for _, s := range specs {
