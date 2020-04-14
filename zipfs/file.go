@@ -130,7 +130,7 @@ func (f *File) Readdir(count int) (fi []os.FileInfo, err error) {
 	}
 	for _, zipfile := range zipfiles {
 		fi = append(fi, zipfile.FileInfo())
-		if count >= 0 && len(fi) >= count {
+		if count > 0 && len(fi) >= count {
 			break
 		}
 	}
@@ -144,7 +144,7 @@ func (f *File) Readdirnames(count int) (names []string, err error) {
 	}
 	for filename := range zipfiles {
 		names = append(names, filename)
-		if count >= 0 && len(names) >= count {
+		if count > 0 && len(names) >= count {
 			break
 		}
 	}
