@@ -104,6 +104,29 @@ func checkPathError(t *testing.T, err error, op string) {
 	}
 }
 
+// Ensure os.O_EXCL is correctly handled.
+func TestOpenFileExcl(t *testing.T) {
+	const fileName = "/myFileTest"
+	const fileMode = os.FileMode(0765)
+
+	fs := NewMemMapFs()
+
+	// First creation should succeed.
+	f, err := fs.OpenFile(fileName, os.O_CREATE|os.O_EXCL, fileMode)
+	if err != nil {
+		t.Errorf("OpenFile Create Excl failed: %s", err)
+		return
+	}
+	f.Close()
+
+	// Second creation should fail.
+	_, err = fs.OpenFile(fileName, os.O_CREATE|os.O_EXCL, fileMode)
+	if err == nil {
+		t.Errorf("OpenFile Create Excl should have failed, but it didn't")
+	}
+	checkPathError(t, err, "Open")
+}
+
 // Ensure Permissions are set on OpenFile/Mkdir/MkdirAll
 func TestPermSet(t *testing.T) {
 	const fileName = "/myFileTest"

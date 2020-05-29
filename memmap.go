@@ -212,6 +212,9 @@ func (m *MemMapFs) lockfreeOpen(name string) (*mem.FileData, error) {
 func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
 	chmod := false
 	file, err := m.openWrite(name)
+	if err == nil && (flag&os.O_EXCL > 0) {
+		return nil, &os.PathError{Op: "open", Path: name, Err: ErrFileExists}
+	}
 	if os.IsNotExist(err) && (flag&os.O_CREATE > 0) {
 		file, err = m.Create(name)
 		chmod = true
