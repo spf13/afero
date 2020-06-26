@@ -61,7 +61,7 @@ func (f *File) Read(p []byte) (n int, err error) {
 	}
 	err = f.fillBuffer(f.offset + int64(len(p)))
 	n = copy(p, f.buf[f.offset:])
-	f.offset += int64(len(p))
+	f.offset += int64(n)
 	return
 }
 
