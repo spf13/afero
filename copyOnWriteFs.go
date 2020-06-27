@@ -282,14 +282,30 @@ func (u *CopyOnWriteFs) Open(name string) (File, error) {
 }
 
 func (u *CopyOnWriteFs) Mkdir(name string, perm os.FileMode) error {
-	dir, err := IsDir(u.base, name)
-	if err != nil {
-		return u.layer.MkdirAll(name, perm)
-	}
-	if dir {
+	inBase, _ := u.isBaseFile(name)
+	if inBase {
 		return ErrFileExists
 	}
-	return u.layer.MkdirAll(name, perm)
+
+	// ensure parent exists and is a directory
+	parentPath := filepath.Dir(normalizePath(name))
+	baseDir, _ := IsDir(u.base, parentPath)
+	layerDir, layerErr := IsDir(u.layer, parentPath)
+
+	if !layerDir && layerErr == nil {
+		// layer parent is a file, not a directory
+		return &os.PathError{Op: "mkdir", Path: parentPath, Err: ErrNotDir}
+	}
+	if layerDir || (baseDir && os.IsNotExist(layerErr)) {
+		// either layer parent is a dir
+		// OR base parent is a dir and layer parent doesn't exist
+		err := u.layer.MkdirAll(parentPath, 0700)
+		if err != nil {
+			return err
+		}
+	}
+
+	return u.layer.Mkdir(name, perm)
 }
 
 func (u *CopyOnWriteFs) Name() string {
