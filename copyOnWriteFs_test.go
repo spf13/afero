@@ -61,6 +61,7 @@ func TestCopyOnWriteFileInMemMapBase(t *testing.T) {
 	}
 }
 
+// Related: https://github.com/spf13/afero/issues/149
 func TestCopyOnWriteMkdir(t *testing.T) {
 	memFs := NewMemMapFs()
 	osFs := NewOsFs()

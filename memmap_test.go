@@ -472,3 +472,44 @@ func TestMemFsUnexpectedEOF(t *testing.T) {
 		t.Fatal("Expected ErrUnexpectedEOF")
 	}
 }
+
+// https://github.com/spf13/afero/issues/149
+func TestMemFsMkdirWithoutParent(t *testing.T) {
+	t.Parallel()
+
+	fs := NewMemMapFs()
+	err := fs.Mkdir("/a/b/c", 0700)
+	if !os.IsNotExist(err) {
+		t.Error("Mkdir should fail if parent directory does not exist:", err)
+	}
+
+	_, err = fs.Create("/a")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = fs.Mkdir("/a/b", 0700)
+	if !os.IsPermission(err) {
+		t.Error("Mkdir should fail if parent is not a directory:", err)
+	}
+}
+
+func TestMemFsCreateWithoutParent(t *testing.T) {
+	t.Parallel()
+
+	fs := NewMemMapFs()
+	_, err := fs.Create("/a/b/c")
+	if !os.IsNotExist(err) {
+		t.Error("Create should fail if parent directory does not exist:", err)
+	}
+
+	_, err = fs.Create("/a")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = fs.Create("/a/b")
+	if !IsNotDir(err) {
+		t.Error("Create should fail if parent is not a directory:", err)
+	}
+}
