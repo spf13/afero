@@ -489,7 +489,7 @@ func TestMemFsMkdirWithoutParent(t *testing.T) {
 	}
 
 	err = fs.Mkdir("/a/b", 0700)
-	if !os.IsPermission(err) {
+	if !IsNotDir(err) {
 		t.Error("Mkdir should fail if parent is not a directory:", err)
 	}
 }

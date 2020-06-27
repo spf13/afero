@@ -49,6 +49,15 @@ func (*MemMapFs) Name() string { return "MemMapFS" }
 
 func (m *MemMapFs) Create(name string) (File, error) {
 	name = normalizePath(name)
+	parentPath := filepath.Dir(name)
+	parent, parentErr := m.Stat(parentPath)
+	if parentErr != nil {
+		return nil, parentErr
+	}
+	if !parent.IsDir() {
+		return nil, &os.PathError{Op: "open", Path: parentPath, Err: ErrNotDir}
+	}
+
 	m.mu.Lock()
 	file := mem.CreateFile(name)
 	m.getData()[name] = file
@@ -126,6 +135,15 @@ func (m *MemMapFs) lockfreeMkdir(name string, perm os.FileMode) error {
 }
 
 func (m *MemMapFs) Mkdir(name string, perm os.FileMode) error {
+	dirPath := filepath.Dir(name)
+	info, err := m.Stat(dirPath)
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		return &os.PathError{Op: "mkdir", Path: dirPath, Err: ErrNotDir}
+	}
+
 	name = normalizePath(name)
 
 	m.mu.RLock()

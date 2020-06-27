@@ -716,3 +716,17 @@ func checkSize(t *testing.T, f File, size int64) {
 		t.Errorf("Stat %q: size %d want %d", f.Name(), dir.Size(), size)
 	}
 }
+
+func TestIsNotDir(t *testing.T) {
+	if IsNotDir(nil) {
+		t.Error("IsNotDir(nil) should be false")
+	}
+
+	if !IsNotDir(ErrNotDir) {
+		t.Error("IsNotDir(ErrNotDir) should be true")
+	}
+
+	if !IsNotDir(&os.PathError{Err: ErrNotDir}) {
+		t.Error("IsNotDir(PathError{ErrNotDir}) should be true")
+	}
+}

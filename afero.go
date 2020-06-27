@@ -26,6 +26,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"syscall"
 	"time"
 )
 
@@ -105,4 +106,11 @@ var (
 	ErrFileNotFound      = os.ErrNotExist
 	ErrFileExists        = os.ErrExist
 	ErrDestinationExists = os.ErrExist
+	ErrNotDir            = syscall.ENOTDIR
 )
+
+// IsNotDir returns a boolean indicating whether the error is known to report when encountering a file along a path intended for a new directory. It is satisfied by ErrNotDir as well as some syscall errors.
+func IsNotDir(err error) bool {
+	pathErr, ok := err.(*os.PathError)
+	return err == ErrNotDir || (ok && pathErr.Unwrap() == ErrNotDir)
+}
