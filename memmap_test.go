@@ -35,7 +35,8 @@ func TestNormalizePath(t *testing.T) {
 
 func TestPathErrors(t *testing.T) {
 	path := filepath.Join(".", "some", "path")
-	path2 := filepath.Join(".", "different", "path")
+	path2 := filepath.Join(".", "different")
+	path3 := filepath.Join(".", "different", "long", "path")
 	fs := NewMemMapFs()
 	perm := os.FileMode(0755)
 
@@ -66,9 +67,9 @@ func TestPathErrors(t *testing.T) {
 	err = fs.Mkdir(path2, perm)
 	checkPathError(t, err, "Mkdir")
 
-	err = fs.MkdirAll(path2, perm)
+	err = fs.MkdirAll(path3, perm)
 	if err != nil {
-		t.Error("MkdirAll:", err)
+		t.Fatal(err)
 	}
 
 	_, err = fs.Open(path)
@@ -93,6 +94,7 @@ func TestPathErrors(t *testing.T) {
 }
 
 func checkPathError(t *testing.T, err error, op string) {
+	t.Helper()
 	pathErr, ok := err.(*os.PathError)
 	if !ok {
 		t.Error(op+":", err, "is not a os.PathError")
