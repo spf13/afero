@@ -208,7 +208,7 @@ func (m *MemMapFs) findMissingDirs(path string) ([]string, error) {
 
 // Handle some relative paths
 func normalizePath(path string) string {
-	path = filepath.Clean(path)
+	path = filepath.Clean(FilePathSeparator + path) // prepend "/" to ensure "/tmp" and "tmp" are identical files
 
 	switch path {
 	case ".":
