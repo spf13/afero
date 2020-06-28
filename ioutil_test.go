@@ -174,3 +174,33 @@ func TestTempFile(t *testing.T) {
 		})
 	}
 }
+
+func TestLongTempPaths(t *testing.T) {
+	// Some platforms have multi-level temp dirs,
+	// so prepend a base path to always test multi-level.
+	t.Run("TempDir", func(t *testing.T) {
+		fs := NewBasePathFs(NewMemMapFs(), "/some/base")
+
+		dir, err := TempDir(fs, "", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = fs.Stat(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("TempFile", func(t *testing.T) {
+		fs := NewBasePathFs(NewMemMapFs(), "/some/base")
+
+		file, err := TempFile(fs, "", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = file.Stat()
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+}
