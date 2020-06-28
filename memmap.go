@@ -49,13 +49,9 @@ func (*MemMapFs) Name() string { return "MemMapFS" }
 
 func (m *MemMapFs) Create(name string) (File, error) {
 	name = normalizePath(name)
-	parentPath := filepath.Dir(name)
-	parent, parentErr := m.Stat(parentPath)
-	if parentErr != nil {
-		return nil, parentErr
-	}
-	if !parent.IsDir() {
-		return nil, &os.PathError{Op: "open", Path: parentPath, Err: ErrNotDir}
+	err := m.requireParentDirectory("create", name)
+	if err != nil {
+		return nil, err
 	}
 
 	m.mu.Lock()
@@ -79,6 +75,20 @@ func (m *MemMapFs) unRegisterWithParent(fileName string) error {
 	parent.Lock()
 	mem.RemoveFromMemDir(parent, f)
 	parent.Unlock()
+	return nil
+}
+
+// requireParentDirectory requires the parent to 'path' exists and is a directory
+func (m *MemMapFs) requireParentDirectory(operationName, path string) error {
+	path = normalizePath(path)
+	parentPath := filepath.Dir(path)
+	parent, parentErr := m.Stat(parentPath)
+	if parentErr != nil {
+		return parentErr
+	}
+	if !parent.IsDir() {
+		return &os.PathError{Op: operationName, Path: parentPath, Err: ErrNotDir}
+	}
 	return nil
 }
 
@@ -144,13 +154,9 @@ func (m *MemMapFs) Mkdir(name string, perm os.FileMode) error {
 		return &os.PathError{Op: "mkdir", Path: name, Err: ErrFileExists}
 	}
 
-	dirPath := filepath.Dir(name)
-	info, err := m.Stat(dirPath)
+	err := m.requireParentDirectory("mkdir", name)
 	if err != nil {
 		return err
-	}
-	if !info.IsDir() {
-		return &os.PathError{Op: "mkdir", Path: dirPath, Err: ErrNotDir}
 	}
 
 	m.mu.Lock()
