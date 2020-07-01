@@ -30,7 +30,9 @@ type BasePathFile struct {
 
 func (f *BasePathFile) Name() string {
 	sourcename := f.File.Name()
-	return strings.TrimPrefix(sourcename, filepath.Clean(f.path))
+	sourcename = strings.TrimPrefix(sourcename, filepath.VolumeName(sourcename))
+	sourcename = strings.TrimPrefix(sourcename, filepath.Clean(f.path))
+	return sourcename
 }
 
 func NewBasePathFs(source Fs, path string) Fs {

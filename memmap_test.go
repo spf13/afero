@@ -16,17 +16,25 @@ func TestNormalizePath(t *testing.T) {
 		expected string
 	}
 
+	rootAbs, err := filepath.Abs(FilePathSeparator)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	data := []test{
-		{".", FilePathSeparator},
-		{"./", FilePathSeparator},
-		{"..", FilePathSeparator},
-		{"../", FilePathSeparator},
-		{"./..", FilePathSeparator},
-		{"./../", FilePathSeparator},
+		{".", rootAbs},
+		{"./", rootAbs},
+		{"..", rootAbs},
+		{"../", rootAbs},
+		{"./..", rootAbs},
+		{"./../", rootAbs},
 	}
 
 	for i, d := range data {
-		cpath := normalizePath(d.input)
+		cpath, err := normalizePath(d.input)
+		if err != nil {
+			t.Error(err)
+		}
 		if d.expected != cpath {
 			t.Errorf("Test %d failed. Expected %q got %q", i, d.expected, cpath)
 		}
