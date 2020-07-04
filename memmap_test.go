@@ -23,6 +23,8 @@ func TestNormalizePath(t *testing.T) {
 		{"../", FilePathSeparator},
 		{"./..", FilePathSeparator},
 		{"./../", FilePathSeparator},
+		{"tmp", FilePathSeparator + "tmp"}, // "tmp" and "/tmp" are equivalent in MemMapFS
+		{FilePathSeparator + "tmp", FilePathSeparator + "tmp"},
 	}
 
 	for i, d := range data {
@@ -35,7 +37,8 @@ func TestNormalizePath(t *testing.T) {
 
 func TestPathErrors(t *testing.T) {
 	path := filepath.Join(".", "some", "path")
-	path2 := filepath.Join(".", "different", "path")
+	path2 := filepath.Join(".", "different")
+	path3 := filepath.Join(".", "different", "long", "path")
 	fs := NewMemMapFs()
 	perm := os.FileMode(0755)
 
@@ -66,9 +69,9 @@ func TestPathErrors(t *testing.T) {
 	err = fs.Mkdir(path2, perm)
 	checkPathError(t, err, "Mkdir")
 
-	err = fs.MkdirAll(path2, perm)
+	err = fs.MkdirAll(path3, perm)
 	if err != nil {
-		t.Error("MkdirAll:", err)
+		t.Fatal(err)
 	}
 
 	_, err = fs.Open(path)
@@ -93,6 +96,7 @@ func TestPathErrors(t *testing.T) {
 }
 
 func checkPathError(t *testing.T, err error, op string) {
+	t.Helper()
 	pathErr, ok := err.(*os.PathError)
 	if !ok {
 		t.Error(op+":", err, "is not a os.PathError")
@@ -470,5 +474,46 @@ func TestMemFsUnexpectedEOF(t *testing.T) {
 
 	if err != io.ErrUnexpectedEOF {
 		t.Fatal("Expected ErrUnexpectedEOF")
+	}
+}
+
+// https://github.com/spf13/afero/issues/149
+func TestMemFsMkdirWithoutParent(t *testing.T) {
+	t.Parallel()
+
+	fs := NewMemMapFs()
+	err := fs.Mkdir("/a/b/c", 0700)
+	if !os.IsNotExist(err) {
+		t.Error("Mkdir should fail if parent directory does not exist:", err)
+	}
+
+	_, err = fs.Create("/a")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = fs.Mkdir("/a/b", 0700)
+	if !IsNotDir(err) {
+		t.Error("Mkdir should fail if parent is not a directory:", err)
+	}
+}
+
+func TestMemFsCreateWithoutParent(t *testing.T) {
+	t.Parallel()
+
+	fs := NewMemMapFs()
+	_, err := fs.Create("/a/b/c")
+	if !os.IsNotExist(err) {
+		t.Error("Create should fail if parent directory does not exist:", err)
+	}
+
+	_, err = fs.Create("/a")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = fs.Create("/a/b")
+	if !IsNotDir(err) {
+		t.Error("Create should fail if parent is not a directory:", err)
 	}
 }

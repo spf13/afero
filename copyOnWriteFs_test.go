@@ -60,3 +60,21 @@ func TestCopyOnWriteFileInMemMapBase(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// Related: https://github.com/spf13/afero/issues/149
+func TestCopyOnWriteMkdir(t *testing.T) {
+	memFs := NewMemMapFs()
+	osFs := NewOsFs()
+	writeDir, err := TempDir(osFs, "", "copy-on-write-test")
+	if err != nil {
+		t.Fatal("error creating tempDir", err)
+	}
+	defer osFs.RemoveAll(writeDir)
+
+	compositeFs := NewCopyOnWriteFs(NewReadOnlyFs(osFs), memFs)
+
+	err = compositeFs.Mkdir(filepath.Join(writeDir, "some/path"), 0700)
+	if !os.IsNotExist(err) {
+		t.Fatal("Mkdir should fail if parent directory does not exist:", err)
+	}
+}

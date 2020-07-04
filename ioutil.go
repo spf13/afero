@@ -179,6 +179,10 @@ func TempFile(fs Fs, dir, pattern string) (f File, err error) {
 	if dir == "" {
 		dir = os.TempDir()
 	}
+	err = fs.MkdirAll(dir, 0700) // temp dir on some systems is several directories deep, but may not exist in 'fs' yet
+	if err != nil {
+		return
+	}
 
 	var prefix, suffix string
 	if pos := strings.LastIndex(pattern, "*"); pos != -1 {
@@ -217,6 +221,10 @@ func (a Afero) TempDir(dir, prefix string) (name string, err error) {
 func TempDir(fs Fs, dir, prefix string) (name string, err error) {
 	if dir == "" {
 		dir = os.TempDir()
+	}
+	err = fs.MkdirAll(dir, 0700) // temp dir on some systems is several directories deep, but may not exist in 'fs' yet
+	if err != nil {
+		return
 	}
 
 	nconflict := 0

@@ -449,10 +449,6 @@ func TestUnionFileReaddirDuplicateEmpty(t *testing.T) {
 
 	// Overlay shares same empty directory as base
 	overlay := NewMemMapFs()
-	err = overlay.Mkdir(dir, 0700)
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	ufs := &CopyOnWriteFs{base: base, layer: overlay}
 

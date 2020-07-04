@@ -48,6 +48,9 @@ func TestLstatIfPossible(t *testing.T) {
 	roFs := &ReadOnlyFs{source: osFs}
 	roFsMem := &ReadOnlyFs{source: memFs}
 
+	if err := memFs.Mkdir(memWorkDir, 0700); err != nil {
+		t.Fatal(err)
+	}
 	pathFileMem := filepath.Join(memWorkDir, "aferom.txt")
 
 	WriteFile(osFs, filepath.Join(workDir, "afero.txt"), []byte("Hi, Afero!"), 0777)

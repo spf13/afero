@@ -49,6 +49,11 @@ func (*MemMapFs) Name() string { return "MemMapFS" }
 
 func (m *MemMapFs) Create(name string) (File, error) {
 	name = normalizePath(name)
+	err := m.requireParentDirectory("create", name)
+	if err != nil {
+		return nil, err
+	}
+
 	m.mu.Lock()
 	file := mem.CreateFile(name)
 	m.getData()[name] = file
@@ -70,6 +75,20 @@ func (m *MemMapFs) unRegisterWithParent(fileName string) error {
 	parent.Lock()
 	mem.RemoveFromMemDir(parent, f)
 	parent.Unlock()
+	return nil
+}
+
+// requireParentDirectory requires the parent to 'path' exists and is a directory
+func (m *MemMapFs) requireParentDirectory(operationName, path string) error {
+	path = normalizePath(path)
+	parentPath := filepath.Dir(path)
+	parent, parentErr := m.Stat(parentPath)
+	if parentErr != nil {
+		return parentErr
+	}
+	if !parent.IsDir() {
+		return &os.PathError{Op: operationName, Path: parentPath, Err: ErrNotDir}
+	}
 	return nil
 }
 
@@ -135,6 +154,11 @@ func (m *MemMapFs) Mkdir(name string, perm os.FileMode) error {
 		return &os.PathError{Op: "mkdir", Path: name, Err: ErrFileExists}
 	}
 
+	err := m.requireParentDirectory("mkdir", name)
+	if err != nil {
+		return err
+	}
+
 	m.mu.Lock()
 	item := mem.CreateDir(name)
 	m.getData()[name] = item
@@ -147,19 +171,48 @@ func (m *MemMapFs) Mkdir(name string, perm os.FileMode) error {
 }
 
 func (m *MemMapFs) MkdirAll(path string, perm os.FileMode) error {
-	err := m.Mkdir(path, perm)
+	missingDirs, err := m.findMissingDirs(path)
 	if err != nil {
-		if err.(*os.PathError).Err == ErrFileExists {
-			return nil
-		}
 		return err
+	}
+	for i := len(missingDirs) - 1; i >= 0; i-- { // missingDirs are in reverse order
+		err := m.Mkdir(missingDirs[i], perm)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
+// findMissingDirs returns all paths that must be created, in reverse order
+func (m *MemMapFs) findMissingDirs(path string) ([]string, error) {
+	path = normalizePath(path)
+	var missingDirs []string
+	for currentPath := path; currentPath != FilePathSeparator; currentPath = filepath.Dir(currentPath) {
+		info, err := m.Stat(currentPath)
+		switch {
+		case os.IsNotExist(err):
+			missingDirs = append(missingDirs, currentPath)
+		case err != nil:
+			return nil, err
+		case info.IsDir():
+			// found a directory in the chain, return early
+			return missingDirs, nil
+		case !info.IsDir():
+			// a file is found where we want a directory, fail with ENOTDIR
+			return nil, &os.PathError{Op: "mkdirall", Path: currentPath, Err: ErrNotDir}
+		}
+	}
+	return missingDirs, nil
+}
+
 // Handle some relative paths
 func normalizePath(path string) string {
-	path = filepath.Clean(path)
+	if !strings.HasPrefix(path, FilePathSeparator) {
+		path = filepath.Join(FilePathSeparator, path) // prepend "/" to ensure "/tmp" and "tmp" are identical files
+	} else {
+		path = filepath.Clean(path)
+	}
 
 	switch path {
 	case ".":
