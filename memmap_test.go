@@ -23,8 +23,8 @@ func TestNormalizePath(t *testing.T) {
 		{"../", FilePathSeparator},
 		{"./..", FilePathSeparator},
 		{"./../", FilePathSeparator},
-		{"tmp", "/tmp"}, // "tmp" and "/tmp" are equivalent in MemMapFS
-		{"/tmp", "/tmp"},
+		{"tmp", FilePathSeparator + "tmp"}, // "tmp" and "/tmp" are equivalent in MemMapFS
+		{FilePathSeparator + "tmp", FilePathSeparator + "tmp"},
 	}
 
 	for i, d := range data {
