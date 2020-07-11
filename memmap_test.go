@@ -472,3 +472,34 @@ func TestMemFsUnexpectedEOF(t *testing.T) {
 		t.Fatal("Expected ErrUnexpectedEOF")
 	}
 }
+
+func TestMemFsChmod(t *testing.T) {
+	t.Parallel()
+
+	fs := NewMemMapFs()
+	const file = "/hello"
+	if err := fs.Mkdir(file, 0700); err != nil {
+		t.Fatal(err)
+	}
+
+	info, err := fs.Stat(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().String() != "drwx------" {
+		t.Fatal("mkdir failed to create a directory: mode =", info.Mode())
+	}
+
+	err = fs.Chmod(file, 0)
+	if err != nil {
+		t.Error("Failed to run chmod:", err)
+	}
+
+	info, err = fs.Stat(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().String() != "d---------" {
+		t.Error("chmod should not change file type. New mode =", info.Mode())
+	}
+}
