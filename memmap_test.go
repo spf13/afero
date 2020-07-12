@@ -477,7 +477,7 @@ func TestMemFsChmod(t *testing.T) {
 	t.Parallel()
 
 	fs := NewMemMapFs()
-	const file = "/hello"
+	const file = "hello"
 	if err := fs.Mkdir(file, 0700); err != nil {
 		t.Fatal(err)
 	}
