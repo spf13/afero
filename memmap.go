@@ -141,7 +141,7 @@ func (m *MemMapFs) Mkdir(name string, perm os.FileMode) error {
 	m.registerWithParent(item)
 	m.mu.Unlock()
 
-	return m.unrestrictedChmod(name, perm|os.ModeDir)
+	return m.setFileMode(name, perm|os.ModeDir)
 }
 
 func (m *MemMapFs) MkdirAll(path string, perm os.FileMode) error {
@@ -238,7 +238,7 @@ func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, erro
 		}
 	}
 	if chmod {
-		return file, m.unrestrictedChmod(name, perm)
+		return file, m.setFileMode(name, perm)
 	}
 	return file, nil
 }
@@ -331,10 +331,10 @@ func (m *MemMapFs) Chmod(name string, mode os.FileMode) error {
 	prevOtherBits := mem.GetFileInfo(f).Mode() & ^chmodBits
 
 	mode = prevOtherBits | mode
-	return m.unrestrictedChmod(name, mode)
+	return m.setFileMode(name, mode)
 }
 
-func (m *MemMapFs) unrestrictedChmod(name string, mode os.FileMode) error {
+func (m *MemMapFs) setFileMode(name string, mode os.FileMode) error {
 	name = normalizePath(name)
 
 	m.mu.RLock()
