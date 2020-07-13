@@ -141,9 +141,7 @@ func (m *MemMapFs) Mkdir(name string, perm os.FileMode) error {
 	m.registerWithParent(item)
 	m.mu.Unlock()
 
-	m.Chmod(name, perm|os.ModeDir)
-
-	return nil
+	return m.setFileMode(name, perm|os.ModeDir)
 }
 
 func (m *MemMapFs) MkdirAll(path string, perm os.FileMode) error {
@@ -240,7 +238,7 @@ func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, erro
 		}
 	}
 	if chmod {
-		m.Chmod(name, perm)
+		return file, m.setFileMode(name, perm)
 	}
 	return file, nil
 }
@@ -321,6 +319,22 @@ func (m *MemMapFs) Stat(name string) (os.FileInfo, error) {
 }
 
 func (m *MemMapFs) Chmod(name string, mode os.FileMode) error {
+	const chmodBits = os.ModePerm | os.ModeSetuid | os.ModeSetgid | os.ModeSticky // Only a subset of bits are allowed to be changed. Documented under os.Chmod()
+	mode &= chmodBits
+
+	m.mu.RLock()
+	f, ok := m.getData()[name]
+	m.mu.RUnlock()
+	if !ok {
+		return &os.PathError{Op: "chmod", Path: name, Err: ErrFileNotFound}
+	}
+	prevOtherBits := mem.GetFileInfo(f).Mode() & ^chmodBits
+
+	mode = prevOtherBits | mode
+	return m.setFileMode(name, mode)
+}
+
+func (m *MemMapFs) setFileMode(name string, mode os.FileMode) error {
 	name = normalizePath(name)
 
 	m.mu.RLock()
