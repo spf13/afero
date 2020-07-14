@@ -51,7 +51,7 @@ func TestRealPath(t *testing.T) {
 	}
 	defer fs.RemoveAll(anotherDir)
 
-	bp := NewBasePathFs(fs, baseDir).(*BasePathFs)
+	bp := NewBasePathFs(fs, baseDir)
 
 	subDir := filepath.Join(baseDir, "s1")
 

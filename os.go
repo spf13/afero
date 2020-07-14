@@ -20,6 +20,7 @@ import (
 )
 
 var _ Lstater = (*OsFs)(nil)
+var _ Fs = (*OsFs)(nil)
 
 // OsFs is a Fs implementation that uses functions provided by the os package.
 //
@@ -27,7 +28,7 @@ var _ Lstater = (*OsFs)(nil)
 // (http://golang.org/pkg/os/).
 type OsFs struct{}
 
-func NewOsFs() Fs {
+func NewOsFs() *OsFs {
 	return &OsFs{}
 }
 
