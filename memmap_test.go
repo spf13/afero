@@ -104,6 +104,29 @@ func checkPathError(t *testing.T, err error, op string) {
 	}
 }
 
+// Ensure os.O_EXCL is correctly handled.
+func TestOpenFileExcl(t *testing.T) {
+	const fileName = "/myFileTest"
+	const fileMode = os.FileMode(0765)
+
+	fs := NewMemMapFs()
+
+	// First creation should succeed.
+	f, err := fs.OpenFile(fileName, os.O_CREATE|os.O_EXCL, fileMode)
+	if err != nil {
+		t.Errorf("OpenFile Create Excl failed: %s", err)
+		return
+	}
+	f.Close()
+
+	// Second creation should fail.
+	_, err = fs.OpenFile(fileName, os.O_CREATE|os.O_EXCL, fileMode)
+	if err == nil {
+		t.Errorf("OpenFile Create Excl should have failed, but it didn't")
+	}
+	checkPathError(t, err, "Open")
+}
+
 // Ensure Permissions are set on OpenFile/Mkdir/MkdirAll
 func TestPermSet(t *testing.T) {
 	const fileName = "/myFileTest"
@@ -389,6 +412,116 @@ loop:
 	}
 }
 
+// root is a directory
+func TestMemFsRootDirMode(t *testing.T) {
+	t.Parallel()
+
+	fs := NewMemMapFs()
+	info, err := fs.Stat("/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !info.IsDir() {
+		t.Error("should be a directory")
+	}
+	if !info.Mode().IsDir() {
+		t.Errorf("FileMode is not directory, is %s", info.Mode().String())
+	}
+}
+
+// MkdirAll creates intermediate directories with correct mode
+func TestMemFsMkdirAllMode(t *testing.T) {
+	t.Parallel()
+
+	fs := NewMemMapFs()
+	err := fs.MkdirAll("/a/b/c", 0755)
+	if err != nil {
+		t.Fatal(err)
+	}
+	info, err := fs.Stat("/a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !info.Mode().IsDir() {
+		t.Error("/a: mode is not directory")
+	}
+	if info.Mode() != os.FileMode(os.ModeDir|0755) {
+		t.Errorf("/a: wrong permissions, expected drwxr-xr-x, got %s", info.Mode())
+	}
+	info, err = fs.Stat("/a/b")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !info.Mode().IsDir() {
+		t.Error("/a/b: mode is not directory")
+	}
+	if info.Mode() != os.FileMode(os.ModeDir|0755) {
+		t.Errorf("/a/b: wrong permissions, expected drwxr-xr-x, got %s", info.Mode())
+	}
+	info, err = fs.Stat("/a/b/c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !info.Mode().IsDir() {
+		t.Error("/a/b/c: mode is not directory")
+	}
+	if info.Mode() != os.FileMode(os.ModeDir|0755) {
+		t.Errorf("/a/b/c: wrong permissions, expected drwxr-xr-x, got %s", info.Mode())
+	}
+}
+
+// MkdirAll does not change permissions of already-existing directories
+func TestMemFsMkdirAllNoClobber(t *testing.T) {
+	t.Parallel()
+
+	fs := NewMemMapFs()
+	err := fs.MkdirAll("/a/b/c", 0755)
+	if err != nil {
+		t.Fatal(err)
+	}
+	info, err := fs.Stat("/a/b")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode() != os.FileMode(os.ModeDir|0755) {
+		t.Errorf("/a/b: wrong permissions, expected drwxr-xr-x, got %s", info.Mode())
+	}
+	err = fs.MkdirAll("/a/b/c/d/e/f", 0710)
+	// '/a/b' is unchanged
+	if err != nil {
+		t.Fatal(err)
+	}
+	info, err = fs.Stat("/a/b")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode() != os.FileMode(os.ModeDir|0755) {
+		t.Errorf("/a/b: wrong permissions, expected drwxr-xr-x, got %s", info.Mode())
+	}
+	// new directories created with proper permissions
+	info, err = fs.Stat("/a/b/c/d")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode() != os.FileMode(os.ModeDir|0710) {
+		t.Errorf("/a/b/c/d: wrong permissions, expected drwx--x---, got %s", info.Mode())
+	}
+	info, err = fs.Stat("/a/b/c/d/e")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode() != os.FileMode(os.ModeDir|0710) {
+		t.Errorf("/a/b/c/d/e: wrong permissions, expected drwx--x---, got %s", info.Mode())
+	}
+	info, err = fs.Stat("/a/b/c/d/e/f")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode() != os.FileMode(os.ModeDir|0710) {
+		t.Errorf("/a/b/c/d/e/f: wrong permissions, expected drwx--x---, got %s", info.Mode())
+	}
+}
+
 func TestMemFsDirMode(t *testing.T) {
 	fs := NewMemMapFs()
 	err := fs.Mkdir("/testDir1", 0644)
@@ -447,6 +580,74 @@ func TestMemFsUnexpectedEOF(t *testing.T) {
 
 	if err != io.ErrUnexpectedEOF {
 		t.Fatal("Expected ErrUnexpectedEOF")
+	}
+}
+
+func TestMemFsChmod(t *testing.T) {
+	t.Parallel()
+
+	fs := NewMemMapFs()
+	const file = "hello"
+	if err := fs.Mkdir(file, 0700); err != nil {
+		t.Fatal(err)
+	}
+
+	info, err := fs.Stat(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().String() != "drwx------" {
+		t.Fatal("mkdir failed to create a directory: mode =", info.Mode())
+	}
+
+	err = fs.Chmod(file, 0)
+	if err != nil {
+		t.Error("Failed to run chmod:", err)
+	}
+
+	info, err = fs.Stat(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().String() != "d---------" {
+		t.Error("chmod should not change file type. New mode =", info.Mode())
+	}
+}
+
+// can't use Mkdir to get around which permissions we're allowed to set
+func TestMemFsMkdirModeIllegal(t *testing.T) {
+	t.Parallel()
+
+	fs := NewMemMapFs()
+	err := fs.Mkdir("/a", os.ModeSocket|0755)
+	if err != nil {
+		t.Fatal(err)
+	}
+	info, err := fs.Stat("/a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode() != os.FileMode(os.ModeDir|0755) {
+		t.Fatalf("should not be able to use Mkdir to set illegal mode: %s", info.Mode().String())
+	}
+}
+
+// can't use OpenFile to get around which permissions we're allowed to set
+func TestMemFsOpenFileModeIllegal(t *testing.T) {
+	t.Parallel()
+
+	fs := NewMemMapFs()
+	file, err := fs.OpenFile("/a", os.O_CREATE, os.ModeSymlink|0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	info, err := fs.Stat("/a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode() != os.FileMode(0644) {
+		t.Fatalf("should not be able to use OpenFile to set illegal mode: %s", info.Mode().String())
 	}
 }
 

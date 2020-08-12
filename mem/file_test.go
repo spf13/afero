@@ -1,6 +1,7 @@
 package mem
 
 import (
+	"io"
 	"testing"
 	"time"
 )
@@ -150,5 +151,57 @@ func TestFileDataSizeRace(t *testing.T) {
 	d.dir = true
 	if s.Size() != int64(42) {
 		t.Errorf("Failed to read correct value for dir, was %v", s.Size())
+	}
+}
+
+func TestFileReadAtSeekOffset(t *testing.T) {
+	t.Parallel()
+
+	fd := CreateFile("foo")
+	f := NewFileHandle(fd)
+
+	_, err := f.WriteString("TEST")
+	if err != nil {
+		t.Fatal(err)
+	}
+	offset, err := f.Seek(0, io.SeekStart)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if offset != 0 {
+		t.Fail()
+	}
+
+	offsetBeforeReadAt, err := f.Seek(0, io.SeekCurrent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if offsetBeforeReadAt != 0 {
+		t.Fatal("expected 0")
+	}
+
+	b := make([]byte, 4)
+	n, err := f.ReadAt(b, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 4 {
+		t.Fail()
+	}
+	if string(b) != "TEST" {
+		t.Fail()
+	}
+
+	offsetAfterReadAt, err := f.Seek(0, io.SeekCurrent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if offsetAfterReadAt != offsetBeforeReadAt {
+		t.Fatal("ReadAt should not affect offset")
+	}
+
+	err = f.Close()
+	if err != nil {
+		t.Fatal(err)
 	}
 }
