@@ -260,7 +260,7 @@ func (f *File) Write(b []byte) (n int, err error) {
 	}
 	setModTime(f.fileData, time.Now())
 
-	atomic.StoreInt64(&f.at, int64(len(f.fileData.data)))
+	atomic.AddInt64(&f.at, int64(n))
 	return
 }
 
