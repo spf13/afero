@@ -477,7 +477,8 @@ func TestUnionFileReaddirAskForTooMany(t *testing.T) {
 	base := &MemMapFs{}
 	overlay := &MemMapFs{}
 
-	for i := 0; i < 5; i++ {
+	const testFiles = 5
+	for i := 0; i < testFiles; i++ {
 		WriteFile(base, fmt.Sprintf("file%d.txt", i), []byte("afero"), 0777)
 	}
 
@@ -490,13 +491,24 @@ func TestUnionFileReaddirAskForTooMany(t *testing.T) {
 
 	defer f.Close()
 
-	names, err := f.Readdirnames(6)
+	// Read part of all files
+	wantNames := 3
+	names, err := f.Readdirnames(wantNames)
 	if err != nil {
 		t.Fatal(err)
 	}
+	if len(names) != wantNames {
+		t.Fatalf("got %d names %v, want %d", len(names), names, wantNames)
+	}
 
-	if len(names) != 5 {
-		t.Fatal(names)
+	// Try to read more files than remaining
+	wantNames = testFiles - len(names)
+	names, err = f.Readdirnames(wantNames + 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(names) != wantNames {
+		t.Fatalf("got %d names %v, want %d", len(names), names, wantNames)
 	}
 
 	// End of directory
