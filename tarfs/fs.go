@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/spf13/afero"
@@ -49,7 +50,15 @@ func New(t *tar.Reader) *Fs {
 }
 
 func (fs *Fs) Open(name string) (afero.File, error) {
-	panic("not implemented")
+	f, ok := fs.files[name]
+	if !ok {
+		return nil, &os.PathError{Op: "open", Path: name, Err: syscall.ENOENT}
+	}
+
+	f.open = true
+	f.at = 0
+
+	return f, nil
 }
 
 func (fs *Fs) Name() string { return "tarfs" }
