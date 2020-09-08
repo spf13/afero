@@ -44,10 +44,12 @@ func TestFsNew(t *testing.T) {
 			t.Fatalf("%v exists == %v, should be %v", f.name, found, f.exists)
 		}
 
-		if f.exists {
-			if e.h.Typeflag == tar.TypeDir && !f.isdir {
-				t.Errorf("%v is a directory, and should not be", e.Name())
-			}
+		if !f.exists {
+			continue
+		}
+
+		if e.h.Typeflag == tar.TypeDir && !f.isdir {
+			t.Errorf("%v is a directory, and should not be", e.Name())
 		}
 	}
 
