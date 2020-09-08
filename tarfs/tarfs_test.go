@@ -53,4 +53,29 @@ func TestFsNew(t *testing.T) {
 		}
 	}
 
+func TestFsOpen(t *testing.T) {
+	for _, f := range files {
+		file, err := tfs.Open(f.name)
+		if (err == nil) != f.exists {
+			t.Errorf("%v exists = %v, but got err = %v", file.Name(), f.exists, err)
+		}
+
+		if !f.exists {
+			continue
+		}
+
+		s, err := file.Stat()
+		if err != nil {
+			t.Errorf("stat %v: got error '%v'", file.Name(), err)
+			continue
+		}
+
+		if isdir := s.IsDir(); isdir != f.isdir {
+			t.Errorf("%v directory, got: %v, expected: %v", file.Name(), isdir, f.isdir)
+		}
+
+		if size := s.Size(); size != f.size {
+			t.Errorf("%v size, got: %v, expected: %v", file.Name(), size, f.size)
+		}
+	}
 }
