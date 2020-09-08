@@ -33,9 +33,9 @@ func New(t *tar.Reader) *Fs {
 		}
 
 		f := &File{
-			h:      hdr,
-			at:     0,
-			closed: true,
+			h:    hdr,
+			at:   0,
+			open: false,
 		}
 
 		var buf bytes.Buffer

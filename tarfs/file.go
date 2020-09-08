@@ -7,10 +7,10 @@ import (
 )
 
 type File struct {
-	h      *tar.Header
-	data   []byte
-	at     int64
-	closed bool
+	h    *tar.Header
+	data []byte
+	at   int64
+	open bool
 }
 
 func (f *File) Close() error {
