@@ -34,11 +34,11 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 }
 
 func (f *File) Write(p []byte) (n int, err error) {
-	panic("not implemented") // TODO: Implement
+	return 0, syscall.EROFS
 }
 
 func (f *File) WriteAt(p []byte, off int64) (n int, err error) {
-	panic("not implemented") // TODO: Implement
+	return 0, syscall.EROFS
 }
 
 func (f *File) Name() string {
@@ -59,13 +59,13 @@ func (f *File) Stat() (os.FileInfo, error) {
 }
 
 func (f *File) Sync() error {
-	panic("not implemented") // TODO: Implement
+	return nil
 }
 
 func (f *File) Truncate(size int64) error {
-	panic("not implemented") // TODO: Implement
+	return syscall.EROFS
 }
 
 func (f *File) WriteString(s string) (ret int, err error) {
-	panic("not implemented") // TODO: Implement
+	return 0, syscall.EROFS
 }
