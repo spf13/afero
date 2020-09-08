@@ -54,7 +54,8 @@ func (f *File) Readdirnames(n int) ([]string, error) {
 }
 
 func (f *File) Stat() (os.FileInfo, error) {
-	panic("not implemented") // TODO: Implement
+	return f.h.FileInfo(), nil
+
 }
 
 func (f *File) Sync() error {
