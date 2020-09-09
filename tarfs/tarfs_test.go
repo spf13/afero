@@ -1,3 +1,4 @@
+// Most of the tests are stolen from the zipfs implementation
 package tarfs
 
 import (
@@ -52,6 +53,8 @@ func TestFsNew(t *testing.T) {
 			t.Errorf("%v is a directory, and should not be", e.Name())
 		}
 	}
+
+}
 
 func TestFsOpen(t *testing.T) {
 	for _, f := range files {
