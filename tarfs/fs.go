@@ -71,42 +71,26 @@ func (fs *Fs) Open(name string) (afero.File, error) {
 
 func (fs *Fs) Name() string { return "tarfs" }
 
-func (fs *Fs) Create(name string) (afero.File, error) {
-	return nil, syscall.EROFS
-}
+func (fs *Fs) Create(name string) (afero.File, error) { return nil, syscall.EROFS }
 
-func (fs *Fs) Mkdir(name string, perm os.FileMode) error {
-	return syscall.EROFS
-}
+func (fs *Fs) Mkdir(name string, perm os.FileMode) error { return syscall.EROFS }
 
-func (fs *Fs) MkdirAll(path string, perm os.FileMode) error {
-	return syscall.EROFS
-}
+func (fs *Fs) MkdirAll(path string, perm os.FileMode) error { return syscall.EROFS }
 
 func (fs *Fs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error) {
 	panic("not implemented")
 }
 
-func (fs *Fs) Remove(name string) error {
-	return syscall.EROFS
-}
+func (fs *Fs) Remove(name string) error { return syscall.EROFS }
 
-func (fs *Fs) RemoveAll(path string) error {
-	return syscall.EROFS
-}
+func (fs *Fs) RemoveAll(path string) error { return syscall.EROFS }
 
-func (fs *Fs) Rename(oldname string, newname string) error {
-	return syscall.EROFS
-}
+func (fs *Fs) Rename(oldname string, newname string) error { return syscall.EROFS }
 
 func (fs *Fs) Stat(name string) (os.FileInfo, error) {
 	panic("not implemented")
 }
 
-func (fs *Fs) Chmod(name string, mode os.FileMode) error {
-	return syscall.EROFS
-}
+func (fs *Fs) Chmod(name string, mode os.FileMode) error { return syscall.EROFS }
 
-func (fs *Fs) Chtimes(name string, atime time.Time, mtime time.Time) error {
-	return syscall.EROFS
-}
+func (fs *Fs) Chtimes(name string, atime time.Time, mtime time.Time) error { return syscall.EROFS }
