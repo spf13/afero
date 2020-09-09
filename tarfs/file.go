@@ -26,7 +26,10 @@ func (f *File) Read(p []byte) (n int, err error) {
 }
 
 func (f *File) ReadAt(p []byte, off int64) (n int, err error) {
-	panic("not implemented") // TODO: Implement
+	if f.h.Typeflag == tar.TypeDir {
+		return 0, syscall.EISDIR
+	}
+	return f.data.ReadAt(p, off)
 }
 
 func (f *File) Seek(offset int64, whence int) (int64, error) {

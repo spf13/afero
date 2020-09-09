@@ -5,21 +5,23 @@ import (
 	"archive/tar"
 	"fmt"
 	"os"
+	"syscall"
 	"testing"
 )
 
 var files = []struct {
-	name   string
-	exists bool
-	isdir  bool
-	size   int64
+	name        string
+	exists      bool
+	isdir       bool
+	size        int64
+	contentAt4k string
 }{
-	{"sub", true, true, 0},
-	{"sub/testDir2", true, true, 0},
-	{"testFile", true, false, 8192},
-	{"testDir1/testFile", true, false, 8192},
+	{"sub", true, true, 0, ""},
+	{"sub/testDir2", true, true, 0, ""},
+	{"testFile", true, false, 8192, "aaaabbbb"},
+	{"testDir1/testFile", true, false, 8192, "bbbbcccc"},
 
-	{"nonExisting", false, false, 0},
+	{"nonExisting", false, false, 0, ""},
 }
 
 var tfs *Fs
@@ -83,7 +85,7 @@ func TestFsOpen(t *testing.T) {
 	}
 }
 
-func TestFileOps(t *testing.T) {
+func TestReadAt(t *testing.T) {
 	for _, f := range files {
 		if !f.exists {
 			continue
@@ -95,12 +97,17 @@ func TestFileOps(t *testing.T) {
 		}
 
 		buf := make([]byte, 8)
-		if n, err := file.ReadAt(buf, 4092); err != nil {
-			t.Error(err)
+		n, err := file.ReadAt(buf, 4092)
+		if err != nil {
+			if f.isdir && (err != syscall.EISDIR) {
+				t.Errorf("%v got error %v, expected EISDIR", f.name, err)
+			} else if !f.isdir {
+				t.Errorf("%v: %v", f.name, err)
+			}
 		} else if n != 8 {
-			t.Errorf("expected to read 8 bytes, got %d", n)
-		} else if string(buf) != "aaaabbbb" {
-			t.Errorf("expected to get <aaaabbbb>, got <%s>", string(buf))
+			t.Errorf("%v: got %d read bytes, expected 8", f.name, n)
+		} else if string(buf) != f.contentAt4k {
+			t.Errorf("%v: got <%s>, expected <%s>", f.name, f.contentAt4k, string(buf))
 		}
 
 	}
