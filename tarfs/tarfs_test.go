@@ -82,3 +82,26 @@ func TestFsOpen(t *testing.T) {
 		}
 	}
 }
+
+func TestFileOps(t *testing.T) {
+	for _, f := range files {
+		if !f.exists {
+			continue
+		}
+
+		file, err := tfs.Open(f.name)
+		if err != nil {
+			t.Fatalf("opening %v: %v", f.name, err)
+		}
+
+		buf := make([]byte, 8)
+		if n, err := file.ReadAt(buf, 4092); err != nil {
+			t.Error(err)
+		} else if n != 8 {
+			t.Errorf("expected to read 8 bytes, got %d", n)
+		} else if string(buf) != "aaaabbbb" {
+			t.Errorf("expected to get <aaaabbbb>, got <%s>", string(buf))
+		}
+
+	}
+}
