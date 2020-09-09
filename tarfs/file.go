@@ -2,14 +2,14 @@ package tarfs
 
 import (
 	"archive/tar"
+	"bytes"
 	"os"
 	"syscall"
 )
 
 type File struct {
 	h    *tar.Header
-	data []byte
-	at   int64
+	data *bytes.Reader
 	open bool
 }
 

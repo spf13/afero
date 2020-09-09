@@ -35,12 +35,20 @@ func New(t *tar.Reader) *Fs {
 
 		f := &File{
 			h:    hdr,
-			at:   0,
 			open: false,
 		}
 
 		var buf bytes.Buffer
-		io.Copy(&buf, t)
+		size, err := buf.ReadFrom(t)
+		if err != nil {
+			panic("tarfs: reading from tar:" + err.Error())
+		}
+
+		if size != f.h.Size {
+			panic("tarfs: size mismatch")
+		}
+
+		f.data = bytes.NewReader(buf.Bytes())
 
 		fs.files[filepath.Clean(hdr.Name)] = f
 
@@ -56,7 +64,7 @@ func (fs *Fs) Open(name string) (afero.File, error) {
 	}
 
 	f.open = true
-	f.at = 0
+	f.data.Seek(0, io.SeekStart)
 
 	return f, nil
 }
