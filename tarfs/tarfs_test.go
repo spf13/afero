@@ -184,3 +184,22 @@ func TestSeek(t *testing.T) {
 
 	}
 }
+
+func TestName(t *testing.T) {
+	for _, f := range files {
+		if !f.exists {
+			continue
+		}
+
+		file, err := tfs.Open(f.name)
+		if err != nil {
+			t.Fatalf("opening %v: %v", f.name, err)
+		}
+
+		n := file.Name()
+		if n != f.name {
+			t.Errorf("got: %v, expected: %v", n, f.name)
+		}
+
+	}
+}
