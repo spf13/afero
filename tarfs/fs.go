@@ -34,8 +34,7 @@ func New(t *tar.Reader) *Fs {
 		}
 
 		f := &File{
-			h:    hdr,
-			open: false,
+			h: hdr,
 		}
 
 		var buf bytes.Buffer
@@ -69,7 +68,9 @@ func (fs *Fs) Open(name string) (afero.File, error) {
 		return nil, &os.PathError{Op: "open", Path: name, Err: syscall.ENOENT}
 	}
 
-	f.open = true
+	// TODO: return a copy of the File structure instead of a pointer to the original
+	// saved in the filesystem
+	f.closed = false
 	f.data.Seek(0, io.SeekStart)
 
 	return f, nil
