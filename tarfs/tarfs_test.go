@@ -4,6 +4,7 @@ package tarfs
 import (
 	"archive/tar"
 	"fmt"
+	"io"
 	"os"
 	"syscall"
 	"testing"
@@ -137,6 +138,48 @@ func TestReadAt(t *testing.T) {
 			t.Errorf("%v: got %d read bytes, expected 8", f.name, n)
 		} else if string(buf) != f.contentAt4k {
 			t.Errorf("%v: got <%s>, expected <%s>", f.name, f.contentAt4k, string(buf))
+		}
+
+	}
+}
+
+func TestSeek(t *testing.T) {
+	for _, f := range files {
+		if !f.exists {
+			continue
+		}
+
+		file, err := tfs.Open(f.name)
+		if err != nil {
+			t.Fatalf("opening %v: %v", f.name, err)
+		}
+
+		var tests = []struct {
+			offin  int64
+			whence int
+			offout int64
+		}{
+			{0, io.SeekStart, 0},
+			{10, io.SeekStart, 10},
+			{1, io.SeekCurrent, 11},
+			{10, io.SeekCurrent, 21},
+			{0, io.SeekEnd, f.size},
+			{-1, io.SeekEnd, f.size - 1},
+		}
+
+		for _, s := range tests {
+			n, err := file.Seek(s.offin, s.whence)
+			if err != nil {
+				if f.isdir && err == syscall.EISDIR {
+					continue
+				}
+
+				t.Errorf("%v: %v", f.name, err)
+			}
+
+			if n != s.offout {
+				t.Errorf("%v: (off: %v, whence: %v): got %v, expected %v", f.name, s.offin, s.whence, n, s.offout)
+			}
 		}
 
 	}
