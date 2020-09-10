@@ -41,7 +41,7 @@ func (f *File) Write(p []byte) (n int, err error) { return 0, syscall.EROFS }
 func (f *File) WriteAt(p []byte, off int64) (n int, err error) { return 0, syscall.EROFS }
 
 func (f *File) Name() string {
-	panic("not implemented") // TODO: Implement
+	return f.h.Name
 }
 
 func (f *File) Readdir(count int) ([]os.FileInfo, error) {
