@@ -14,14 +14,15 @@ var files = []struct {
 	exists      bool
 	isdir       bool
 	size        int64
+	content     string
 	contentAt4k string
 }{
-	{"sub", true, true, 0, ""},
-	{"sub/testDir2", true, true, 0, ""},
-	{"testFile", true, false, 8192, "aaaabbbb"},
-	{"testDir1/testFile", true, false, 8192, "bbbbcccc"},
+	{"sub", true, true, 0, "", ""},
+	{"sub/testDir2", true, true, 0, "", ""},
+	{"testFile", true, false, 8192, "aaaaaaaa", "aaaabbbb"},
+	{"testDir1/testFile", true, false, 8192, "bbbbbbbb", "bbbbcccc"},
 
-	{"nonExisting", false, false, 0, ""},
+	{"nonExisting", false, false, 0, "", ""},
 }
 
 var tfs *Fs
@@ -82,6 +83,34 @@ func TestFsOpen(t *testing.T) {
 		if size := s.Size(); size != f.size {
 			t.Errorf("%v size, got: %v, expected: %v", file.Name(), size, f.size)
 		}
+	}
+}
+
+func TestRead(t *testing.T) {
+	for _, f := range files {
+		if !f.exists {
+			continue
+		}
+
+		file, err := tfs.Open(f.name)
+		if err != nil {
+			t.Fatalf("opening %v: %v", f.name, err)
+		}
+
+		buf := make([]byte, 8)
+		n, err := file.Read(buf)
+		if err != nil {
+			if f.isdir && (err != syscall.EISDIR) {
+				t.Errorf("%v got error %v, expected EISDIR", f.name, err)
+			} else if !f.isdir {
+				t.Errorf("%v: %v", f.name, err)
+			}
+		} else if n != 8 {
+			t.Errorf("%v: got %d read bytes, expected 8", f.name, n)
+		} else if string(buf) != f.content {
+			t.Errorf("%v: got <%s>, expected <%s>", f.name, f.content, string(buf))
+		}
+
 	}
 }
 
