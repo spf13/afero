@@ -203,3 +203,42 @@ func TestName(t *testing.T) {
 
 	}
 }
+
+func TestClose(t *testing.T) {
+	for _, f := range files {
+		if !f.exists {
+			continue
+		}
+
+		file, err := tfs.Open(f.name)
+		if err != nil {
+			t.Fatalf("opening %v: %v", f.name, err)
+		}
+
+		err = file.Close()
+		if err != nil {
+			t.Errorf("%v: %v", f.name, err)
+		}
+
+		err = file.Close()
+		if err == nil {
+			t.Errorf("%v: closing twice should return an error", f.name)
+		}
+
+		buf := make([]byte, 8)
+		n, err := file.Read(buf)
+		if n != 0 || err == nil {
+			t.Errorf("%v: could read from a closed file", f.name)
+		}
+
+		n, err = file.ReadAt(buf, 256)
+		if n != 0 || err == nil {
+			t.Errorf("%v: could readAt from a closed file", f.name)
+		}
+
+		off, err := file.Seek(0, io.SeekStart)
+		if off != 0 || err == nil {
+			t.Errorf("%v: could seek from a closed file", f.name)
+		}
+	}
+}
