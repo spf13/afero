@@ -3,6 +3,7 @@ package tarfs
 
 import (
 	"archive/tar"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -240,5 +241,31 @@ func TestClose(t *testing.T) {
 		if off != 0 || err == nil {
 			t.Errorf("%v: could seek from a closed file", f.name)
 		}
+	}
+}
+
+func TestOpenFile(t *testing.T) {
+	for _, f := range files {
+		file, err := tfs.OpenFile(f.name, os.O_RDONLY, 0400)
+		if !f.exists {
+			if !errors.Is(err, syscall.ENOENT) {
+				t.Errorf("%v: got %v, expected%v", f.name, err, syscall.ENOENT)
+			}
+			file.Close()
+
+			continue
+		}
+
+		if err != nil {
+			t.Errorf("%v: %v", f.name, err)
+		}
+		file.Close()
+
+		file, err = tfs.OpenFile(f.name, os.O_CREATE, 0600)
+		if !errors.Is(err, syscall.EPERM) {
+			t.Errorf("%v: open for write: got %v, expected %v", f.name, err, syscall.EPERM)
+		}
+		file.Close()
+
 	}
 }
