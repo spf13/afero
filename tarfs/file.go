@@ -18,11 +18,7 @@ func (f *File) Close() error {
 }
 
 func (f *File) Read(p []byte) (n int, err error) {
-	if f.h.Typeflag == tar.TypeDir {
-		return 0, syscall.EISDIR
-	}
-
-	return 0, nil
+	return f.ReadAt(p, 0)
 }
 
 func (f *File) ReadAt(p []byte, off int64) (n int, err error) {
