@@ -93,7 +93,12 @@ func (fs *Fs) RemoveAll(path string) error { return syscall.EROFS }
 func (fs *Fs) Rename(oldname string, newname string) error { return syscall.EROFS }
 
 func (fs *Fs) Stat(name string) (os.FileInfo, error) {
-	panic("not implemented")
+	f, ok := fs.files[name]
+	if !ok {
+		return nil, &os.PathError{Op: "stat", Path: name, Err: syscall.ENOENT}
+	}
+
+	return f.h.FileInfo(), nil
 }
 
 func (fs *Fs) Chmod(name string, mode os.FileMode) error { return syscall.EROFS }
