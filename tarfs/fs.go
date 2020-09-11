@@ -64,12 +64,10 @@ func (fs *Fs) Open(name string) (afero.File, error) {
 		return nil, &os.PathError{Op: "open", Path: name, Err: syscall.ENOENT}
 	}
 
-	// TODO: return a copy of the File structure instead of a pointer to the original
-	// saved in the filesystem
-	f.closed = false
-	f.data.Seek(0, io.SeekStart)
+	// preserve the original data, and return a copy instead
+	cp := &File{h: f.h, data: f.data}
 
-	return f, nil
+	return cp, nil
 }
 
 func (fs *Fs) Name() string { return "tarfs" }
