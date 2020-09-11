@@ -44,11 +44,14 @@ func TestFsOpen(t *testing.T) {
 	for _, f := range files {
 		file, err := tfs.Open(f.name)
 		if (err == nil) != f.exists {
-			t.Errorf("%v exists = %v, but got err = %v", file.Name(), f.exists, err)
+			t.Errorf("%v exists = %v, but got err = %v", f.name, f.exists, err)
 		}
 
 		if !f.exists {
 			continue
+		}
+		if err != nil {
+			t.Fatalf("%v: %v", f.name, err)
 		}
 
 		s, err := file.Stat()
@@ -234,7 +237,7 @@ func TestOpenFile(t *testing.T) {
 		}
 
 		if err != nil {
-			t.Errorf("%v: %v", f.name, err)
+			t.Fatalf("%v: %v", f.name, err)
 		}
 		file.Close()
 
@@ -258,7 +261,7 @@ func TestFsStat(t *testing.T) {
 		}
 
 		if err != nil {
-			t.Errorf("stat %v: got error '%v'", f.name, err)
+			t.Fatalf("stat %v: got error '%v'", f.name, err)
 		}
 
 		if isdir := fi.IsDir(); isdir != f.isdir {
