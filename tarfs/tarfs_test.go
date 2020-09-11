@@ -74,8 +74,7 @@ func TestFsOpen(t *testing.T) {
 
 		s, err := file.Stat()
 		if err != nil {
-			t.Errorf("stat %v: got error '%v'", file.Name(), err)
-			continue
+			t.Fatalf("stat %v: got error '%v'", file.Name(), err)
 		}
 
 		if isdir := s.IsDir(); isdir != f.isdir {
