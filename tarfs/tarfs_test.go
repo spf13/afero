@@ -303,7 +303,7 @@ func TestReaddir(t *testing.T) {
 			t.Errorf("%v: children, got '%v', expected '%v'", d.name, fi, d.children)
 		}
 
-		fi, err := dir.Readdir(1)
+		fi, err = dir.Readdir(1)
 		if err != nil {
 			t.Fatal(err)
 		}
