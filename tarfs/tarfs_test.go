@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"syscall"
 	"testing"
 )
@@ -22,10 +23,21 @@ var files = []struct {
 	{"/", true, true, 0, "", ""},
 	{"/sub", true, true, 0, "", ""},
 	{"/sub/testDir2", true, true, 0, "", ""},
+	{"/sub/testDir2/testFile", true, false, 8192, "cccccccc", "ccccdddd"},
 	{"/testFile", true, false, 8192, "aaaaaaaa", "aaaabbbb"},
 	{"/testDir1/testFile", true, false, 8192, "bbbbbbbb", "bbbbcccc"},
 
 	{"/nonExisting", false, false, 0, "", ""},
+}
+
+var dirs = []struct {
+	name     string
+	children []string
+}{
+	{"/", []string{"sub", "testDir1", "testFile"}},
+	{"/sub", []string{"testDir2"}},
+	{"/sub/testDir2", []string{"testFile"}},
+	{"/testDir1", []string{"testFile"}},
 }
 
 var tfs *Fs
@@ -272,5 +284,42 @@ func TestFsStat(t *testing.T) {
 		if size := fi.Size(); size != f.size {
 			t.Errorf("%v size, got: %v, expected: %v", f.name, size, f.size)
 		}
+	}
+}
+
+func TestReaddir(t *testing.T) {
+	for _, d := range dirs {
+		dir, err := tfs.Open(d.name)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		fi, err := dir.Readdir(0)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !reflect.DeepEqual(fi, d.children) {
+			t.Errorf("%v: children, got '%v', expected '%v'", d.name, fi, d.children)
+		}
+
+		fi, err := dir.Readdir(1)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !reflect.DeepEqual(fi, d.children[0:1]) {
+			t.Errorf("%v: children, got '%v', expected '%v'", d.name, fi, d.children[0:1])
+		}
+	}
+
+	dir, err := tfs.Open("/testFile")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = dir.Readdir(-1)
+	if err != syscall.ENOTDIR {
+		t.Fatal("Expected error")
 	}
 }
