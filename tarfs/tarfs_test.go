@@ -266,3 +266,28 @@ func TestOpenFile(t *testing.T) {
 
 	}
 }
+
+func TestFsStat(t *testing.T) {
+	for _, f := range files {
+		fi, err := tfs.Stat(f.name)
+		if !f.exists {
+			if !errors.Is(err, syscall.ENOENT) {
+				t.Errorf("%v: got %v, expected%v", f.name, err, syscall.ENOENT)
+			}
+
+			continue
+		}
+
+		if err != nil {
+			t.Errorf("stat %v: got error '%v'", f.name, err)
+		}
+
+		if isdir := fi.IsDir(); isdir != f.isdir {
+			t.Errorf("%v directory, got: %v, expected: %v", f.name, isdir, f.isdir)
+		}
+
+		if size := fi.Size(); size != f.size {
+			t.Errorf("%v size, got: %v, expected: %v", f.name, size, f.size)
+		}
+	}
+}
