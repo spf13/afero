@@ -50,10 +50,6 @@ func New(t *tar.Reader) *Fs {
 		f.data = bytes.NewReader(buf.Bytes())
 
 		name := filepath.Clean(hdr.Name)
-		if name[len(name)-1] == '/' {
-			name = name[1:]
-		}
-
 		fs.files[name] = f
 		f.h.Name = name
 
