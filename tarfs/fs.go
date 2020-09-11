@@ -57,6 +57,7 @@ func New(t *tar.Reader) *Fs {
 		file := &File{
 			h:    hdr,
 			data: bytes.NewReader(buf.Bytes()),
+			fs:   fs,
 		}
 		file.h.Name = filepath.Join(d, f)
 
@@ -72,6 +73,7 @@ func New(t *tar.Reader) *Fs {
 			Size:     0,
 		},
 		data: bytes.NewReader(nil),
+		fs:   fs,
 	}
 
 	return fs

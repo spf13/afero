@@ -13,6 +13,7 @@ type File struct {
 	h      *tar.Header
 	data   *bytes.Reader
 	closed bool
+	fs     *Fs
 }
 
 func (f *File) Close() error {
@@ -23,6 +24,7 @@ func (f *File) Close() error {
 	f.closed = true
 	f.h = nil
 	f.data = nil
+	f.fs = nil
 
 	return nil
 }
