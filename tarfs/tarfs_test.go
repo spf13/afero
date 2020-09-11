@@ -19,12 +19,12 @@ var files = []struct {
 	content     string
 	contentAt4k string
 }{
-	{"sub", true, true, 0, "", ""},
-	{"sub/testDir2", true, true, 0, "", ""},
-	{"testFile", true, false, 8192, "aaaaaaaa", "aaaabbbb"},
-	{"testDir1/testFile", true, false, 8192, "bbbbbbbb", "bbbbcccc"},
+	{"/sub", true, true, 0, "", ""},
+	{"/sub/testDir2", true, true, 0, "", ""},
+	{"/testFile", true, false, 8192, "aaaaaaaa", "aaaabbbb"},
+	{"/testDir1/testFile", true, false, 8192, "bbbbbbbb", "bbbbcccc"},
 
-	{"nonExisting", false, false, 0, "", ""},
+	{"/nonExisting", false, false, 0, "", ""},
 }
 
 var tfs *Fs

@@ -14,11 +14,22 @@ import (
 )
 
 type Fs struct {
-	files map[string]*File
+	files map[string]map[string]*File
+}
+
+func splitpath(name string) (dir, file string) {
+	name = filepath.ToSlash(name)
+	if len(name) == 0 || name[0] != '/' {
+		name = "/" + name
+	}
+	name = filepath.Clean(name)
+	dir, file = filepath.Split(name)
+	dir = filepath.Clean(dir)
+	return
 }
 
 func New(t *tar.Reader) *Fs {
-	fs := &Fs{files: make(map[string]*File)}
+	fs := &Fs{files: make(map[string]map[string]*File)}
 	for {
 		hdr, err := t.Next()
 		if err == io.EOF {
@@ -28,8 +39,9 @@ func New(t *tar.Reader) *Fs {
 			return nil
 		}
 
-		f := &File{
-			h: hdr,
+		d, f := splitpath(hdr.Name)
+		if _, ok := fs.files[d]; !ok {
+			fs.files[d] = make(map[string]*File)
 		}
 
 		var buf bytes.Buffer
@@ -38,15 +50,17 @@ func New(t *tar.Reader) *Fs {
 			panic("tarfs: reading from tar:" + err.Error())
 		}
 
-		if size != f.h.Size {
+		if size != hdr.Size {
 			panic("tarfs: size mismatch")
 		}
 
-		f.data = bytes.NewReader(buf.Bytes())
+		file := &File{
+			h:    hdr,
+			data: bytes.NewReader(buf.Bytes()),
+		}
+		file.h.Name = filepath.Join(d, f)
 
-		name := filepath.Clean(hdr.Name)
-		fs.files[name] = f
-		f.h.Name = name
+		fs.files[d][f] = file
 
 	}
 
@@ -54,15 +68,17 @@ func New(t *tar.Reader) *Fs {
 }
 
 func (fs *Fs) Open(name string) (afero.File, error) {
-	f, ok := fs.files[name]
+	d, f := splitpath(name)
+	if _, ok := fs.files[d]; !ok {
+		return nil, &os.PathError{Op: "open", Path: name, Err: syscall.ENOENT}
+	}
+
+	file, ok := fs.files[d][f]
 	if !ok {
 		return nil, &os.PathError{Op: "open", Path: name, Err: syscall.ENOENT}
 	}
 
-	// preserve the original data, and return a copy instead
-	cp := &File{h: f.h, data: f.data}
-
-	return cp, nil
+	return &File{h: file.h, data: file.data}, nil
 }
 
 func (fs *Fs) Name() string { return "tarfs" }
@@ -88,12 +104,17 @@ func (fs *Fs) RemoveAll(path string) error { return syscall.EROFS }
 func (fs *Fs) Rename(oldname string, newname string) error { return syscall.EROFS }
 
 func (fs *Fs) Stat(name string) (os.FileInfo, error) {
-	f, ok := fs.files[name]
+	d, f := splitpath(name)
+	if _, ok := fs.files[d]; !ok {
+		return nil, &os.PathError{Op: "stat", Path: name, Err: syscall.ENOENT}
+	}
+
+	file, ok := fs.files[d][f]
 	if !ok {
 		return nil, &os.PathError{Op: "stat", Path: name, Err: syscall.ENOENT}
 	}
 
-	return f.h.FileInfo(), nil
+	return file.h.FileInfo(), nil
 }
 
 func (fs *Fs) Chmod(name string, mode os.FileMode) error { return syscall.EROFS }
