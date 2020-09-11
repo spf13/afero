@@ -19,6 +19,7 @@ var files = []struct {
 	content     string
 	contentAt4k string
 }{
+	{"/", true, true, 0, "", ""},
 	{"/sub", true, true, 0, "", ""},
 	{"/sub/testDir2", true, true, 0, "", ""},
 	{"/testFile", true, false, 8192, "aaaaaaaa", "aaaabbbb"},

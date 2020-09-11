@@ -64,6 +64,16 @@ func New(t *tar.Reader) *Fs {
 
 	}
 
+	// Add a pseudoroot
+	fs.files["/"][""] = &File{
+		h: &tar.Header{
+			Name:     "/",
+			Typeflag: tar.TypeDir,
+			Size:     0,
+		},
+		data: bytes.NewReader(nil),
+	}
+
 	return fs
 }
 
