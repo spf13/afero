@@ -251,7 +251,6 @@ func TestOpenFile(t *testing.T) {
 			if !errors.Is(err, syscall.ENOENT) {
 				t.Errorf("%v: got %v, expected%v", f.name, err, syscall.ENOENT)
 			}
-			file.Close()
 
 			continue
 		}
@@ -265,7 +264,6 @@ func TestOpenFile(t *testing.T) {
 		if !errors.Is(err, syscall.EPERM) {
 			t.Errorf("%v: open for write: got %v, expected %v", f.name, err, syscall.EPERM)
 		}
-		file.Close()
 
 	}
 }
