@@ -4,7 +4,6 @@ package tarfs
 import (
 	"archive/tar"
 	"bytes"
-	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -12,10 +11,6 @@ import (
 	"time"
 
 	"github.com/spf13/afero"
-)
-
-var (
-	ErrNotImplemented = errors.New("Not implemented")
 )
 
 type Fs struct {
