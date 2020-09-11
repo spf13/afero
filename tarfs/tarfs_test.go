@@ -40,27 +40,6 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func TestFsNew(t *testing.T) {
-
-	t.Logf("+%v", tfs)
-
-	for _, f := range files {
-		e, found := tfs.files[f.name]
-		if found != f.exists {
-			t.Fatalf("%v exists == %v, should be %v", f.name, found, f.exists)
-		}
-
-		if !f.exists {
-			continue
-		}
-
-		if e.h.Typeflag == tar.TypeDir && !f.isdir {
-			t.Errorf("%v is a directory, and should not be", e.Name())
-		}
-	}
-
-}
-
 func TestFsOpen(t *testing.T) {
 	for _, f := range files {
 		file, err := tfs.Open(f.name)
