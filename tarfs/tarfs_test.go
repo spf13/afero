@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"reflect"
 	"syscall"
 	"testing"
@@ -374,5 +375,28 @@ func TestReaddirnames(t *testing.T) {
 	_, err = dir.Readdir(-1)
 	if err != syscall.ENOTDIR {
 		t.Fatal("Expected error")
+	}
+}
+
+func TestGlob(t *testing.T) {
+	for _, s := range []struct {
+		glob    string
+		entries []string
+	}{
+		{filepath.FromSlash("/*"), []string{filepath.FromSlash("/sub"), filepath.FromSlash("/testDir1"), filepath.FromSlash("/testFile")}},
+		{filepath.FromSlash("*"), []string{filepath.FromSlash("sub"), filepath.FromSlash("testDir1"), filepath.FromSlash("testFile")}},
+		{filepath.FromSlash("sub/*"), []string{filepath.FromSlash("sub/testDir2")}},
+		{filepath.FromSlash("sub/testDir2/*"), []string{filepath.FromSlash("sub/testDir2/testFile")}},
+		{filepath.FromSlash("testDir1/*"), []string{filepath.FromSlash("testDir1/testFile")}},
+	} {
+		entries, err := afero.Glob(afs.Fs, s.glob)
+		if err != nil {
+			t.Error(err)
+		}
+		if reflect.DeepEqual(entries, s.entries) {
+			t.Logf("glob: %s: glob ok", s.glob)
+		} else {
+			t.Errorf("glob: %s: got %#v, expected %#v", s.glob, entries, s.entries)
+		}
 	}
 }
