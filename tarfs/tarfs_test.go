@@ -67,6 +67,10 @@ func TestFsOpen(t *testing.T) {
 			t.Fatalf("%v: %v", f.name, err)
 		}
 
+		if file.Name() != f.name {
+			t.Errorf("Name(), got %v, expected %v", file.Name(), f.name)
+		}
+
 		s, err := file.Stat()
 		if err != nil {
 			t.Fatalf("stat %v: got error '%v'", file.Name(), err)
