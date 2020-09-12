@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"os"
+	"sort"
 	"syscall"
 
 	"github.com/spf13/afero"
@@ -73,8 +74,50 @@ func (f *File) Name() string {
 	return f.h.Name
 }
 
+func (f *File) getDirectoryNames() ([]string, error) {
+	d, ok := f.fs.files[f.Name()]
+	if !ok {
+		return nil, &os.PathError{Op: "readdir", Path: f.Name(), Err: syscall.ENOENT}
+	}
+
+	var names []string
+	for n := range d {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+
+	return names, nil
+}
+
 func (f *File) Readdir(count int) ([]os.FileInfo, error) {
-	panic("not implemented") // TODO: Implement
+	if f.closed {
+		return nil, afero.ErrFileClosed
+	}
+
+	if !f.h.FileInfo().IsDir() {
+		return nil, syscall.ENOTDIR
+	}
+
+	names, err := f.getDirectoryNames()
+	if err != nil {
+		return nil, err
+	}
+
+	d := f.fs.files[f.Name()]
+	var fi []os.FileInfo
+	for _, n := range names {
+		if n == "" {
+			continue
+		}
+
+		f := d[n]
+		fi = append(fi, f.h.FileInfo())
+		if count > 0 && len(fi) >= count {
+			break
+		}
+	}
+
+	return fi, nil
 }
 
 func (f *File) Readdirnames(n int) ([]string, error) {
