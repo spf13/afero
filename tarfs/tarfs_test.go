@@ -298,9 +298,13 @@ func TestReaddir(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		var names []string
+		for _, f := range fi {
+			names = append(names, f.Name())
+		}
 
-		if !reflect.DeepEqual(fi, d.children) {
-			t.Errorf("%v: children, got '%v', expected '%v'", d.name, fi, d.children)
+		if !reflect.DeepEqual(names, d.children) {
+			t.Errorf("%v: children, got '%v', expected '%v'", d.name, names, d.children)
 		}
 
 		fi, err = dir.Readdir(1)
@@ -308,8 +312,13 @@ func TestReaddir(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if !reflect.DeepEqual(fi, d.children[0:1]) {
-			t.Errorf("%v: children, got '%v', expected '%v'", d.name, fi, d.children[0:1])
+		names = []string{}
+		for _, f := range fi {
+			names = append(names, f.Name())
+		}
+
+		if !reflect.DeepEqual(names, d.children[0:1]) {
+			t.Errorf("%v: children, got '%v', expected '%v'", d.name, names, d.children[0:1])
 		}
 	}
 
