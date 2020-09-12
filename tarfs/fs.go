@@ -90,7 +90,9 @@ func (fs *Fs) Open(name string) (afero.File, error) {
 		return nil, &os.PathError{Op: "open", Path: name, Err: syscall.ENOENT}
 	}
 
-	return &File{h: file.h, data: file.data}, nil
+	nf := *file
+
+	return &nf, nil
 }
 
 func (fs *Fs) Name() string { return "tarfs" }
