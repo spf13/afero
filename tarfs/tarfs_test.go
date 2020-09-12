@@ -10,6 +10,8 @@ import (
 	"reflect"
 	"syscall"
 	"testing"
+
+	"github.com/spf13/afero"
 )
 
 var files = []struct {
@@ -40,7 +42,7 @@ var dirs = []struct {
 	{"/testDir1", []string{"testFile"}},
 }
 
-var tfs *Fs
+var afs *afero.Afero
 
 func TestMain(m *testing.M) {
 	tf, err := os.Open("testdata/t.tar")
@@ -49,13 +51,14 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	tfs = New(tar.NewReader(tf))
+	tfs := New(tar.NewReader(tf))
+	afs = &afero.Afero{Fs: tfs}
 	os.Exit(m.Run())
 }
 
 func TestFsOpen(t *testing.T) {
 	for _, f := range files {
-		file, err := tfs.Open(f.name)
+		file, err := afs.Open(f.name)
 		if (err == nil) != f.exists {
 			t.Errorf("%v exists = %v, but got err = %v", f.name, f.exists, err)
 		}
@@ -92,7 +95,7 @@ func TestRead(t *testing.T) {
 			continue
 		}
 
-		file, err := tfs.Open(f.name)
+		file, err := afs.Open(f.name)
 		if err != nil {
 			t.Fatalf("opening %v: %v", f.name, err)
 		}
@@ -120,7 +123,7 @@ func TestReadAt(t *testing.T) {
 			continue
 		}
 
-		file, err := tfs.Open(f.name)
+		file, err := afs.Open(f.name)
 		if err != nil {
 			t.Fatalf("opening %v: %v", f.name, err)
 		}
@@ -148,7 +151,7 @@ func TestSeek(t *testing.T) {
 			continue
 		}
 
-		file, err := tfs.Open(f.name)
+		file, err := afs.Open(f.name)
 		if err != nil {
 			t.Fatalf("opening %v: %v", f.name, err)
 		}
@@ -190,7 +193,7 @@ func TestName(t *testing.T) {
 			continue
 		}
 
-		file, err := tfs.Open(f.name)
+		file, err := afs.Open(f.name)
 		if err != nil {
 			t.Fatalf("opening %v: %v", f.name, err)
 		}
@@ -209,7 +212,7 @@ func TestClose(t *testing.T) {
 			continue
 		}
 
-		file, err := tfs.Open(f.name)
+		file, err := afs.Open(f.name)
 		if err != nil {
 			t.Fatalf("opening %v: %v", f.name, err)
 		}
@@ -244,7 +247,7 @@ func TestClose(t *testing.T) {
 
 func TestOpenFile(t *testing.T) {
 	for _, f := range files {
-		file, err := tfs.OpenFile(f.name, os.O_RDONLY, 0400)
+		file, err := afs.OpenFile(f.name, os.O_RDONLY, 0400)
 		if !f.exists {
 			if !errors.Is(err, syscall.ENOENT) {
 				t.Errorf("%v: got %v, expected%v", f.name, err, syscall.ENOENT)
@@ -258,7 +261,7 @@ func TestOpenFile(t *testing.T) {
 		}
 		file.Close()
 
-		file, err = tfs.OpenFile(f.name, os.O_CREATE, 0600)
+		file, err = afs.OpenFile(f.name, os.O_CREATE, 0600)
 		if !errors.Is(err, syscall.EPERM) {
 			t.Errorf("%v: open for write: got %v, expected %v", f.name, err, syscall.EPERM)
 		}
@@ -268,7 +271,7 @@ func TestOpenFile(t *testing.T) {
 
 func TestFsStat(t *testing.T) {
 	for _, f := range files {
-		fi, err := tfs.Stat(f.name)
+		fi, err := afs.Stat(f.name)
 		if !f.exists {
 			if !errors.Is(err, syscall.ENOENT) {
 				t.Errorf("%v: got %v, expected%v", f.name, err, syscall.ENOENT)
@@ -293,7 +296,7 @@ func TestFsStat(t *testing.T) {
 
 func TestReaddir(t *testing.T) {
 	for _, d := range dirs {
-		dir, err := tfs.Open(d.name)
+		dir, err := afs.Open(d.name)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -326,7 +329,7 @@ func TestReaddir(t *testing.T) {
 		}
 	}
 
-	dir, err := tfs.Open("/testFile")
+	dir, err := afs.Open("/testFile")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -339,7 +342,7 @@ func TestReaddir(t *testing.T) {
 
 func TestReaddirnames(t *testing.T) {
 	for _, d := range dirs {
-		dir, err := tfs.Open(d.name)
+		dir, err := afs.Open(d.name)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -363,7 +366,7 @@ func TestReaddirnames(t *testing.T) {
 		}
 	}
 
-	dir, err := tfs.Open("/testFile")
+	dir, err := afs.Open("/testFile")
 	if err != nil {
 		t.Fatal(err)
 	}
