@@ -332,3 +332,40 @@ func TestReaddir(t *testing.T) {
 		t.Fatal("Expected error")
 	}
 }
+
+func TestReaddirnames(t *testing.T) {
+	for _, d := range dirs {
+		dir, err := tfs.Open(d.name)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		names, err := dir.Readdirnames(0)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !reflect.DeepEqual(names, d.children) {
+			t.Errorf("%v: children, got '%v', expected '%v'", d.name, names, d.children)
+		}
+
+		names, err = dir.Readdirnames(1)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !reflect.DeepEqual(names, d.children[0:1]) {
+			t.Errorf("%v: children, got '%v', expected '%v'", d.name, names, d.children[0:1])
+		}
+	}
+
+	dir, err := tfs.Open("/testFile")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = dir.Readdir(-1)
+	if err != syscall.ENOTDIR {
+		t.Fatal("Expected error")
+	}
+}
