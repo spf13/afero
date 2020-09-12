@@ -121,7 +121,17 @@ func (f *File) Readdir(count int) ([]os.FileInfo, error) {
 }
 
 func (f *File) Readdirnames(n int) ([]string, error) {
-	panic("not implemented") // TODO: Implement
+	fi, err := f.Readdir(n)
+	if err != nil {
+		return nil, err
+	}
+
+	var names []string
+	for _, f := range fi {
+		names = append(names, f.Name())
+	}
+
+	return names, nil
 }
 
 func (f *File) Stat() (os.FileInfo, error) { return f.h.FileInfo(), nil }
