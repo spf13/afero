@@ -200,8 +200,8 @@ func TestName(t *testing.T) {
 		}
 
 		n := file.Name()
-		if n != f.name {
-			t.Errorf("got: %v, expected: %v", n, f.name)
+		if n != filepath.FromSlash(f.name) {
+			t.Errorf("got: %v, expected: %v", n, filepath.FromSlash(f.name))
 		}
 
 	}
