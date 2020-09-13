@@ -66,7 +66,7 @@ func New(t *tar.Reader) *Fs {
 	}
 
 	// Add a pseudoroot
-	fs.files["/"][""] = &File{
+	fs.files[afero.FilePathSeparator][""] = &File{
 		h: &tar.Header{
 			Name:     "/",
 			Typeflag: tar.TypeDir,
