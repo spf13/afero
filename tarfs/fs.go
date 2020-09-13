@@ -59,8 +59,6 @@ func New(t *tar.Reader) *Fs {
 			data: bytes.NewReader(buf.Bytes()),
 			fs:   fs,
 		}
-		file.h.Name = filepath.Join(d, f)
-
 		fs.files[d][f] = file
 
 	}
@@ -68,7 +66,7 @@ func New(t *tar.Reader) *Fs {
 	// Add a pseudoroot
 	fs.files[afero.FilePathSeparator][""] = &File{
 		h: &tar.Header{
-			Name:     "/",
+			Name:     afero.FilePathSeparator,
 			Typeflag: tar.TypeDir,
 			Size:     0,
 		},

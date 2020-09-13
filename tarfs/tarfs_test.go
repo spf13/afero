@@ -71,8 +71,8 @@ func TestFsOpen(t *testing.T) {
 			t.Fatalf("%v: %v", f.name, err)
 		}
 
-		if file.Name() != f.name {
-			t.Errorf("Name(), got %v, expected %v", file.Name(), f.name)
+		if file.Name() != filepath.FromSlash(f.name) {
+			t.Errorf("Name(), got %v, expected %v", file.Name(), filepath.FromSlash(f.name))
 		}
 
 		s, err := file.Stat()
@@ -200,8 +200,8 @@ func TestName(t *testing.T) {
 		}
 
 		n := file.Name()
-		if n != f.name {
-			t.Errorf("got: %v, expected: %v", n, f.name)
+		if n != filepath.FromSlash(f.name) {
+			t.Errorf("got: %v, expected: %v", n, filepath.FromSlash(f.name))
 		}
 
 	}

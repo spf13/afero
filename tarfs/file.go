@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"os"
+	"path/filepath"
 	"sort"
 	"syscall"
 
@@ -71,7 +72,7 @@ func (f *File) Write(p []byte) (n int, err error) { return 0, syscall.EROFS }
 func (f *File) WriteAt(p []byte, off int64) (n int, err error) { return 0, syscall.EROFS }
 
 func (f *File) Name() string {
-	return f.h.Name
+	return filepath.Join(splitpath(f.h.Name))
 }
 
 func (f *File) getDirectoryNames() ([]string, error) {
