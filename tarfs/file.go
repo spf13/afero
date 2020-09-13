@@ -3,7 +3,6 @@ package tarfs
 import (
 	"archive/tar"
 	"bytes"
-	"fmt"
 	"os"
 	"sort"
 	"syscall"
@@ -72,7 +71,6 @@ func (f *File) Write(p []byte) (n int, err error) { return 0, syscall.EROFS }
 func (f *File) WriteAt(p []byte, off int64) (n int, err error) { return 0, syscall.EROFS }
 
 func (f *File) Name() string {
-	fmt.Printf("f: %+v\n", f)
 	return f.h.Name
 }
 

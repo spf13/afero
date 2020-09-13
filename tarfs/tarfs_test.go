@@ -297,7 +297,7 @@ func TestFsStat(t *testing.T) {
 
 func TestReaddir(t *testing.T) {
 	for _, d := range dirs {
-		dir, err := afs.Open(d.name)
+		dir, err := afs.Open(filepath.FromSlash(d.name))
 		if err != nil {
 			t.Fatal(err)
 		}
