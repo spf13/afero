@@ -8,9 +8,6 @@ import (
 	"runtime"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNormalizePath(t *testing.T) {
@@ -663,13 +660,21 @@ func TestMemFsLstatIfPossible(t *testing.T) {
 
 	// We assert that fs implements Lstater
 	fsAsserted, ok := fs.(Lstater)
-	require.True(t, ok, "The filesytem does not implement Lstater")
+	if !ok {
+		t.Fatalf("The filesytem does not implement Lstater")
+	}
 
 	file, err := fs.OpenFile("/a.txt", os.O_CREATE, 0o644)
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("Error when opening file: %v", err)
+	}
 	defer file.Close()
 
 	_, lstatCalled, err := fsAsserted.LstatIfPossible("/a.txt")
-	assert.NoError(t, err)
-	assert.False(t, lstatCalled)
+	if err != nil {
+		t.Fatalf("Function returned err: %v", err)
+	}
+	if lstatCalled {
+		t.Fatalf("Function indicated lstat was called. This should never be true.")
+	}
 }
