@@ -650,3 +650,31 @@ func TestMemFsOpenFileModeIllegal(t *testing.T) {
 		t.Fatalf("should not be able to use OpenFile to set illegal mode: %s", info.Mode().String())
 	}
 }
+
+// LstatIfPossible should always return false, since MemMapFs does not
+// support symlinks.
+func TestMemFsLstatIfPossible(t *testing.T) {
+	t.Parallel()
+
+	fs := NewMemMapFs()
+
+	// We assert that fs implements Lstater
+	fsAsserted, ok := fs.(Lstater)
+	if !ok {
+		t.Fatalf("The filesytem does not implement Lstater")
+	}
+
+	file, err := fs.OpenFile("/a.txt", os.O_CREATE, 0o644)
+	if err != nil {
+		t.Fatalf("Error when opening file: %v", err)
+	}
+	defer file.Close()
+
+	_, lstatCalled, err := fsAsserted.LstatIfPossible("/a.txt")
+	if err != nil {
+		t.Fatalf("Function returned err: %v", err)
+	}
+	if lstatCalled {
+		t.Fatalf("Function indicated lstat was called. This should never be true.")
+	}
+}
