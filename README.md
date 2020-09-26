@@ -270,6 +270,24 @@ Some known limitations of the existing implementation:
 * No Chtimes support - Could be simulated with attributes (gcs a/m-times are set implicitly) but that's is left for another version.
 * Not thread safe - Also assumes all file operations are done through the same instance of the GcsFs. File operations between different GcsFs instances are not guaranteed to be consistent.
 
+### SwiftFs
+
+Afero has experimental support for openstack swift storage as a backend.
+To use it, you need a `username`, `api key`, `auth url`, `domain` and `container name` for an openstack switch store:
+
+```go
+fs, err = NewSwiftFs(&swift.Connection{
+	UserName: "swift_username",
+	ApiKey:   "swift_apikey",
+	AuthUrl:  "swift_authurl",
+	Domain:   "swift_domain",
+}, "containername")
+if err != nil {
+    fmt.Println("Error connecting to swift storage")
+}
+```
+
+After creating a connection, you can use the backend in the same way as usual.
 
 ## Filtering Backends
 
