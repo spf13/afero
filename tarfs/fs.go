@@ -63,6 +63,9 @@ func New(t *tar.Reader) *Fs {
 
 	}
 
+	if fs.files[afero.FilePathSeparator] == nil {
+		fs.files[afero.FilePathSeparator] = make(map[string]*File)
+	}
 	// Add a pseudoroot
 	fs.files[afero.FilePathSeparator][""] = &File{
 		h: &tar.Header{

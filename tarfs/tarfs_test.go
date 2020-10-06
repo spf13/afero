@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"syscall"
 	"testing"
 
@@ -54,6 +55,9 @@ func TestMain(m *testing.M) {
 
 	tfs := New(tar.NewReader(tf))
 	afs = &afero.Afero{Fs: tfs}
+
+	// Check that an empty reader does not panic.
+	_ = New(tar.NewReader(strings.NewReader("")))
 	os.Exit(m.Run())
 }
 
