@@ -210,6 +210,8 @@ func (f *File) Truncate(size int64) error {
 	if size < 0 {
 		return ErrOutOfRange
 	}
+	f.fileData.Lock()
+	defer f.fileData.Unlock()
 	if size > int64(len(f.fileData.data)) {
 		diff := size - int64(len(f.fileData.data))
 		f.fileData.data = append(f.fileData.data, bytes.Repeat([]byte{00}, int(diff))...)
