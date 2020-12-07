@@ -38,6 +38,8 @@ func TestPathErrors(t *testing.T) {
 	path2 := filepath.Join(".", "different", "path")
 	fs := NewMemMapFs()
 	perm := os.FileMode(0755)
+	uid := 1000
+	gid := 1000
 
 	// relevant functions:
 	// func (m *MemMapFs) Chmod(name string, mode os.FileMode) error
@@ -53,6 +55,9 @@ func TestPathErrors(t *testing.T) {
 
 	err := fs.Chmod(path, perm)
 	checkPathError(t, err, "Chmod")
+
+	err = fs.Chown(path, uid, gid)
+	checkPathError(t, err, "Chown")
 
 	err = fs.Chtimes(path, time.Now(), time.Now())
 	checkPathError(t, err, "Chtimes")
