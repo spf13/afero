@@ -91,6 +91,10 @@ func (OsFs) Chmod(name string, mode os.FileMode) error {
 	return os.Chmod(name, mode)
 }
 
+func (OsFs) Chown(name string, uid, gid int) error {
+	return os.Chown(name, uid, gid)
+}
+
 func (OsFs) Chtimes(name string, atime time.Time, mtime time.Time) error {
 	return os.Chtimes(name, atime, mtime)
 }
@@ -100,6 +104,10 @@ func (OsFs) LstatIfPossible(name string) (os.FileInfo, bool, error) {
 	return fi, true, err
 }
 
-func (OsFs) Chown(name string, uid, gid int) error {
-	return os.Chown(name, uid, gid)
+func (OsFs) SymlinkIfPossible(oldname, newname string) error {
+	return os.Symlink(oldname, newname)
+}
+
+func (OsFs) ReadlinkIfPossible(name string) (string, error) {
+	return os.Readlink(name)
 }

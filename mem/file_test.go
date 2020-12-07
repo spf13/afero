@@ -1,6 +1,8 @@
 package mem
 
 import (
+	"bytes"
+	"io"
 	"testing"
 	"time"
 )
@@ -150,5 +152,96 @@ func TestFileDataSizeRace(t *testing.T) {
 	d.dir = true
 	if s.Size() != int64(42) {
 		t.Errorf("Failed to read correct value for dir, was %v", s.Size())
+	}
+}
+
+func TestFileReadAtSeekOffset(t *testing.T) {
+	t.Parallel()
+
+	fd := CreateFile("foo")
+	f := NewFileHandle(fd)
+
+	_, err := f.WriteString("TEST")
+	if err != nil {
+		t.Fatal(err)
+	}
+	offset, err := f.Seek(0, io.SeekStart)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if offset != 0 {
+		t.Fail()
+	}
+
+	offsetBeforeReadAt, err := f.Seek(0, io.SeekCurrent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if offsetBeforeReadAt != 0 {
+		t.Fatal("expected 0")
+	}
+
+	b := make([]byte, 4)
+	n, err := f.ReadAt(b, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 4 {
+		t.Fail()
+	}
+	if string(b) != "TEST" {
+		t.Fail()
+	}
+
+	offsetAfterReadAt, err := f.Seek(0, io.SeekCurrent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if offsetAfterReadAt != offsetBeforeReadAt {
+		t.Fatal("ReadAt should not affect offset")
+	}
+
+	err = f.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestFileWriteAndSeek(t *testing.T) {
+	fd := CreateFile("foo")
+	f := NewFileHandle(fd)
+
+	assert := func(expected bool, v ...interface{}) {
+		if !expected {
+			t.Helper()
+			t.Fatal(v...)
+		}
+	}
+
+	data4 := []byte{0, 1, 2, 3}
+	data20 := bytes.Repeat(data4, 5)
+	var off int64
+
+	for i := 0; i < 100; i++ {
+		// write 20 bytes
+		n, err := f.Write(data20)
+		assert(err == nil, err)
+		off += int64(n)
+		assert(n == len(data20), n)
+		assert(off == int64((i+1)*len(data20)), off)
+
+		// rewind to start and write 4 bytes there
+		cur, err := f.Seek(-off, io.SeekCurrent)
+		assert(err == nil, err)
+		assert(cur == 0, cur)
+
+		n, err = f.Write(data4)
+		assert(err == nil, err)
+		assert(n == len(data4), n)
+
+		// back at the end
+		cur, err = f.Seek(off-int64(n), io.SeekCurrent)
+		assert(err == nil, err)
+		assert(cur == off, cur, off)
 	}
 }

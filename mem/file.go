@@ -207,8 +207,11 @@ func (f *File) Read(b []byte) (n int, err error) {
 }
 
 func (f *File) ReadAt(b []byte, off int64) (n int, err error) {
+	prev := atomic.LoadInt64(&f.at)
 	atomic.StoreInt64(&f.at, off)
-	return f.Read(b)
+	n, err = f.Read(b)
+	atomic.StoreInt64(&f.at, prev)
+	return
 }
 
 func (f *File) Truncate(size int64) error {
@@ -221,6 +224,8 @@ func (f *File) Truncate(size int64) error {
 	if size < 0 {
 		return ErrOutOfRange
 	}
+	f.fileData.Lock()
+	defer f.fileData.Unlock()
 	if size > int64(len(f.fileData.data)) {
 		diff := size - int64(len(f.fileData.data))
 		f.fileData.data = append(f.fileData.data, bytes.Repeat([]byte{00}, int(diff))...)
@@ -236,17 +241,20 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 		return 0, ErrFileClosed
 	}
 	switch whence {
-	case 0:
+	case io.SeekStart:
 		atomic.StoreInt64(&f.at, offset)
-	case 1:
-		atomic.AddInt64(&f.at, int64(offset))
-	case 2:
+	case io.SeekCurrent:
+		atomic.AddInt64(&f.at, offset)
+	case io.SeekEnd:
 		atomic.StoreInt64(&f.at, int64(len(f.fileData.data))+offset)
 	}
 	return f.at, nil
 }
 
 func (f *File) Write(b []byte) (n int, err error) {
+	if f.closed == true {
+		return 0, ErrFileClosed
+	}
 	if f.readOnly {
 		return 0, &os.PathError{Op: "write", Path: f.fileData.name, Err: errors.New("file handle is read only")}
 	}
@@ -268,7 +276,7 @@ func (f *File) Write(b []byte) (n int, err error) {
 	}
 	setModTime(f.fileData, time.Now())
 
-	atomic.StoreInt64(&f.at, int64(len(f.fileData.data)))
+	atomic.AddInt64(&f.at, int64(n))
 	return
 }
 

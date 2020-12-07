@@ -96,10 +96,10 @@ func TestNestedBasePaths(t *testing.T) {
 		Dir1, Dir2, Dir3 string
 	}
 	dirSpecs := []dirSpec{
-		dirSpec{Dir1: "/", Dir2: "/", Dir3: "/"},
-		dirSpec{Dir1: "/", Dir2: "/path2", Dir3: "/"},
-		dirSpec{Dir1: "/path1/dir", Dir2: "/path2/dir/", Dir3: "/path3/dir"},
-		dirSpec{Dir1: "C:/path1", Dir2: "path2/dir", Dir3: "/path3/dir/"},
+		{Dir1: "/", Dir2: "/", Dir3: "/"},
+		{Dir1: "/", Dir2: "/path2", Dir3: "/"},
+		{Dir1: "/path1/dir", Dir2: "/path2/dir/", Dir3: "/path3/dir"},
+		{Dir1: "C:/path1", Dir2: "path2/dir", Dir3: "/path3/dir/"},
 	}
 
 	for _, ds := range dirSpecs {
@@ -113,9 +113,9 @@ func TestNestedBasePaths(t *testing.T) {
 			FileName string
 		}
 		specs := []spec{
-			spec{BaseFs: level3Fs, FileName: "f.txt"},
-			spec{BaseFs: level2Fs, FileName: "f.txt"},
-			spec{BaseFs: level1Fs, FileName: "f.txt"},
+			{BaseFs: level3Fs, FileName: "f.txt"},
+			{BaseFs: level2Fs, FileName: "f.txt"},
+			{BaseFs: level1Fs, FileName: "f.txt"},
 		}
 
 		for _, s := range specs {
