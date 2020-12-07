@@ -94,8 +94,14 @@ func (s Fs) Open(name string) (afero.File, error) {
 	return FileOpen(s.client, name)
 }
 
+// OpenFile calls the OpenFile method on the SSHFS connection. The mode argument
+// is ignored because it's ignored by the github.com/pkg/sftp implementation.
 func (s Fs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error) {
-	return nil, nil
+	sshfsFile, err := s.client.OpenFile(name, flag)
+	if err != nil {
+		return nil, err
+	}
+	return &File{fd: sshfsFile}, nil
 }
 
 func (s Fs) Remove(name string) error {
@@ -124,10 +130,10 @@ func (s Fs) Chmod(name string, mode os.FileMode) error {
 	return s.client.Chmod(name, mode)
 }
 
-func (s Fs) Chtimes(name string, atime time.Time, mtime time.Time) error {
-	return s.client.Chtimes(name, atime, mtime)
-}
-
 func (s Fs) Chown(name string, uid, gid int) error {
 	return s.client.Chown(name, uid, gid)
+}
+
+func (s Fs) Chtimes(name string, atime time.Time, mtime time.Time) error {
+	return s.client.Chtimes(name, atime, mtime)
 }

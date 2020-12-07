@@ -11,24 +11,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package afero
+package sftpfs
 
 import (
-	"testing"
-	"os"
-	"log"
-	"fmt"
-	"net"
-	"flag"
-	"time"
-	"io/ioutil"
-	"crypto/rsa"
 	_rand "crypto/rand"
-	"encoding/pem"
+	"crypto/rsa"
 	"crypto/x509"
+	"encoding/pem"
+	"flag"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net"
+	"os"
+	"testing"
+	"time"
 
-	"golang.org/x/crypto/ssh"
 	"github.com/pkg/sftp"
+	"golang.org/x/crypto/ssh"
 )
 
 type SftpFsContext struct {
@@ -40,50 +40,51 @@ type SftpFsContext struct {
 // TODO we only connect with hardcoded user+pass for now
 // it should be possible to use $HOME/.ssh/id_rsa to login into the stub sftp server
 func SftpConnect(user, password, host string) (*SftpFsContext, error) {
-/*
-	pemBytes, err := ioutil.ReadFile(os.Getenv("HOME") + "/.ssh/id_rsa")
-	if err != nil {
-		return nil,err
-	}
+	/*
+		pemBytes, err := ioutil.ReadFile(os.Getenv("HOME") + "/.ssh/id_rsa")
+		if err != nil {
+			return nil,err
+		}
 
-	signer, err := ssh.ParsePrivateKey(pemBytes)
-	if err != nil {
-		return nil,err
-	}
+		signer, err := ssh.ParsePrivateKey(pemBytes)
+		if err != nil {
+			return nil,err
+		}
+
+		sshcfg := &ssh.ClientConfig{
+			User: user,
+			Auth: []ssh.AuthMethod{
+				ssh.Password(password),
+				ssh.PublicKeys(signer),
+			},
+		}
+	*/
 
 	sshcfg := &ssh.ClientConfig{
 		User: user,
 		Auth: []ssh.AuthMethod{
 			ssh.Password(password),
-			ssh.PublicKeys(signer),
 		},
-	}
-*/
-
-	sshcfg := &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{
-			ssh.Password(password),
-		},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
 	sshc, err := ssh.Dial("tcp", host, sshcfg)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	sftpc, err := sftp.NewClient(sshc)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	ctx := &SftpFsContext{
-		sshc: sshc,
+		sshc:   sshc,
 		sshcfg: sshcfg,
-		sftpc: sftpc,
+		sftpc:  sftpc,
 	}
 
-	return ctx,nil
+	return ctx, nil
 }
 
 func (ctx *SftpFsContext) Disconnect() error {
@@ -97,7 +98,6 @@ func RunSftpServer(rootpath string) {
 	var (
 		readOnly      bool
 		debugLevelStr string
-		debugLevel    int
 		debugStderr   bool
 		rootDir       string
 	)
@@ -109,10 +109,6 @@ func RunSftpServer(rootpath string) {
 	flag.Parse()
 
 	debugStream := ioutil.Discard
-	if debugStderr {
-		debugStream = os.Stderr
-		debugLevel = 1
-	}
 
 	// An SSH server is represented by a ServerConfig, which holds
 	// certificate details and handles authentication of ServerConns.
@@ -146,7 +142,6 @@ func RunSftpServer(rootpath string) {
 	if err != nil {
 		log.Fatal("failed to listen for connection", err)
 	}
-	fmt.Printf("Listening on %v\n", listener.Addr())
 
 	nConn, err := listener.Accept()
 	if err != nil {
@@ -155,11 +150,11 @@ func RunSftpServer(rootpath string) {
 
 	// Before use, a handshake must be performed on the incoming
 	// net.Conn.
-	_, chans, reqs, err := ssh.NewServerConn(nConn, config)
+	conn, chans, reqs, err := ssh.NewServerConn(nConn, config)
 	if err != nil {
 		log.Fatal("failed to handshake", err)
 	}
-	fmt.Fprintf(debugStream, "SSH server established\n")
+	defer conn.Close()
 
 	// The incoming Request channel must be serviced.
 	go ssh.DiscardRequests(reqs)
@@ -200,13 +195,12 @@ func RunSftpServer(rootpath string) {
 			}
 		}(requests)
 
-		server, err := sftp.NewServer(channel, channel, debugStream, debugLevel, readOnly, rootpath)
+		server, err := sftp.NewServer(channel, sftp.WithDebug(debugStream))
 		if err != nil {
 			log.Fatal(err)
 		}
-		if err := server.Serve(); err != nil {
-			log.Fatal("sftp server completed with error:", err)
-		}
+		_ = server.Serve()
+		return
 	}
 }
 
@@ -253,25 +247,23 @@ func TestSftpCreate(t *testing.T) {
 	}
 	defer ctx.Disconnect()
 
-	var AppFs Fs = SftpFs{
-		SftpClient: ctx.sftpc,
-	}
+	var fs = New(ctx.sftpc)
 
-	AppFs.MkdirAll("test/dir1/dir2/dir3", os.FileMode(0777))
-	AppFs.Mkdir("test/foo", os.FileMode(0000))
-	AppFs.Chmod("test/foo", os.FileMode(0700))
-	AppFs.Mkdir("test/bar", os.FileMode(0777))
+	fs.MkdirAll("test/dir1/dir2/dir3", os.FileMode(0777))
+	fs.Mkdir("test/foo", os.FileMode(0000))
+	fs.Chmod("test/foo", os.FileMode(0700))
+	fs.Mkdir("test/bar", os.FileMode(0777))
 
-	file, err := AppFs.Create("file1")
+	file, err := fs.Create("file1")
 	if err != nil {
 		t.Error(err)
 	}
 	defer file.Close()
 
-	file.Write([]byte("hello\t"))
+	file.Write([]byte("hello "))
 	file.WriteString("world!\n")
 
-	f1, err := AppFs.Open("file1")
+	f1, err := fs.Open("file1")
 	if err != nil {
 		log.Fatalf("open: %v", err)
 	}
@@ -279,8 +271,9 @@ func TestSftpCreate(t *testing.T) {
 
 	b := make([]byte, 100)
 
-	_, err = f1.Read(b)
+	_, _ = f1.Read(b)
 	fmt.Println(string(b))
 
+	fmt.Println("done")
 	// TODO check here if "hello\tworld\n" is in buffer b
 }
