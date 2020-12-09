@@ -22,9 +22,8 @@ import (
 	"path/filepath"
 	"sync"
 	"sync/atomic"
+	"time"
 )
-
-import "time"
 
 const FilePathSeparator = string(filepath.Separator)
 
@@ -105,7 +104,7 @@ func SetUID(f *FileData, uid int) {
 
 func SetGID(f *FileData, gid int) {
 	f.Lock()
-	f.uid = gid
+	f.gid = gid
 	f.Unlock()
 }
 
