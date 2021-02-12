@@ -95,6 +95,57 @@ func TestFileDataModeRace(t *testing.T) {
 	}
 }
 
+// See https://github.com/spf13/afero/issues/286.
+func TestFileWriteAt(t *testing.T) {
+	t.Parallel()
+
+	data := CreateFile("abc.txt")
+	f := NewFileHandle(data)
+
+	testData := []byte{1, 2, 3, 4, 5}
+	offset := len(testData)
+
+	// 5 zeros + testdata
+	_, err := f.WriteAt(testData, int64(offset))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 2 * testdata
+	_, err = f.WriteAt(testData, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 3 * testdata
+	_, err = f.WriteAt(testData, int64(offset*2))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 3 * testdata + 5 zeros + testdata
+	_, err = f.WriteAt(testData, int64(offset*4))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 5 * testdata
+	_, err = f.WriteAt(testData, int64(offset*3))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = f.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := bytes.Repeat(testData, 5)
+	if !bytes.Equal(expected, data.data) {
+		t.Fatalf("expected: %v, got: %v", expected, data.data)
+	}
+}
+
 func TestFileDataIsDirRace(t *testing.T) {
 	t.Parallel()
 
