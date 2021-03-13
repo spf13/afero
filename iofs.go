@@ -3,8 +3,11 @@
 package afero
 
 import (
+	"io"
 	"io/fs"
+	"os"
 	"path"
+	"time"
 )
 
 // IOFS adopts afero.Fs to stdlib io/fs.FS
@@ -135,4 +138,151 @@ func (r readDirFile) ReadDir(n int) ([]fs.DirEntry, error) {
 	}
 
 	return ret, nil
+}
+
+// FromIOFS adopts io/fs.FS to use it as afero.Fs
+// Note that io/fs.FS is read-only so all mutating methods will return fs.PathError with fs.ErrPermission
+// To store modifications you may use afero.CopyOnWriteFs
+type FromIOFS struct {
+	fs.FS
+}
+
+var _ Fs = FromIOFS{}
+
+func (f FromIOFS) Create(name string) (File, error) { return nil, notImplemented("create", name) }
+
+func (f FromIOFS) Mkdir(name string, perm os.FileMode) error { return notImplemented("mkdir", name) }
+
+func (f FromIOFS) MkdirAll(path string, perm os.FileMode) error {
+	return notImplemented("mkdirall", path)
+}
+
+func (f FromIOFS) Open(name string) (File, error) {
+	file, err := f.FS.Open(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return fromIOFSFile{File: file, name: name}, nil
+}
+
+func (f FromIOFS) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
+	return f.Open(name)
+}
+
+func (f FromIOFS) Remove(name string) error {
+	return notImplemented("remove", name)
+}
+
+func (f FromIOFS) RemoveAll(path string) error {
+	return notImplemented("removeall", path)
+}
+
+func (f FromIOFS) Rename(oldname, newname string) error {
+	return notImplemented("rename", oldname)
+}
+
+func (f FromIOFS) Stat(name string) (os.FileInfo, error) { return fs.Stat(f.FS, name) }
+
+func (f FromIOFS) Name() string { return "fromiofs" }
+
+func (f FromIOFS) Chmod(name string, mode os.FileMode) error {
+	return notImplemented("chmod", name)
+}
+
+func (f FromIOFS) Chown(name string, uid, gid int) error {
+	return notImplemented("chown", name)
+}
+
+func (f FromIOFS) Chtimes(name string, atime time.Time, mtime time.Time) error {
+	return notImplemented("chtimes", name)
+}
+
+type fromIOFSFile struct {
+	fs.File
+	name string
+}
+
+func (f fromIOFSFile) ReadAt(p []byte, off int64) (n int, err error) {
+	readerAt, ok := f.File.(io.ReaderAt)
+	if !ok {
+		return -1, notImplemented("readat", f.name)
+	}
+
+	return readerAt.ReadAt(p, off)
+}
+
+func (f fromIOFSFile) Seek(offset int64, whence int) (int64, error) {
+	seeker, ok := f.File.(io.Seeker)
+	if !ok {
+		return -1, notImplemented("seek", f.name)
+	}
+
+	return seeker.Seek(offset, whence)
+}
+
+func (f fromIOFSFile) Write(p []byte) (n int, err error) {
+	return -1, notImplemented("write", f.name)
+}
+
+func (f fromIOFSFile) WriteAt(p []byte, off int64) (n int, err error) {
+	return -1, notImplemented("writeat", f.name)
+}
+
+func (f fromIOFSFile) Name() string { return f.name }
+
+func (f fromIOFSFile) Readdir(count int) ([]os.FileInfo, error) {
+	rdfile, ok := f.File.(fs.ReadDirFile)
+	if !ok {
+		return nil, notImplemented("readdir", f.name)
+	}
+
+	entries, err := rdfile.ReadDir(count)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := make([]os.FileInfo, len(entries))
+	for i := range entries {
+		ret[i], err = entries[i].Info()
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return ret, nil
+}
+
+func (f fromIOFSFile) Readdirnames(n int) ([]string, error) {
+	rdfile, ok := f.File.(fs.ReadDirFile)
+	if !ok {
+		return nil, notImplemented("readdir", f.name)
+	}
+
+	entries, err := rdfile.ReadDir(n)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := make([]string, len(entries))
+	for i := range entries {
+		ret[i] = entries[i].Name()
+	}
+
+	return ret, nil
+}
+
+func (f fromIOFSFile) Sync() error { return nil }
+
+func (f fromIOFSFile) Truncate(size int64) error {
+	return notImplemented("truncate", f.name)
+}
+
+func (f fromIOFSFile) WriteString(s string) (ret int, err error) {
+	return -1, notImplemented("writestring", f.name)
+}
+
+func notImplemented(op, path string) error {
+	return &fs.PathError{Op: op, Path: path, Err: fs.ErrPermission}
 }
