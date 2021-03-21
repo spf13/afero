@@ -259,6 +259,25 @@ system using InMemoryFile.
 Afero has experimental support for secure file transfer protocol (sftp). Which can
 be used to perform file operations over a encrypted channel.
 
+### SwiftFs
+
+Afero can use openstack swift storage as a backend.
+To use it, you need a `username`, `api key`, `auth url`, `domain` and `container name` for an openstack switch store:
+
+```go
+fs, err = NewSwiftFs(&swift.Connection{
+	UserName: "swift_username",
+	ApiKey:   "swift_apikey",
+	AuthUrl:  "swift_authurl",
+	Domain:   "swift_domain",
+}, "containername")
+if err != nil {
+    fmt.Println("Error connecting to swift storage")
+}
+```
+
+After creating a connection, you can use the backend in the same way as usual.
+
 ## Filtering Backends
 
 ### BasePathFs
