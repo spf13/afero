@@ -185,9 +185,12 @@ func (b *BasePathFs) LstatIfPossible(name string) (os.FileInfo, bool, error) {
 }
 
 func (b *BasePathFs) SymlinkIfPossible(oldname, newname string) error {
-	oldname, err := b.RealPath(oldname)
-	if err != nil {
-		return &os.LinkError{Op: "symlink", Old: oldname, New: newname, Err: err}
+	var err error
+	if filepath.IsAbs(oldname) {
+		oldname, err = b.RealPath(oldname)
+		if err != nil {
+			return &os.LinkError{Op: "symlink", Old: oldname, New: newname, Err: err}
+		}
 	}
 	newname, err = b.RealPath(newname)
 	if err != nil {
@@ -205,7 +208,14 @@ func (b *BasePathFs) ReadlinkIfPossible(name string) (string, error) {
 		return "", &os.PathError{Op: "readlink", Path: name, Err: err}
 	}
 	if reader, ok := b.source.(LinkReader); ok {
-		return reader.ReadlinkIfPossible(name)
+		linkpath, err := reader.ReadlinkIfPossible(name)
+		if err != nil {
+			return "", err
+		}
+		if filepath.IsAbs(linkpath) {
+			linkpath = strings.TrimPrefix(filepath.Clean(linkpath), filepath.Clean(b.path))
+		}
+		return linkpath, nil
 	}
 	return "", &os.PathError{Op: "readlink", Path: name, Err: ErrNoReadlink}
 }
