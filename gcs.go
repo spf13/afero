@@ -21,9 +21,11 @@ import (
 	"os"
 	"time"
 
+	"github.com/spf13/afero/gcsfs"
+
 	"cloud.google.com/go/storage"
 	"github.com/googleapis/google-cloud-go-testing/storage/stiface"
-	"github.com/spf13/afero/gcsfs"
+
 	"google.golang.org/api/option"
 )
 
@@ -31,47 +33,44 @@ type GcsFs struct {
 	source *gcsfs.GcsFs
 }
 
-// Creates a GCS file system, automatically instantiating and decorating the storage client.
+// NewGcsFS creates a GCS file system, automatically instantiating and decorating the storage client.
 // You can provide additional options to be passed to the client creation, as per
 // cloud.google.com/go/storage documentation
-func NewGcsFS(ctx context.Context, bucketName string, opts ...option.ClientOption) (Fs, error) {
+func NewGcsFS(ctx context.Context, opts ...option.ClientOption) (Fs, error) {
 	client, err := storage.NewClient(ctx, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewGcsFSFromClient(ctx, client, bucketName)
+	return NewGcsFSFromClient(ctx, client)
 }
 
-// The same as NewGcsFS, but the files system will use the provided folder separator.
-func NewGcsFSWithSeparator(ctx context.Context, bucketName, folderSeparator string, opts ...option.ClientOption) (Fs, error) {
+// NewGcsFSWithSeparator is the same as NewGcsFS, but the files system will use the provided folder separator.
+func NewGcsFSWithSeparator(ctx context.Context, folderSeparator string, opts ...option.ClientOption) (Fs, error) {
 	client, err := storage.NewClient(ctx, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewGcsFSFromClientWithSeparator(ctx, client, bucketName, folderSeparator)
+	return NewGcsFSFromClientWithSeparator(ctx, client, folderSeparator)
 }
 
-// Creates a GCS file system from a given storage client
-func NewGcsFSFromClient(ctx context.Context, client *storage.Client, bucketName string) (Fs, error) {
+// NewGcsFSFromClient creates a GCS file system from a given storage client
+func NewGcsFSFromClient(ctx context.Context, client *storage.Client) (Fs, error) {
 	c := stiface.AdaptClient(client)
 
-	bucket := c.Bucket(bucketName)
-
-	return &GcsFs{gcsfs.NewGcsFs(ctx, bucket)}, nil
+	return &GcsFs{gcsfs.NewGcsFs(ctx, c)}, nil
 }
 
-// Same as NewGcsFSFromClient, but the file system will use the provided folder separator.
-func NewGcsFSFromClientWithSeparator(ctx context.Context, client *storage.Client, bucketName, folderSeparator string) (Fs, error) {
+// NewGcsFSFromClientWithSeparator is the same as NewGcsFSFromClient, but the file system will use the provided folder separator.
+func NewGcsFSFromClientWithSeparator(ctx context.Context, client *storage.Client, folderSeparator string) (Fs, error) {
 	c := stiface.AdaptClient(client)
 
-	bucket := c.Bucket(bucketName)
-
-	return &GcsFs{gcsfs.NewGcsFsWithSeparator(ctx, bucket, folderSeparator)}, nil
+	return &GcsFs{gcsfs.NewGcsFsWithSeparator(ctx, c, folderSeparator)}, nil
 }
 
 // Wraps gcs.GcsFs and convert some return types to afero interfaces.
+
 func (fs *GcsFs) Name() string {
 	return fs.source.Name()
 }

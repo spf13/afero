@@ -50,6 +50,10 @@ type bucketMock struct {
 	fs Fs
 }
 
+func (m *bucketMock) Attrs(context.Context) (*storage.BucketAttrs, error) {
+	return &storage.BucketAttrs{}, nil
+}
+
 func (m *bucketMock) Object(name string) stiface.ObjectHandle {
 	return &objectMock{name: name, fs: m.fs}
 }
@@ -191,6 +195,10 @@ func (r *readerMock) Read(p []byte) (int, error) {
 		return len(r.buf), nil
 	}
 	return r.file.Read(p)
+}
+
+func (r *readerMock) Close() error {
+	return r.file.Close()
 }
 
 type objectItMock struct {

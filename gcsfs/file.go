@@ -195,11 +195,13 @@ func (o *GcsFile) readdirImpl(count int) ([]*FileInfo, error) {
 		return nil, syscall.ENOTDIR
 	}
 
-	path := o.resource.fs.ensureTrailingSeparator(o.Name())
+	path := o.resource.fs.ensureTrailingSeparator(o.resource.name)
 	if o.ReadDirIt == nil {
 		//log.Printf("Querying path : %s\n", path)
-		o.ReadDirIt = o.resource.fs.bucket.Objects(
-			o.resource.ctx, &storage.Query{Delimiter: o.resource.fs.separator, Prefix: path, Versions: false})
+		bucketName, bucketPath := o.resource.fs.splitName(path)
+
+		o.ReadDirIt = o.resource.fs.client.Bucket(bucketName).Objects(
+			o.resource.ctx, &storage.Query{Delimiter: o.resource.fs.separator, Prefix: bucketPath, Versions: false})
 	}
 	var res []*FileInfo
 	for {
@@ -283,7 +285,7 @@ func (o *GcsFile) Stat() (os.FileInfo, error) {
 		return nil, err
 	}
 
-	return newFileInfo(o.Name(), o.resource.fs, o.resource.fileMode)
+	return newFileInfo(o.resource.name, o.resource.fs, o.resource.fileMode)
 }
 
 func (o *GcsFile) Sync() error {

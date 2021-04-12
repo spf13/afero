@@ -19,7 +19,6 @@ package gcsfs
 import (
 	"context"
 	"errors"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,26 +30,29 @@ import (
 
 const (
 	defaultFileMode = 0755
+	gsPrefix        = "gs://"
 )
 
 // GcsFs is a Fs implementation that uses functions provided by google cloud storage
 type GcsFs struct {
-	ctx           context.Context
-	bucket        stiface.BucketHandle
-	separator     string
+	ctx       context.Context
+	client    stiface.Client
+	separator string
+
+	buckets       map[string]stiface.BucketHandle
 	rawGcsObjects map[string]*GcsFile
 
 	autoRemoveEmptyFolders bool //trigger for creating "virtual folders" (not required by GCSs)
 }
 
-func NewGcsFs(ctx context.Context, bucket stiface.BucketHandle) *GcsFs {
-	return NewGcsFsWithSeparator(ctx, bucket, "/")
+func NewGcsFs(ctx context.Context, client stiface.Client) *GcsFs {
+	return NewGcsFsWithSeparator(ctx, client, "/")
 }
 
-func NewGcsFsWithSeparator(ctx context.Context, bucket stiface.BucketHandle, folderSep string) *GcsFs {
+func NewGcsFsWithSeparator(ctx context.Context, client stiface.Client, folderSep string) *GcsFs {
 	return &GcsFs{
 		ctx:           ctx,
-		bucket:        bucket,
+		client:        client,
 		separator:     folderSep,
 		rawGcsObjects: make(map[string]*GcsFile),
 
@@ -69,39 +71,65 @@ func (fs *GcsFs) ensureTrailingSeparator(s string) string {
 	}
 	return s
 }
-
-func (fs *GcsFs) ensureNoLeadingSeparators(s string) string {
-	// GCS does REALLY not like the names, that begin with a separator
+func (fs *GcsFs) ensureNoLeadingSeparator(s string) string {
 	if len(s) > 0 && strings.HasPrefix(s, fs.separator) {
-		log.Printf(
-			"WARNING: the provided path \"%s\" starts with a separator \"%s\", which is not supported by "+
-				"GCloud. The separator will be automatically trimmed",
-			s,
-			fs.separator,
-		)
-		return s[len(fs.separator):]
+		s = s[len(fs.separator):]
+	}
+
+	return s
+}
+
+func ensureNoPrefix(s string) string {
+	if len(s) > 0 && strings.HasPrefix(s, gsPrefix) {
+		return s[len(gsPrefix):]
 	}
 	return s
 }
 
-func correctTheDot(s string) string {
-	// So, Afero's Glob likes to give "." as a name - that to list the "empty" dir name.
-	// GCS _really_ dislikes the dot and gives no entries for it - so we should rather replace the dot
-	// with an empty string
-	if s == "." {
-		return ""
+func validateName(s string) error {
+	if len(s) == 0 {
+		return ErrNoBucketInName
 	}
-	return s
+	return nil
 }
 
-func (fs *GcsFs) getObj(name string) stiface.ObjectHandle {
-	return fs.bucket.Object(name)
+// Splits provided name into bucket name and path
+func (fs *GcsFs) splitName(name string) (bucketName string, path string) {
+	splitName := strings.Split(name, fs.separator)
+
+	return splitName[0], strings.Join(splitName[1:], fs.separator)
+}
+
+func (fs *GcsFs) getBucket(name string) (stiface.BucketHandle, error) {
+	bucket := fs.buckets[name]
+	if bucket == nil {
+		bucket = fs.client.Bucket(name)
+		_, err := bucket.Attrs(fs.ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return bucket, nil
+}
+
+func (fs *GcsFs) getObj(name string) (stiface.ObjectHandle, error) {
+	bucketName, path := fs.splitName(name)
+
+	bucket, err := fs.getBucket(bucketName)
+	if err != nil {
+		return nil, err
+	}
+
+	return bucket.Object(path), nil
 }
 
 func (fs *GcsFs) Name() string { return "GcsFs" }
 
 func (fs *GcsFs) Create(name string) (*GcsFile, error) {
-	name = fs.ensureNoLeadingSeparators(fs.normSeparators(correctTheDot(name)))
+	name = fs.ensureNoLeadingSeparator(fs.normSeparators(ensureNoPrefix(name)))
+	if err := validateName(name); err != nil {
+		return nil, err
+	}
 
 	if !fs.autoRemoveEmptyFolders {
 		baseDir := filepath.Base(name)
@@ -113,9 +141,11 @@ func (fs *GcsFs) Create(name string) (*GcsFile, error) {
 		}
 	}
 
-	obj := fs.getObj(name)
+	obj, err := fs.getObj(name)
+	if err != nil {
+		return nil, err
+	}
 	w := obj.NewWriter(fs.ctx)
-	var err error
 	err = w.Close()
 	if err != nil {
 		return nil, err
@@ -127,15 +157,24 @@ func (fs *GcsFs) Create(name string) (*GcsFile, error) {
 }
 
 func (fs *GcsFs) Mkdir(name string, _ os.FileMode) error {
-	name = fs.ensureTrailingSeparator(fs.ensureNoLeadingSeparators(fs.normSeparators(correctTheDot(name))))
+	name = fs.ensureNoLeadingSeparator(fs.ensureTrailingSeparator(fs.normSeparators(ensureNoPrefix(name))))
+	if err := validateName(name); err != nil {
+		return err
+	}
 
-	obj := fs.getObj(name)
+	obj, err := fs.getObj(name)
+	if err != nil {
+		return err
+	}
 	w := obj.NewWriter(fs.ctx)
 	return w.Close()
 }
 
 func (fs *GcsFs) MkdirAll(path string, perm os.FileMode) error {
-	path = fs.ensureTrailingSeparator(fs.ensureNoLeadingSeparators(fs.normSeparators(correctTheDot(path))))
+	path = fs.ensureNoLeadingSeparator(fs.ensureTrailingSeparator(fs.normSeparators(ensureNoPrefix(path))))
+	if err := validateName(path); err != nil {
+		return err
+	}
 
 	root := ""
 	folders := strings.Split(path, fs.separator)
@@ -165,13 +204,21 @@ func (fs *GcsFs) OpenFile(name string, flag int, fileMode os.FileMode) (*GcsFile
 	var file *GcsFile
 	var err error
 
-	name = fs.ensureNoLeadingSeparators(fs.normSeparators(correctTheDot(name)))
+	name = fs.ensureNoLeadingSeparator(fs.normSeparators(ensureNoPrefix(name)))
+	if err = validateName(name); err != nil {
+		return nil, err
+	}
 
-	obj, found := fs.rawGcsObjects[name]
+	f, found := fs.rawGcsObjects[name]
 	if found {
-		file = NewGcsFileFromOldFH(flag, fileMode, obj.resource)
+		file = NewGcsFileFromOldFH(flag, fileMode, f.resource)
 	} else {
-		file = NewGcsFile(fs.ctx, fs, fs.getObj(name), flag, fileMode, name)
+		var obj stiface.ObjectHandle
+		obj, err = fs.getObj(name)
+		if err != nil {
+			return nil, err
+		}
+		file = NewGcsFile(fs.ctx, fs, obj, flag, fileMode, name)
 	}
 
 	if flag == os.O_RDONLY {
@@ -211,9 +258,15 @@ func (fs *GcsFs) OpenFile(name string, flag int, fileMode os.FileMode) (*GcsFile
 }
 
 func (fs *GcsFs) Remove(name string) error {
-	name = fs.ensureNoLeadingSeparators(fs.normSeparators(correctTheDot(name)))
+	name = fs.ensureNoLeadingSeparator(fs.normSeparators(ensureNoPrefix(name)))
+	if err := validateName(name); err != nil {
+		return err
+	}
 
-	obj := fs.getObj(name)
+	obj, err := fs.getObj(name)
+	if err != nil {
+		return err
+	}
 	info, err := fs.Stat(name)
 	if err != nil {
 		return err
@@ -235,7 +288,10 @@ func (fs *GcsFs) Remove(name string) error {
 
 		// it's an empty folder, we can continue
 		name = fs.ensureTrailingSeparator(name)
-		obj = fs.getObj(name)
+		obj, err = fs.getObj(name)
+		if err != nil {
+			return err
+		}
 
 		return obj.Delete(fs.ctx)
 	}
@@ -243,7 +299,10 @@ func (fs *GcsFs) Remove(name string) error {
 }
 
 func (fs *GcsFs) RemoveAll(path string) error {
-	path = fs.ensureNoLeadingSeparators(fs.normSeparators(correctTheDot(path)))
+	path = fs.ensureNoLeadingSeparator(fs.normSeparators(ensureNoPrefix(path)))
+	if err := validateName(path); err != nil {
+		return err
+	}
 
 	pathInfo, err := fs.Stat(path)
 	if err != nil {
@@ -262,63 +321,37 @@ func (fs *GcsFs) RemoveAll(path string) error {
 	var infos []os.FileInfo
 	infos, err = dir.Readdir(0)
 	for _, info := range infos {
-		err = fs.RemoveAll(path + fs.separator + info.Name())
+		nameToRemove := fs.normSeparators(info.Name())
+		err = fs.RemoveAll(path + fs.separator + nameToRemove)
 		if err != nil {
 			return err
 		}
 	}
 
 	return fs.Remove(path)
-
-	//it := fs.bucket.Objects(fs.ctx, &storage.Query{Delimiter: fs.separator, Prefix: path, Versions: false})
-	//for {
-	//	objAttrs, err := it.Next()
-	//	if err == iterator.Done {
-	//		break
-	//	}
-	//	if err != nil {
-	//		return err
-	//	}
-	//
-	//	name := objAttrs.Name
-	//	if name == "" {
-	//		name = objAttrs.Prefix
-	//	}
-	//
-	//	if name == path {
-	//		// somehow happens
-	//		continue
-	//	}
-	//	if objAttrs.Name == "" && objAttrs.Prefix != "" {
-	//		// it's a folder, let's try to remove it normally first
-	//		err = fs.Remove(path + fs.separator + objAttrs.Name)
-	//		if err != nil {
-	//			if err == syscall.ENOTEMPTY {
-	//				err = fs.RemoveAll(path + fs.separator + objAttrs.Name)
-	//			}
-	//		}
-	//		if err != nil {
-	//			return err
-	//		}
-	//
-	//	} else {
-	//		err = fs.Remove(objAttrs.Name)
-	//		if err != nil {
-	//			return err
-	//		}
-	//	}
-	//}
-	//return nil
 }
 
 func (fs *GcsFs) Rename(oldName, newName string) error {
-	oldName = fs.ensureNoLeadingSeparators(fs.normSeparators(correctTheDot(oldName)))
-	newName = fs.ensureNoLeadingSeparators(fs.normSeparators(correctTheDot(newName)))
+	oldName = fs.ensureNoLeadingSeparator(fs.normSeparators(ensureNoPrefix(oldName)))
+	if err := validateName(oldName); err != nil {
+		return err
+	}
 
-	src := fs.bucket.Object(oldName)
-	dst := fs.bucket.Object(newName)
+	newName = fs.ensureNoLeadingSeparator(fs.normSeparators(ensureNoPrefix(newName)))
+	if err := validateName(newName); err != nil {
+		return err
+	}
 
-	if _, err := dst.CopierFrom(src).Run(fs.ctx); err != nil {
+	src, err := fs.getObj(oldName)
+	if err != nil {
+		return err
+	}
+	dst, err := fs.getObj(newName)
+	if err != nil {
+		return err
+	}
+
+	if _, err = dst.CopierFrom(src).Run(fs.ctx); err != nil {
 		return err
 	}
 	delete(fs.rawGcsObjects, oldName)
@@ -326,7 +359,10 @@ func (fs *GcsFs) Rename(oldName, newName string) error {
 }
 
 func (fs *GcsFs) Stat(name string) (os.FileInfo, error) {
-	name = fs.ensureNoLeadingSeparators(fs.normSeparators(correctTheDot(name)))
+	name = fs.ensureNoLeadingSeparator(fs.normSeparators(ensureNoPrefix(name)))
+	if err := validateName(name); err != nil {
+		return nil, err
+	}
 
 	return newFileInfo(name, fs, defaultFileMode)
 }
