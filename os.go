@@ -34,7 +34,7 @@ func NewOsFs() Fs {
 func (OsFs) Name() string { return "OsFs" }
 
 func (OsFs) Create(name string) (File, error) {
-	f, e := os.Create(name)
+	f, e := os.Create(normalizeLongPath(name))
 	if f == nil {
 		// while this looks strange, we need to return a bare nil (of type nil) not
 		// a nil value of type *os.File or nil won't be nil
@@ -44,15 +44,15 @@ func (OsFs) Create(name string) (File, error) {
 }
 
 func (OsFs) Mkdir(name string, perm os.FileMode) error {
-	return os.Mkdir(name, perm)
+	return os.Mkdir(normalizeLongPath(name), perm)
 }
 
 func (OsFs) MkdirAll(path string, perm os.FileMode) error {
-	return os.MkdirAll(path, perm)
+	return os.MkdirAll(normalizeLongPath(path), perm)
 }
 
 func (OsFs) Open(name string) (File, error) {
-	f, e := os.Open(name)
+	f, e := os.Open(normalizeLongPath(name))
 	if f == nil {
 		// while this looks strange, we need to return a bare nil (of type nil) not
 		// a nil value of type *os.File or nil won't be nil
@@ -62,7 +62,7 @@ func (OsFs) Open(name string) (File, error) {
 }
 
 func (OsFs) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
-	f, e := os.OpenFile(name, flag, perm)
+	f, e := os.OpenFile(normalizeLongPath(name), flag, perm)
 	if f == nil {
 		// while this looks strange, we need to return a bare nil (of type nil) not
 		// a nil value of type *os.File or nil won't be nil
@@ -72,35 +72,35 @@ func (OsFs) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
 }
 
 func (OsFs) Remove(name string) error {
-	return os.Remove(name)
+	return os.Remove(normalizeLongPath(name))
 }
 
 func (OsFs) RemoveAll(path string) error {
-	return os.RemoveAll(path)
+	return os.RemoveAll(normalizeLongPath(path))
 }
 
 func (OsFs) Rename(oldname, newname string) error {
-	return os.Rename(oldname, newname)
+	return os.Rename(normalizeLongPath(oldname), normalizeLongPath(newname))
 }
 
 func (OsFs) Stat(name string) (os.FileInfo, error) {
-	return os.Stat(name)
+	return os.Stat(normalizeLongPath(name))
 }
 
 func (OsFs) Chmod(name string, mode os.FileMode) error {
-	return os.Chmod(name, mode)
+	return os.Chmod(normalizeLongPath(name), mode)
 }
 
 func (OsFs) Chown(name string, uid, gid int) error {
-	return os.Chown(name, uid, gid)
+	return os.Chown(normalizeLongPath(name), uid, gid)
 }
 
 func (OsFs) Chtimes(name string, atime time.Time, mtime time.Time) error {
-	return os.Chtimes(name, atime, mtime)
+	return os.Chtimes(normalizeLongPath(name), atime, mtime)
 }
 
 func (OsFs) LstatIfPossible(name string) (os.FileInfo, bool, error) {
-	fi, err := os.Lstat(name)
+	fi, err := os.Lstat(normalizeLongPath(name))
 	return fi, true, err
 }
 
