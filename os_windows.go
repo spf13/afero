@@ -8,7 +8,7 @@ import (
 )
 
 // windows cannot handle long relative paths, so convert to absolute paths by default
-func fixLongPath(path string) string {
+func normalizeLongPath(path string) string {
 	// get absolute path - len(path) is not reliable for early return
 	absolutePath, err := filepath.Abs(path)
 
