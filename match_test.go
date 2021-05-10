@@ -174,9 +174,23 @@ func TestGlobSymlink(t *testing.T) {
 
 func TestGlobError(t *testing.T) {
 	for _, fs := range Fss {
-		_, err := Glob(fs, "[7]")
-		if err != nil {
+		_, err := Glob(fs, "a/b[")
+		if err == nil {
 			t.Error("expected error for bad pattern; got none")
 		}
 	}
 }
+
+func TestGlobErrorDirExistsAndContainsFile(t *testing.T) {
+	for _, fs := range Fss {
+		fs.Mkdir("a", os.ModePerm)
+		fs.OpenFile("a/a.txt", os.O_CREATE, os.ModePerm)
+		defer fs.RemoveAll("a")
+		_, err := Glob(fs, "a/b[")
+		if err == nil {
+			t.Error("expected error for bad pattern; got none")
+		}
+
+	}
+}
+
