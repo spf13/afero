@@ -22,7 +22,6 @@ import (
 	"path/filepath"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 )
 
@@ -320,13 +319,7 @@ func (s *FileInfo) IsDir() bool {
 	return s.dir
 }
 func (s *FileInfo) Sys() interface{} {
-	s.Lock()
-	defer s.Unlock()
-	return &syscall.Stat_t{
-		Nlink: 1,
-		Uid: uint32(s.uid),
-		Gid: uint32(s.gid),
-	}
+	return s.sys()
 }
 func (s *FileInfo) Size() int64 {
 	if s.IsDir() {
