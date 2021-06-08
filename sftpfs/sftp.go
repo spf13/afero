@@ -101,7 +101,8 @@ func (s Fs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error
 	if err != nil {
 		return nil, err
 	}
-	return &File{fd: sshfsFile}, nil
+	err = sshfsFile.Chmod(perm)
+	return &File{fd: sshfsFile}, err
 }
 
 func (s Fs) Remove(name string) error {
