@@ -16,6 +16,7 @@
 // +build !dragonfly
 // +build !netbsd
 // +build !aix
+// +build !zos
 
 package afero
 
