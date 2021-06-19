@@ -94,3 +94,21 @@ func TestFilterRegexReadDir(t *testing.T) {
 		t.Errorf("Got wrong number of names: %v", names)
 	}
 }
+
+func TestFilterRegexTarget(t *testing.T) {
+	mfs := &MemMapFs{}
+	fs := &RegexpFs{re: regexp.MustCompile(`^a`), source: mfs}
+
+	mfs.MkdirAll("/dir/", 0777)
+
+	_, err := fs.Create("a.txt")
+	if err != nil {
+		t.Errorf("Got unexpected error: %#err", err)
+	}
+
+	// regexp is applied with file name (not file path)
+	_, err = fs.Create("/dir/a.txt")
+	if err != nil {
+		t.Errorf("Got unexpected error: %#err", err)
+	}
+}
