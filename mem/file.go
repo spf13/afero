@@ -31,6 +31,7 @@ type File struct {
 	// atomic requires 64-bit alignment for struct field access
 	at           int64
 	readDirCount int64
+	dirBuf       []*FileData
 	closed       bool
 	readOnly     bool
 	fileData     *FileData
@@ -150,7 +151,10 @@ func (f *File) Readdir(count int) (res []os.FileInfo, err error) {
 	var outLength int64
 
 	f.fileData.Lock()
-	files := f.fileData.memDir.Files()[f.readDirCount:]
+	if f.dirBuf == nil {
+		f.dirBuf = f.fileData.memDir.Files()
+	}
+	files := f.dirBuf[f.readDirCount:]
 	if count > 0 {
 		if len(files) < count {
 			outLength = int64(len(files))
