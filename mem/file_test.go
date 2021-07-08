@@ -2,6 +2,7 @@ package mem
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"testing"
 	"time"
@@ -203,6 +204,49 @@ func TestFileDataSizeRace(t *testing.T) {
 	d.dir = true
 	if s.Size() != int64(42) {
 		t.Errorf("Failed to read correct value for dir, was %v", s.Size())
+	}
+}
+
+func TestFileReaddirBuffer(t *testing.T) {
+	dir := CreateDir("dir")
+
+	const testFiles = 5
+	for i := 0; i < testFiles; i++ {
+		fd := CreateFile(fmt.Sprintf("%d.txt", i))
+		AddToMemDir(dir, fd)
+	}
+
+	f := NewFileHandle(dir)
+	defer f.Close()
+	// Read part of all files
+	wantNames := 3
+	names, err := f.Readdirnames(wantNames)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(names) != wantNames {
+		t.Fatalf("got %d names %v, want %d", len(names), names, wantNames)
+	}
+
+	// Remove half of files
+	for _, fd := range dir.memDir.Files()[:testFiles/2] {
+		RemoveFromMemDir(dir, fd)
+	}
+
+	// Try to read more files than remaining
+	wantNames = testFiles - len(names)
+	names, err = f.Readdirnames(wantNames + 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(names) != wantNames {
+		t.Fatalf("got %d names %v, want %d", len(names), names, wantNames)
+	}
+
+	// End of directory
+	_, err = f.Readdirnames(testFiles + 1)
+	if err != io.EOF {
+		t.Fatal(err)
 	}
 }
 
