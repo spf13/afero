@@ -79,11 +79,11 @@ would.
 
 So if my application before had:
 ```go
-os.Open('/tmp/foo')
+os.Open("/tmp/foo")
 ```
 We would replace it with:
 ```go
-AppFs.Open('/tmp/foo')
+AppFs.Open("/tmp/foo")
 ```
 
 `AppFs` being the variable we defined above.
@@ -127,7 +127,7 @@ WriteString(s string) : ret int, err error
 In some applications it may make sense to define a new package that
 simply exports the file system variable for easy access from anywhere.
 
-## Using Afero's utility functions
+## Using Aferos utility functions
 
 Afero provides a set of functions to make it easier to use the underlying file systems.
 These functions have been primarily ported from io & ioutil with some developed for Hugo.
