@@ -146,6 +146,10 @@ type writerMock struct {
 }
 
 func (w *writerMock) Write(p []byte) (n int, err error) {
+	if w.name == "" {
+		return 0, gcsfs.ErrEmptyObjectName
+	}
+
 	if w.file == nil {
 		w.file, err = w.fs.Create(w.name)
 		if err != nil {
@@ -157,6 +161,9 @@ func (w *writerMock) Write(p []byte) (n int, err error) {
 }
 
 func (w *writerMock) Close() error {
+	if w.name == "" {
+		return gcsfs.ErrEmptyObjectName
+	}
 	if w.file == nil {
 		var err error
 		if strings.HasSuffix(w.name, "/") {

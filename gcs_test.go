@@ -712,76 +712,96 @@ func TestGcsGlob(t *testing.T) {
 }
 
 func TestGcsMkdir(t *testing.T) {
-	dirName := filepath.Join(bucketName, "a-test-dir")
-	var err error
+	t.Run("empty", func(t *testing.T) {
+		emptyDirName := bucketName
 
-	err = gcsAfs.Mkdir(dirName, 0755)
-	if err != nil {
-		t.Fatal("failed to create a folder with error", err)
-	}
+		err := gcsAfs.Mkdir(emptyDirName, 0755)
+		if err == nil {
+			t.Fatal("did not fail upon creation of an empty folder")
+		}
+	})
+	t.Run("success", func(t *testing.T) {
+		dirName := filepath.Join(bucketName, "a-test-dir")
+		var err error
 
-	info, err := gcsAfs.Stat(dirName)
-	if err != nil {
-		t.Fatal("failed to get info", err)
-	}
-	if !info.IsDir() {
-		t.Fatalf("%s: not a dir", dirName)
-	}
-	if !info.Mode().IsDir() {
-		t.Errorf("%s: mode is not directory", dirName)
-	}
+		err = gcsAfs.Mkdir(dirName, 0755)
+		if err != nil {
+			t.Fatal("failed to create a folder with error", err)
+		}
 
-	if info.Mode() != os.ModeDir|0755 {
-		t.Errorf("%s: wrong permissions, expected drwxr-xr-x, got %s", dirName, info.Mode())
-	}
+		info, err := gcsAfs.Stat(dirName)
+		if err != nil {
+			t.Fatal("failed to get info", err)
+		}
+		if !info.IsDir() {
+			t.Fatalf("%s: not a dir", dirName)
+		}
+		if !info.Mode().IsDir() {
+			t.Errorf("%s: mode is not directory", dirName)
+		}
 
-	err = gcsAfs.Remove(dirName)
-	if err != nil {
-		t.Fatalf("could not delete the folder %s after the test with error: %s", dirName, err)
-	}
+		if info.Mode() != os.ModeDir|0755 {
+			t.Errorf("%s: wrong permissions, expected drwxr-xr-x, got %s", dirName, info.Mode())
+		}
+
+		err = gcsAfs.Remove(dirName)
+		if err != nil {
+			t.Fatalf("could not delete the folder %s after the test with error: %s", dirName, err)
+		}
+	})
 }
 
 func TestGcsMkdirAll(t *testing.T) {
-	dirName := filepath.Join(bucketName, "a/b/c")
+	t.Run("empty", func(t *testing.T) {
+		emptyDirName := bucketName
 
-	err := gcsAfs.MkdirAll(dirName, 0755)
-	if err != nil {
-		t.Fatal(err)
-	}
+		err := gcsAfs.MkdirAll(emptyDirName, 0755)
+		if err == nil {
+			t.Fatal("did not fail upon creation of an empty folder")
+		}
+	})
+	t.Run("success", func(t *testing.T) {
+		dirName := filepath.Join(bucketName, "a/b/c")
 
-	info, err := gcsAfs.Stat(filepath.Join(bucketName, "a"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !info.Mode().IsDir() {
-		t.Errorf("%s: mode is not directory", filepath.Join(bucketName, "a"))
-	}
-	if info.Mode() != os.ModeDir|0755 {
-		t.Errorf("%s: wrong permissions, expected drwxr-xr-x, got %s", filepath.Join(bucketName, "a"), info.Mode())
-	}
-	info, err = gcsAfs.Stat(filepath.Join(bucketName, "a/b"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !info.Mode().IsDir() {
-		t.Errorf("%s: mode is not directory", filepath.Join(bucketName, "a/b"))
-	}
-	if info.Mode() != os.ModeDir|0755 {
-		t.Errorf("%s: wrong permissions, expected drwxr-xr-x, got %s", filepath.Join(bucketName, "a/b"), info.Mode())
-	}
-	info, err = gcsAfs.Stat(dirName)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !info.Mode().IsDir() {
-		t.Errorf("%s: mode is not directory", dirName)
-	}
-	if info.Mode() != os.ModeDir|0755 {
-		t.Errorf("%s: wrong permissions, expected drwxr-xr-x, got %s", dirName, info.Mode())
-	}
+		err := gcsAfs.MkdirAll(dirName, 0755)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	err = gcsAfs.RemoveAll(filepath.Join(bucketName, "a"))
-	if err != nil {
-		t.Fatalf("failed to remove the folder %s with error: %s", filepath.Join(bucketName, "a"), err)
-	}
+		info, err := gcsAfs.Stat(filepath.Join(bucketName, "a"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !info.Mode().IsDir() {
+			t.Errorf("%s: mode is not directory", filepath.Join(bucketName, "a"))
+		}
+		if info.Mode() != os.ModeDir|0755 {
+			t.Errorf("%s: wrong permissions, expected drwxr-xr-x, got %s", filepath.Join(bucketName, "a"), info.Mode())
+		}
+		info, err = gcsAfs.Stat(filepath.Join(bucketName, "a/b"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !info.Mode().IsDir() {
+			t.Errorf("%s: mode is not directory", filepath.Join(bucketName, "a/b"))
+		}
+		if info.Mode() != os.ModeDir|0755 {
+			t.Errorf("%s: wrong permissions, expected drwxr-xr-x, got %s", filepath.Join(bucketName, "a/b"), info.Mode())
+		}
+		info, err = gcsAfs.Stat(dirName)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !info.Mode().IsDir() {
+			t.Errorf("%s: mode is not directory", dirName)
+		}
+		if info.Mode() != os.ModeDir|0755 {
+			t.Errorf("%s: wrong permissions, expected drwxr-xr-x, got %s", dirName, info.Mode())
+		}
+
+		err = gcsAfs.RemoveAll(filepath.Join(bucketName, "a"))
+		if err != nil {
+			t.Fatalf("failed to remove the folder %s with error: %s", filepath.Join(bucketName, "a"), err)
+		}
+	})
 }
