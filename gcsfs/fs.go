@@ -161,6 +161,15 @@ func (fs *GcsFs) Mkdir(name string, _ os.FileMode) error {
 	if err := validateName(name); err != nil {
 		return err
 	}
+	// folder creation logic has to additionally check for folder name presence
+	bucketName, path := fs.splitName(name)
+	if bucketName == "" {
+		return ErrNoBucketInName
+	}
+	if path == "" {
+		// the API would throw "googleapi: Error 400: No object name, required", but this one is more consistent
+		return ErrEmptyObjectName
+	}
 
 	obj, err := fs.getObj(name)
 	if err != nil {
@@ -175,6 +184,15 @@ func (fs *GcsFs) MkdirAll(path string, perm os.FileMode) error {
 	if err := validateName(path); err != nil {
 		return err
 	}
+	// folder creation logic has to additionally check for folder name presence
+	bucketName, splitPath := fs.splitName(path)
+	if bucketName == "" {
+		return ErrNoBucketInName
+	}
+	if splitPath == "" {
+		// the API would throw "googleapi: Error 400: No object name, required", but this one is more consistent
+		return ErrEmptyObjectName
+	}
 
 	root := ""
 	folders := strings.Split(path, fs.separator)
@@ -186,7 +204,9 @@ func (fs *GcsFs) MkdirAll(path string, perm os.FileMode) error {
 		if root != "" {
 			root = root + fs.separator + f
 		} else {
+			// we have to have at least bucket name + folder name to create successfully
 			root = f
+			continue
 		}
 
 		if err := fs.Mkdir(root, perm); err != nil {
