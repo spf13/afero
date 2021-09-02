@@ -683,3 +683,26 @@ func TestMemFsLstatIfPossible(t *testing.T) {
 		t.Fatalf("Function indicated lstat was called. This should never be true.")
 	}
 }
+
+func TestMemFsRenameExistingDir(t *testing.T) {
+	testDirs := []string {
+		"/src/subdir1/",
+		"/src/subdir2/",
+	}
+
+	fs := NewMemMapFs()
+
+	for _, path := range testDirs {
+		err := fs.Mkdir(path, 0777)
+		if err != nil {
+			t.Error(err)
+		}
+	}
+
+	err := fs.Rename(testDirs[0], testDirs[1])
+	if err == nil {
+		t.Errorf("Rename should fail, directory already exists: %s", err)
+	} else if !os.IsExist(err) {
+		t.Errorf("Rename failed with unexpected error: %v", err)
+	}
+}

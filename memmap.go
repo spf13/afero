@@ -300,6 +300,11 @@ func (m *MemMapFs) Rename(oldname, newname string) error {
 
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+
+	if _, ok := m.getData()[newname]; ok {
+		return &os.PathError{Op: "rename", Path: newname, Err: ErrDestinationExists}
+	}
+
 	if _, ok := m.getData()[oldname]; ok {
 		m.mu.RUnlock()
 		m.mu.Lock()

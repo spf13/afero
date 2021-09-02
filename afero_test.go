@@ -193,15 +193,7 @@ func TestRename(t *testing.T) {
 		tDir := testDir(fs)
 		from := filepath.Join(tDir, "/renamefrom")
 		to := filepath.Join(tDir, "/renameto")
-		exists := filepath.Join(tDir, "/renameexists")
 		file, err := fs.Create(from)
-		if err != nil {
-			t.Fatalf("%s: open %q failed: %v", fs.Name(), to, err)
-		}
-		if err = file.Close(); err != nil {
-			t.Errorf("%s: close %q failed: %v", fs.Name(), to, err)
-		}
-		file, err = fs.Create(exists)
 		if err != nil {
 			t.Fatalf("%s: open %q failed: %v", fs.Name(), to, err)
 		}
@@ -211,17 +203,6 @@ func TestRename(t *testing.T) {
 		err = fs.Rename(from, to)
 		if err != nil {
 			t.Fatalf("%s: rename %q, %q failed: %v", fs.Name(), to, from, err)
-		}
-		file, err = fs.Create(from)
-		if err != nil {
-			t.Fatalf("%s: open %q failed: %v", fs.Name(), to, err)
-		}
-		if err = file.Close(); err != nil {
-			t.Errorf("%s: close %q failed: %v", fs.Name(), to, err)
-		}
-		err = fs.Rename(from, exists)
-		if err != nil {
-			t.Errorf("%s: rename %q, %q failed: %v", fs.Name(), exists, from, err)
 		}
 		names, err := readDirNames(fs, tDir)
 		if err != nil {
