@@ -279,7 +279,7 @@ func (m *MemMapFs) RemoveAll(path string) error {
 	defer m.mu.RUnlock()
 
 	for p := range m.getData() {
-		if strings.HasPrefix(p, path+FilePathSeparator) {
+		if strings.HasPrefix(p, path) {
 			m.mu.RUnlock()
 			m.mu.Lock()
 			delete(m.getData(), p)
@@ -316,7 +316,7 @@ func (m *MemMapFs) Rename(oldname, newname string) error {
 	}
 
 	for p, fileData := range m.getData() {
-		if strings.HasPrefix(p, oldname+FilePathSeparator) {
+		if strings.HasPrefix(p, oldname) {
 			m.mu.RUnlock()
 			m.mu.Lock()
 			delete(m.getData(), p)

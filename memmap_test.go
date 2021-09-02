@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 )
@@ -685,45 +686,73 @@ func TestMemFsLstatIfPossible(t *testing.T) {
 }
 
 func TestMemFsRenameDir(t *testing.T) {
+
+	testDirs := []string {
+		"/src/subdir1/",
+		"/src/subdir1/subdir2/",
+		"/src/subdir1/subdir2/subdir3",
+	}
+
+	testFiles := []string {
+		"/src/subdir1/testFile1.txt",
+		"/src/subdir1/subdir2/testFile3.txt",
+		"/src/subdir1/subdir2/testFile4.txt",
+		"/src/subdir1/subdir2/subdir3/testFile5.txt",
+	}
+
 	const srcPath = "/src"
 	const dstPath = "/dst"
-	const subDir = "dir"
 
 	fs := NewMemMapFs()
 
-	err := fs.MkdirAll(srcPath+FilePathSeparator+subDir, 0777)
-	if err != nil {
-		t.Errorf("MkDirAll failed: %s", err)
-		return
+	// set up the nested file structure
+	for _, path := range testDirs {
+		err := fs.Mkdir(path, 0777)
+		if err != nil {
+			t.Error(err)
+		}
 	}
 
-	err = fs.Rename(srcPath, dstPath)
+	// add some files
+	for _, file := range testFiles {
+		_, err := fs.Create(file)
+		if err != nil {
+			t.Error(err)
+		}
+	}
+
+	// rename the top level path
+	err := fs.Rename(srcPath, dstPath)
 	if err != nil {
 		t.Errorf("Rename failed: %s", err)
 		return
 	}
 
-	_, err = fs.Stat(srcPath + FilePathSeparator + subDir)
-	if err == nil {
-		t.Errorf("SubDir still exists in the source dir")
-		return
+	// check that all sub dirs have been renamed
+	for _, path := range testDirs {
+		expectedPath := strings.ReplaceAll(path, srcPath, dstPath)
+		_, err = fs.Stat(expectedPath)
+		if err != nil {
+			t.Errorf("Failed to rename dir: %s to %s", path, expectedPath)
+			return
+		}
 	}
 
-	_, err = fs.Stat(dstPath + FilePathSeparator + subDir)
-	if err != nil {
-		t.Errorf("SubDir stat in the destination dir: %s", err)
-		return
+	// check that all files in all sub dirs have been renamed
+	for _, path := range testFiles {
+		expectedFile := strings.ReplaceAll(path, srcPath, dstPath)
+		_, err = fs.Stat(expectedFile)
+		if err != nil {
+			t.Errorf("Failed to rename file: %s to %s", path, expectedFile)
+			return
+		}
 	}
 
-	err = fs.Mkdir(srcPath, 0777)
-	if err != nil {
-		t.Errorf("Cannot recreate the source dir: %s", err)
-		return
-	}
-
-	err = fs.Mkdir(srcPath+FilePathSeparator+subDir, 0777)
-	if err != nil {
-		t.Errorf("Cannot recreate the subdir in the source dir: %s", err)
-		return
+	// check that we the original source dirs can be created again
+	for _, path := range testDirs {
+		err := fs.Mkdir(path, 0777)
+		if err != nil {
+			t.Errorf("Failed to recreate dir: %s", path)
+		}
 	}
 }
