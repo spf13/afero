@@ -15,6 +15,7 @@
 package afero
 
 import (
+	"io/fs"
 	"os"
 	"time"
 )
@@ -43,12 +44,20 @@ func (OsFs) Create(name string) (File, error) {
 	return f, e
 }
 
+func (OsFs) CreateTemp(dir, pattern string) (*os.File, error) {
+	return os.CreateTemp(dir, pattern)
+}
+
 func (OsFs) Mkdir(name string, perm os.FileMode) error {
 	return os.Mkdir(name, perm)
 }
 
 func (OsFs) MkdirAll(path string, perm os.FileMode) error {
 	return os.MkdirAll(path, perm)
+}
+
+func (OsFs) MkdirTemp(dir, pattern string) (string, error) {
+	return os.MkdirTemp(dir, pattern)
 }
 
 func (OsFs) Open(name string) (File, error) {
@@ -110,4 +119,16 @@ func (OsFs) SymlinkIfPossible(oldname, newname string) error {
 
 func (OsFs) ReadlinkIfPossible(name string) (string, error) {
 	return os.Readlink(name)
+}
+
+func (OsFs) ReadFile(name string) ([]byte, error) {
+	return os.ReadFile(name)
+}
+
+func (OsFs) ReadDir(dirname string) ([]fs.DirEntry, error) {
+	return os.ReadDir(dirname)
+}
+
+func (OsFs) WriteFile(name string, data []byte, perm fs.FileMode) error {
+	return os.WriteFile(name, data, perm)
 }
