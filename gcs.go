@@ -37,6 +37,9 @@ type GcsFs struct {
 // You can provide additional options to be passed to the client creation, as per
 // cloud.google.com/go/storage documentation
 func NewGcsFS(ctx context.Context, opts ...option.ClientOption) (Fs, error) {
+	if json := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON"); json != "" {
+		opts = append(opts, option.WithCredentialsJSON([]byte(json)))
+	}
 	client, err := storage.NewClient(ctx, opts...)
 	if err != nil {
 		return nil, err
