@@ -79,11 +79,11 @@ would.
 
 So if my application before had:
 ```go
-os.Open('/tmp/foo')
+os.Open("/tmp/foo")
 ```
 We would replace it with:
 ```go
-AppFs.Open('/tmp/foo')
+AppFs.Open("/tmp/foo")
 ```
 
 `AppFs` being the variable we defined above.
