@@ -3,7 +3,7 @@
 // Most of the tests are "derived" from the Afero's own tarfs implementation.
 // Write-oriented tests and/or checks have been added on top of that
 
-package afero
+package gcsfs
 
 import (
 	"context"
@@ -19,10 +19,9 @@ import (
 
 	"golang.org/x/oauth2/google"
 
-	"github.com/spf13/afero/gcsfs"
-
 	"cloud.google.com/go/storage"
 	"github.com/googleapis/google-cloud-go-testing/storage/stiface"
+	"github.com/spf13/afero"
 )
 
 const (
@@ -62,7 +61,7 @@ var dirs = []struct {
 	{"testDir1", []string{"testFile"}},
 }
 
-var gcsAfs *Afero
+var gcsAfs *afero.Afero
 
 func TestMain(m *testing.M) {
 	ctx := context.Background()
@@ -120,7 +119,7 @@ func TestMain(m *testing.M) {
 	mockClient := newClientMock()
 	mockClient.Client = client
 
-	gcsAfs = &Afero{Fs: &GcsFs{gcsfs.NewGcsFs(ctx, mockClient)}}
+	gcsAfs = &afero.Afero{Fs: &GcsFs{NewGcsFs(ctx, mockClient)}}
 
 	// Uncomment to use the real, not mocked, client
 	//gcsAfs = &Afero{Fs: &GcsFs{gcsfs.NewGcsFs(ctx, client)}}
@@ -137,7 +136,7 @@ func createFiles(t *testing.T) {
 		if !f.isdir && f.exists {
 			name := filepath.Join(bucketName, f.name)
 
-			var freshFile File
+			var freshFile afero.File
 			freshFile, err = gcsAfs.Create(name)
 			if err != nil {
 				t.Fatalf("failed to create a file \"%s\": %s", f.name, err)
@@ -481,7 +480,7 @@ func TestGcsOpenFile(t *testing.T) {
 			file, err := gcsAfs.OpenFile(name, os.O_RDONLY, 0400)
 			if !f.exists {
 				if (f.name != "" && !errors.Is(err, syscall.ENOENT)) ||
-					(f.name == "" && !errors.Is(err, gcsfs.ErrNoBucketInName)) {
+					(f.name == "" && !errors.Is(err, ErrNoBucketInName)) {
 					t.Errorf("%v: got %v, expected%v", name, err, syscall.ENOENT)
 				}
 
@@ -524,7 +523,7 @@ func TestGcsFsStat(t *testing.T) {
 			fi, err := gcsAfs.Stat(name)
 			if !f.exists {
 				if (f.name != "" && !errors.Is(err, syscall.ENOENT)) ||
-					(f.name == "" && !errors.Is(err, gcsfs.ErrNoBucketInName)) {
+					(f.name == "" && !errors.Is(err, ErrNoBucketInName)) {
 					t.Errorf("%v: got %v, expected%v", name, err, syscall.ENOENT)
 				}
 
@@ -698,7 +697,7 @@ func TestGcsGlob(t *testing.T) {
 		}
 
 		for i, prefixedGlob := range prefixedGlobs {
-			entries, err := Glob(gcsAfs.Fs, prefixedGlob)
+			entries, err := afero.Glob(gcsAfs.Fs, prefixedGlob)
 			if err != nil {
 				t.Error(err)
 			}

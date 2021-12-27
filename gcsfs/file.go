@@ -44,7 +44,7 @@ type GcsFile struct {
 
 func NewGcsFile(
 	ctx context.Context,
-	fs *GcsFs,
+	fs *Fs,
 	obj stiface.ObjectHandle,
 	openFlags int,
 	// Unused: there is no use to the file mode in GCloud just yet - but we keep it here, just in case we need it
