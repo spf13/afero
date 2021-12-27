@@ -33,8 +33,8 @@ const (
 	gsPrefix        = "gs://"
 )
 
-// GcsFs is a Fs implementation that uses functions provided by google cloud storage
-type GcsFs struct {
+// Fs is a Fs implementation that uses functions provided by google cloud storage
+type Fs struct {
 	ctx       context.Context
 	client    stiface.Client
 	separator string
@@ -45,12 +45,12 @@ type GcsFs struct {
 	autoRemoveEmptyFolders bool //trigger for creating "virtual folders" (not required by GCSs)
 }
 
-func NewGcsFs(ctx context.Context, client stiface.Client) *GcsFs {
+func NewGcsFs(ctx context.Context, client stiface.Client) *Fs {
 	return NewGcsFsWithSeparator(ctx, client, "/")
 }
 
-func NewGcsFsWithSeparator(ctx context.Context, client stiface.Client, folderSep string) *GcsFs {
-	return &GcsFs{
+func NewGcsFsWithSeparator(ctx context.Context, client stiface.Client, folderSep string) *Fs {
+	return &Fs{
 		ctx:           ctx,
 		client:        client,
 		separator:     folderSep,
@@ -61,17 +61,17 @@ func NewGcsFsWithSeparator(ctx context.Context, client stiface.Client, folderSep
 }
 
 // normSeparators will normalize all "\\" and "/" to the provided separator
-func (fs *GcsFs) normSeparators(s string) string {
+func (fs *Fs) normSeparators(s string) string {
 	return strings.Replace(strings.Replace(s, "\\", fs.separator, -1), "/", fs.separator, -1)
 }
 
-func (fs *GcsFs) ensureTrailingSeparator(s string) string {
+func (fs *Fs) ensureTrailingSeparator(s string) string {
 	if len(s) > 0 && !strings.HasSuffix(s, fs.separator) {
 		return s + fs.separator
 	}
 	return s
 }
-func (fs *GcsFs) ensureNoLeadingSeparator(s string) string {
+func (fs *Fs) ensureNoLeadingSeparator(s string) string {
 	if len(s) > 0 && strings.HasPrefix(s, fs.separator) {
 		s = s[len(fs.separator):]
 	}
@@ -94,13 +94,13 @@ func validateName(s string) error {
 }
 
 // Splits provided name into bucket name and path
-func (fs *GcsFs) splitName(name string) (bucketName string, path string) {
+func (fs *Fs) splitName(name string) (bucketName string, path string) {
 	splitName := strings.Split(name, fs.separator)
 
 	return splitName[0], strings.Join(splitName[1:], fs.separator)
 }
 
-func (fs *GcsFs) getBucket(name string) (stiface.BucketHandle, error) {
+func (fs *Fs) getBucket(name string) (stiface.BucketHandle, error) {
 	bucket := fs.buckets[name]
 	if bucket == nil {
 		bucket = fs.client.Bucket(name)
@@ -112,7 +112,7 @@ func (fs *GcsFs) getBucket(name string) (stiface.BucketHandle, error) {
 	return bucket, nil
 }
 
-func (fs *GcsFs) getObj(name string) (stiface.ObjectHandle, error) {
+func (fs *Fs) getObj(name string) (stiface.ObjectHandle, error) {
 	bucketName, path := fs.splitName(name)
 
 	bucket, err := fs.getBucket(bucketName)
@@ -123,9 +123,9 @@ func (fs *GcsFs) getObj(name string) (stiface.ObjectHandle, error) {
 	return bucket.Object(path), nil
 }
 
-func (fs *GcsFs) Name() string { return "GcsFs" }
+func (fs *Fs) Name() string { return "GcsFs" }
 
-func (fs *GcsFs) Create(name string) (*GcsFile, error) {
+func (fs *Fs) Create(name string) (*GcsFile, error) {
 	name = fs.ensureNoLeadingSeparator(fs.normSeparators(ensureNoPrefix(name)))
 	if err := validateName(name); err != nil {
 		return nil, err
@@ -156,7 +156,7 @@ func (fs *GcsFs) Create(name string) (*GcsFile, error) {
 	return file, nil
 }
 
-func (fs *GcsFs) Mkdir(name string, _ os.FileMode) error {
+func (fs *Fs) Mkdir(name string, _ os.FileMode) error {
 	name = fs.ensureNoLeadingSeparator(fs.ensureTrailingSeparator(fs.normSeparators(ensureNoPrefix(name))))
 	if err := validateName(name); err != nil {
 		return err
@@ -179,7 +179,7 @@ func (fs *GcsFs) Mkdir(name string, _ os.FileMode) error {
 	return w.Close()
 }
 
-func (fs *GcsFs) MkdirAll(path string, perm os.FileMode) error {
+func (fs *Fs) MkdirAll(path string, perm os.FileMode) error {
 	path = fs.ensureNoLeadingSeparator(fs.ensureTrailingSeparator(fs.normSeparators(ensureNoPrefix(path))))
 	if err := validateName(path); err != nil {
 		return err
@@ -216,11 +216,11 @@ func (fs *GcsFs) MkdirAll(path string, perm os.FileMode) error {
 	return nil
 }
 
-func (fs *GcsFs) Open(name string) (*GcsFile, error) {
+func (fs *Fs) Open(name string) (*GcsFile, error) {
 	return fs.OpenFile(name, os.O_RDONLY, 0)
 }
 
-func (fs *GcsFs) OpenFile(name string, flag int, fileMode os.FileMode) (*GcsFile, error) {
+func (fs *Fs) OpenFile(name string, flag int, fileMode os.FileMode) (*GcsFile, error) {
 	var file *GcsFile
 	var err error
 
@@ -277,7 +277,7 @@ func (fs *GcsFs) OpenFile(name string, flag int, fileMode os.FileMode) (*GcsFile
 	return file, nil
 }
 
-func (fs *GcsFs) Remove(name string) error {
+func (fs *Fs) Remove(name string) error {
 	name = fs.ensureNoLeadingSeparator(fs.normSeparators(ensureNoPrefix(name)))
 	if err := validateName(name); err != nil {
 		return err
@@ -318,7 +318,7 @@ func (fs *GcsFs) Remove(name string) error {
 	return obj.Delete(fs.ctx)
 }
 
-func (fs *GcsFs) RemoveAll(path string) error {
+func (fs *Fs) RemoveAll(path string) error {
 	path = fs.ensureNoLeadingSeparator(fs.normSeparators(ensureNoPrefix(path)))
 	if err := validateName(path); err != nil {
 		return err
@@ -351,7 +351,7 @@ func (fs *GcsFs) RemoveAll(path string) error {
 	return fs.Remove(path)
 }
 
-func (fs *GcsFs) Rename(oldName, newName string) error {
+func (fs *Fs) Rename(oldName, newName string) error {
 	oldName = fs.ensureNoLeadingSeparator(fs.normSeparators(ensureNoPrefix(oldName)))
 	if err := validateName(oldName); err != nil {
 		return err
@@ -378,7 +378,7 @@ func (fs *GcsFs) Rename(oldName, newName string) error {
 	return src.Delete(fs.ctx)
 }
 
-func (fs *GcsFs) Stat(name string) (os.FileInfo, error) {
+func (fs *Fs) Stat(name string) (os.FileInfo, error) {
 	name = fs.ensureNoLeadingSeparator(fs.normSeparators(ensureNoPrefix(name)))
 	if err := validateName(name); err != nil {
 		return nil, err
@@ -387,14 +387,14 @@ func (fs *GcsFs) Stat(name string) (os.FileInfo, error) {
 	return newFileInfo(name, fs, defaultFileMode)
 }
 
-func (fs *GcsFs) Chmod(_ string, _ os.FileMode) error {
+func (fs *Fs) Chmod(_ string, _ os.FileMode) error {
 	return errors.New("method Chmod is not implemented in GCS")
 }
 
-func (fs *GcsFs) Chtimes(_ string, _, _ time.Time) error {
+func (fs *Fs) Chtimes(_ string, _, _ time.Time) error {
 	return errors.New("method Chtimes is not implemented. Create, Delete, Updated times are read only fields in GCS and set implicitly")
 }
 
-func (fs *GcsFs) Chown(_ string, _, _ int) error {
+func (fs *Fs) Chown(_ string, _, _ int) error {
 	return errors.New("method Chown is not implemented for GCS")
 }
