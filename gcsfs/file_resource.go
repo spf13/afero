@@ -40,7 +40,7 @@ const (
 type gcsFileResource struct {
 	ctx context.Context
 
-	fs *GcsFs
+	fs *Fs
 
 	obj      stiface.ObjectHandle
 	name     string
