@@ -9,7 +9,7 @@
 // switching over to a real bucket - and then the mocks have to be adjusted to match the
 // implementation.
 
-package afero
+package gcsfs
 
 import (
 	"context"
@@ -17,10 +17,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/spf13/afero/gcsfs"
-
 	"cloud.google.com/go/storage"
 	"github.com/googleapis/google-cloud-go-testing/storage/stiface"
+	"github.com/spf13/afero"
 	"google.golang.org/api/iterator"
 )
 
@@ -31,11 +30,11 @@ func normSeparators(s string) string {
 
 type clientMock struct {
 	stiface.Client
-	fs Fs
+	fs afero.Fs
 }
 
 func newClientMock() *clientMock {
-	return &clientMock{fs: NewMemMapFs()}
+	return &clientMock{fs: afero.NewMemMapFs()}
 }
 
 func (m *clientMock) Bucket(name string) stiface.BucketHandle {
@@ -47,7 +46,7 @@ type bucketMock struct {
 
 	bucketName string
 
-	fs Fs
+	fs afero.Fs
 }
 
 func (m *bucketMock) Attrs(context.Context) (*storage.BucketAttrs, error) {
@@ -66,7 +65,7 @@ type objectMock struct {
 	stiface.ObjectHandle
 
 	name string
-	fs   Fs
+	fs   afero.Fs
 }
 
 func (o *objectMock) NewWriter(_ context.Context) stiface.Writer {
@@ -75,7 +74,7 @@ func (o *objectMock) NewWriter(_ context.Context) stiface.Writer {
 
 func (o *objectMock) NewRangeReader(_ context.Context, offset, length int64) (stiface.Reader, error) {
 	if o.name == "" {
-		return nil, gcsfs.ErrEmptyObjectName
+		return nil, ErrEmptyObjectName
 	}
 
 	file, err := o.fs.Open(o.name)
@@ -104,14 +103,14 @@ func (o *objectMock) NewRangeReader(_ context.Context, offset, length int64) (st
 
 func (o *objectMock) Delete(_ context.Context) error {
 	if o.name == "" {
-		return gcsfs.ErrEmptyObjectName
+		return ErrEmptyObjectName
 	}
 	return o.fs.Remove(o.name)
 }
 
 func (o *objectMock) Attrs(_ context.Context) (*storage.ObjectAttrs, error) {
 	if o.name == "" {
-		return nil, gcsfs.ErrEmptyObjectName
+		return nil, ErrEmptyObjectName
 	}
 
 	info, err := o.fs.Stat(o.name)
@@ -130,7 +129,7 @@ func (o *objectMock) Attrs(_ context.Context) (*storage.ObjectAttrs, error) {
 
 	if info.IsDir() {
 		// we have to mock it here, because of FileInfo logic
-		return nil, gcsfs.ErrObjectDoesNotExist
+		return nil, ErrObjectDoesNotExist
 	}
 
 	return res, nil
@@ -140,14 +139,14 @@ type writerMock struct {
 	stiface.Writer
 
 	name string
-	fs   Fs
+	fs   afero.Fs
 
-	file File
+	file afero.File
 }
 
 func (w *writerMock) Write(p []byte) (n int, err error) {
 	if w.name == "" {
-		return 0, gcsfs.ErrEmptyObjectName
+		return 0, ErrEmptyObjectName
 	}
 
 	if w.file == nil {
@@ -162,7 +161,7 @@ func (w *writerMock) Write(p []byte) (n int, err error) {
 
 func (w *writerMock) Close() error {
 	if w.name == "" {
-		return gcsfs.ErrEmptyObjectName
+		return ErrEmptyObjectName
 	}
 	if w.file == nil {
 		var err error
@@ -187,7 +186,7 @@ func (w *writerMock) Close() error {
 type readerMock struct {
 	stiface.Reader
 
-	file File
+	file afero.File
 
 	buf []byte
 }
@@ -212,9 +211,9 @@ type objectItMock struct {
 	stiface.ObjectIterator
 
 	name string
-	fs   Fs
+	fs   afero.Fs
 
-	dir   File
+	dir   afero.File
 	infos []*storage.ObjectAttrs
 }
 
@@ -227,7 +226,7 @@ func (it *objectItMock) Next() (*storage.ObjectAttrs, error) {
 		}
 
 		var isDir bool
-		isDir, err = IsDir(it.fs, it.name)
+		isDir, err = afero.IsDir(it.fs, it.name)
 		if err != nil {
 			return nil, err
 		}

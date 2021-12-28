@@ -37,7 +37,7 @@ type FileInfo struct {
 	fileMode os.FileMode
 }
 
-func newFileInfo(name string, fs *GcsFs, fileMode os.FileMode) (*FileInfo, error) {
+func newFileInfo(name string, fs *Fs, fileMode os.FileMode) (*FileInfo, error) {
 	res := &FileInfo{
 		name:     name,
 		size:     folderSize,
