@@ -451,7 +451,7 @@ func TestMemFsMkdirAllMode(t *testing.T) {
 		t.Error("/a: mode is not directory")
 	}
 	if !info.ModTime().After(time.Now().Add(-1 * time.Hour)) {
-		t.Errorf("/a: mod time not set, got %s", info.Mode())
+		t.Errorf("/a: mod time not set, got %s", info.ModTime())
 	}
 	if info.Mode() != os.FileMode(os.ModeDir|0755) {
 		t.Errorf("/a: wrong permissions, expected drwxr-xr-x, got %s", info.Mode())
@@ -467,7 +467,7 @@ func TestMemFsMkdirAllMode(t *testing.T) {
 		t.Errorf("/a/b: wrong permissions, expected drwxr-xr-x, got %s", info.Mode())
 	}
 	if !info.ModTime().After(time.Now().Add(-1 * time.Hour)) {
-		t.Errorf("/a/b: mod time not set, got %s", info.Mode())
+		t.Errorf("/a/b: mod time not set, got %s", info.ModTime())
 	}
 	info, err = fs.Stat("/a/b/c")
 	if err != nil {
@@ -480,7 +480,7 @@ func TestMemFsMkdirAllMode(t *testing.T) {
 		t.Errorf("/a/b/c: wrong permissions, expected drwxr-xr-x, got %s", info.Mode())
 	}
 	if !info.ModTime().After(time.Now().Add(-1 * time.Hour)) {
-		t.Errorf("/a/b/c: mod time not set, got %s", info.Mode())
+		t.Errorf("/a/b/c: mod time not set, got %s", info.ModTime())
 	}
 }
 
