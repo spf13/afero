@@ -7,15 +7,15 @@ import (
 	"time"
 )
 
-// PredicateFs filters files (not directories) by predicate,
+// FilePredicateFs filters files (not directories) by predicate,
 // which takes file path as an arg.
-type PredicateFs struct {
+type FilePredicateFs struct {
 	pred   func(string) bool
 	source Fs
 }
 
-func NewPredicateFs(source Fs, pred func(string) bool) Fs {
-	return &PredicateFs{source: source, pred: pred}
+func NewFilePredicateFs(source Fs, pred func(string) bool) Fs {
+	return &FilePredicateFs{source: source, pred: pred}
 }
 
 type PredicateFile struct {
@@ -23,14 +23,14 @@ type PredicateFile struct {
 	pred func(string) bool
 }
 
-func (p *PredicateFs) validate(path string) error {
+func (p *FilePredicateFs) validate(path string) error {
 	if p.pred(path) {
 		return nil
 	}
 	return syscall.ENOENT
 }
 
-func (p *PredicateFs) dirOrValidPath(path string) error {
+func (p *FilePredicateFs) dirOrValidPath(path string) error {
 	dir, err := IsDir(p.source, path)
 	if err != nil {
 		return err
@@ -41,39 +41,39 @@ func (p *PredicateFs) dirOrValidPath(path string) error {
 	return p.validate(path)
 }
 
-func (p *PredicateFs) Chtimes(path string, a, m time.Time) error {
+func (p *FilePredicateFs) Chtimes(path string, a, m time.Time) error {
 	if err := p.dirOrValidPath(path); err != nil {
 		return err
 	}
 	return p.source.Chtimes(path, a, m)
 }
 
-func (p *PredicateFs) Chmod(path string, mode os.FileMode) error {
+func (p *FilePredicateFs) Chmod(path string, mode os.FileMode) error {
 	if err := p.dirOrValidPath(path); err != nil {
 		return err
 	}
 	return p.source.Chmod(path, mode)
 }
 
-func (p *PredicateFs) Chown(path string, uid, gid int) error {
+func (p *FilePredicateFs) Chown(path string, uid, gid int) error {
 	if err := p.dirOrValidPath(path); err != nil {
 		return err
 	}
 	return p.source.Chown(path, uid, gid)
 }
 
-func (p *PredicateFs) Name() string {
-	return "PredicateFs"
+func (p *FilePredicateFs) Name() string {
+	return "FilePredicateFs"
 }
 
-func (p *PredicateFs) Stat(path string) (os.FileInfo, error) {
+func (p *FilePredicateFs) Stat(path string) (os.FileInfo, error) {
 	if err := p.dirOrValidPath(path); err != nil {
 		return nil, err
 	}
 	return p.source.Stat(path)
 }
 
-func (p *PredicateFs) Rename(oldname, newname string) error {
+func (p *FilePredicateFs) Rename(oldname, newname string) error {
 	dir, err := IsDir(p.source, oldname)
 	if err != nil {
 		return err
@@ -90,7 +90,7 @@ func (p *PredicateFs) Rename(oldname, newname string) error {
 	return p.source.Rename(oldname, newname)
 }
 
-func (p *PredicateFs) RemoveAll(path string) error {
+func (p *FilePredicateFs) RemoveAll(path string) error {
 	dir, err := IsDir(p.source, path)
 	if err != nil {
 		return err
@@ -103,21 +103,21 @@ func (p *PredicateFs) RemoveAll(path string) error {
 	return p.source.RemoveAll(path)
 }
 
-func (p *PredicateFs) Remove(path string) error {
+func (p *FilePredicateFs) Remove(path string) error {
 	if err := p.dirOrValidPath(path); err != nil {
 		return err
 	}
 	return p.source.Remove(path)
 }
 
-func (p *PredicateFs) OpenFile(path string, flag int, perm os.FileMode) (File, error) {
+func (p *FilePredicateFs) OpenFile(path string, flag int, perm os.FileMode) (File, error) {
 	if err := p.dirOrValidPath(path); err != nil {
 		return nil, err
 	}
 	return p.source.OpenFile(path, flag, perm)
 }
 
-func (p *PredicateFs) Open(path string) (File, error) {
+func (p *FilePredicateFs) Open(path string) (File, error) {
 	dir, err := IsDir(p.source, path)
 	if err != nil {
 		return nil, err
@@ -134,15 +134,15 @@ func (p *PredicateFs) Open(path string) (File, error) {
 	return &PredicateFile{f: f, pred: p.pred}, nil
 }
 
-func (p *PredicateFs) Mkdir(n string, path os.FileMode) error {
+func (p *FilePredicateFs) Mkdir(n string, path os.FileMode) error {
 	return p.source.Mkdir(n, path)
 }
 
-func (p *PredicateFs) MkdirAll(n string, path os.FileMode) error {
+func (p *FilePredicateFs) MkdirAll(n string, path os.FileMode) error {
 	return p.source.MkdirAll(n, path)
 }
 
-func (p *PredicateFs) Create(path string) (File, error) {
+func (p *FilePredicateFs) Create(path string) (File, error) {
 	if err := p.validate(path); err != nil {
 		return nil, err
 	}

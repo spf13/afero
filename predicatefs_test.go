@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestPredicateFs(t *testing.T) {
+func TestFilePredicateFs(t *testing.T) {
 	mfs := &MemMapFs{}
 
 	txtExts := func(name string) bool {
@@ -30,7 +30,7 @@ func TestPredicateFs(t *testing.T) {
 		return nonEmpty(path) && txtExts(path) && !inHiddenDir(path)
 	}
 
-	fs := &PredicateFs{pred: pred, source: mfs}
+	fs := &FilePredicateFs{pred: pred, source: mfs}
 
 	mfs.MkdirAll("/dir/sub/.hidden", 0777)
 	for _, name := range []string{"file.txt", "file.html", "empty.txt"} {

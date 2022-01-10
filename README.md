@@ -294,7 +294,7 @@ _, err := fs.Create("/file.html")
 // err = syscall.ENOENT
 ```
 
-### PredicateFs
+### FilePredicateFs
 
 A filtered view on predicates which takes file path as an argument,
 any file will be treated as non-existing when the predicate returns false.
@@ -306,7 +306,7 @@ and directories are always not filtered.
 pred := func(path string) bool {
 	return strings.HasSuffix(path, ".txt")
 }
-fs := afero.NewPredicateFs(afero.NewMemMapFs(), pred)
+fs := afero.NewFilePredicateFs(afero.NewMemMapFs(), pred)
 _, err := fs.Create("/file.html")
 // err = syscall.ENOENT
 ```
