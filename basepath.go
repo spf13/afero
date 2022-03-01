@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-var _ Lstater = (*BasePathFs)(nil)
+var _ Symlinker = (*BasePathFs)(nil)
 
 // The BasePathFs restricts all operations to a given path within an Fs.
 // The given file name to the operations on this Fs will be prepended with
@@ -208,4 +208,15 @@ func (b *BasePathFs) ReadlinkIfPossible(name string) (string, error) {
 		return reader.ReadlinkIfPossible(name)
 	}
 	return "", &os.PathError{Op: "readlink", Path: name, Err: ErrNoReadlink}
+}
+
+func (b *BasePathFs) LchownIfPossible(name string, uid, gid int) error {
+	name, err := b.RealPath(name)
+	if err != nil {
+		return &os.PathError{Op: "lchown", Path: name, Err: err}
+	}
+	if owner, ok := b.source.(LinkOwner); ok {
+		return owner.LchownIfPossible(name, uid, gid)
+	}
+	return &os.PathError{Op: "lchown", Path: name, Err: ErrNoLchown}
 }

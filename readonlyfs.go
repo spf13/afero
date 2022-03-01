@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-var _ Lstater = (*ReadOnlyFs)(nil)
+var _ Symlinker = (*ReadOnlyFs)(nil)
 
 type ReadOnlyFs struct {
 	source Fs
@@ -58,6 +58,10 @@ func (r *ReadOnlyFs) ReadlinkIfPossible(name string) (string, error) {
 	}
 
 	return "", &os.PathError{Op: "readlink", Path: name, Err: ErrNoReadlink}
+}
+
+func (r *ReadOnlyFs) LchownIfPossible(name string, uid, gid int) error {
+	return &os.PathError{Op: "lchown", Path: name, Err: ErrNoLchown}
 }
 
 func (r *ReadOnlyFs) Rename(o, n string) error {

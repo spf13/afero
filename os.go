@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-var _ Lstater = (*OsFs)(nil)
+var _ Symlinker = (*OsFs)(nil)
 
 // OsFs is a Fs implementation that uses functions provided by the os package.
 //
@@ -110,4 +110,8 @@ func (OsFs) SymlinkIfPossible(oldname, newname string) error {
 
 func (OsFs) ReadlinkIfPossible(name string) (string, error) {
 	return os.Readlink(name)
+}
+
+func (OsFs) LchownIfPossible(name string, uid, gid int) error {
+	return os.Lchown(name, uid, gid)
 }
