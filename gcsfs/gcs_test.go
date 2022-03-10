@@ -809,7 +809,7 @@ func TestGcsRemoveAll(t *testing.T) {
 	t.Run("non-existent", func(t *testing.T) {
 		err := gcsAfs.RemoveAll(filepath.Join(bucketName, "a"))
 		if err != nil {
-			t.Fatal("failed when removing non-existent file")
+			t.Fatal("error should be nil when removing non-existent file")
 		}
 	})
 	t.Run("success", func(t *testing.T) {
