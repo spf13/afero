@@ -804,3 +804,35 @@ func TestGcsMkdirAll(t *testing.T) {
 		}
 	})
 }
+
+func TestGcsRemoveAll(t *testing.T) {
+	t.Run("non-existent", func(t *testing.T) {
+		err := gcsAfs.RemoveAll(filepath.Join(bucketName, "a"))
+		if err != nil {
+			t.Fatal("error should be nil when removing non-existent file")
+		}
+	})
+	t.Run("success", func(t *testing.T) {
+		aDir := filepath.Join(bucketName, "a")
+		bDir := filepath.Join(aDir, "b")
+
+		err := gcsAfs.MkdirAll(bDir, 0755)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = gcsAfs.Stat(bDir)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = gcsAfs.RemoveAll(aDir)
+		if err != nil {
+			t.Fatalf("failed to remove the folder %s with error: %s", aDir, err)
+		}
+
+		_, err = gcsAfs.Stat(aDir)
+		if err == nil {
+			t.Fatalf("folder %s wasn't removed", aDir)
+		}
+	})
+}
