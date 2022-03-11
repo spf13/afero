@@ -325,9 +325,14 @@ func (fs *Fs) RemoveAll(path string) error {
 	}
 
 	pathInfo, err := fs.Stat(path)
+	if errors.Is(err, ErrFileNotFound) {
+		// return early if file doesn't exist
+		return nil
+	}
 	if err != nil {
 		return err
 	}
+
 	if !pathInfo.IsDir() {
 		return fs.Remove(path)
 	}
