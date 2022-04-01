@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
+
+	"github.com/Jille/errchain"
 )
 
 // The UnionFile implements the afero.File interface and will be returned
@@ -32,11 +34,13 @@ func (f *UnionFile) Close() error {
 	// first close base, so we have a newer timestamp in the overlay. If we'd close
 	// the overlay first, we'd get a cacheStale the next time we access this file
 	// -> cache would be useless ;-)
+	var err error
 	if f.Base != nil {
-		f.Base.Close()
+		errchain.Append(&err, f.Base.Close())
 	}
 	if f.Layer != nil {
-		return f.Layer.Close()
+		errchain.Append(&err, f.Layer.Close())
+		return err
 	}
 	return BADFD
 }

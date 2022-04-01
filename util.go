@@ -25,6 +25,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/Jille/errchain"
 	"golang.org/x/text/transform"
 	"golang.org/x/text/unicode/norm"
 )
@@ -37,12 +38,12 @@ func (a Afero) WriteReader(path string, r io.Reader) (err error) {
 	return WriteReader(a.Fs, path, r)
 }
 
-func WriteReader(fs Fs, path string, r io.Reader) (err error) {
+func WriteReader(fs Fs, path string, r io.Reader) (retErr error) {
 	dir, _ := filepath.Split(path)
 	ospath := filepath.FromSlash(dir)
 
 	if ospath != "" {
-		err = fs.MkdirAll(ospath, 0777) // rwx, rw, r
+		err := fs.MkdirAll(ospath, 0777) // rwx, rw, r
 		if err != nil {
 			if err != os.ErrExist {
 				return err
@@ -54,7 +55,7 @@ func WriteReader(fs Fs, path string, r io.Reader) (err error) {
 	if err != nil {
 		return
 	}
-	defer file.Close()
+	defer errchain.Call(&retErr, file.Close)
 
 	_, err = io.Copy(file, r)
 	return
@@ -65,12 +66,12 @@ func (a Afero) SafeWriteReader(path string, r io.Reader) (err error) {
 	return SafeWriteReader(a.Fs, path, r)
 }
 
-func SafeWriteReader(fs Fs, path string, r io.Reader) (err error) {
+func SafeWriteReader(fs Fs, path string, r io.Reader) (retErr error) {
 	dir, _ := filepath.Split(path)
 	ospath := filepath.FromSlash(dir)
 
 	if ospath != "" {
-		err = fs.MkdirAll(ospath, 0777) // rwx, rw, r
+		err := fs.MkdirAll(ospath, 0777) // rwx, rw, r
 		if err != nil {
 			return
 		}
@@ -88,7 +89,7 @@ func SafeWriteReader(fs Fs, path string, r io.Reader) (err error) {
 	if err != nil {
 		return
 	}
-	defer file.Close()
+	defer errchain.Call(&retErr, file.Close)
 
 	_, err = io.Copy(file, r)
 	return
