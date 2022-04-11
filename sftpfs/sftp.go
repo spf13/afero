@@ -15,11 +15,14 @@ package sftpfs
 
 import (
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/pkg/sftp"
 	"github.com/spf13/afero"
 )
+
+var _ afero.Symlinker = (*Fs)(nil)
 
 // Fs is a afero.Fs implementation that uses functions provided by the sftp package.
 //
@@ -110,9 +113,34 @@ func (s Fs) Remove(name string) error {
 }
 
 func (s Fs) RemoveAll(path string) error {
-	// TODO have a look at os.RemoveAll
-	// https://github.com/golang/go/blob/master/src/os/path.go#L66
-	return nil
+	if path == "" {
+		return nil
+	}
+
+	info, _, err := s.LstatIfPossible(path)
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		return s.client.Remove(path)
+	}
+
+	files, err := s.client.ReadDir(path)
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		fp := filepath.Join(path, file.Name())
+		if file.IsDir() {
+			err = s.RemoveAll(fp)
+		} else {
+			err = s.client.Remove(fp)
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return s.client.RemoveDirectory(path)
 }
 
 func (s Fs) Rename(oldname, newname string) error {
@@ -137,4 +165,21 @@ func (s Fs) Chown(name string, uid, gid int) error {
 
 func (s Fs) Chtimes(name string, atime time.Time, mtime time.Time) error {
 	return s.client.Chtimes(name, atime, mtime)
+}
+
+func (s Fs) LstatIfPossible(name string) (os.FileInfo, bool, error) {
+	fi, err := s.client.Lstat(name)
+	if err == nil {
+		return fi, true, err
+	}
+	fi, err = s.client.Stat(name)
+	return fi, false, err
+}
+
+func (s Fs) SymlinkIfPossible(oldname, newname string) error {
+	return s.client.Symlink(oldname, newname)
+}
+
+func (s Fs) ReadlinkIfPossible(name string) (string, error) {
+	return s.client.ReadLink(name)
 }
