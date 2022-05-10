@@ -223,6 +223,9 @@ func (f *File) ReadAt(b []byte, off int64) (n int, err error) {
 		n = len(f.fileData.data) - int(off)
 	}
 	copy(b, f.fileData.data[off:off+int64(n)])
+	if n < len(b) {
+		err = io.EOF
+	}
 	return
 }
 
@@ -231,7 +234,6 @@ func (f *File) Read(b []byte) (n int, err error) {
 	atomic.AddInt64(&f.at, int64(n))
 	return
 }
-
 func (f *File) Truncate(size int64) error {
 	if f.closed {
 		return ErrFileClosed
