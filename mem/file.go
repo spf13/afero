@@ -210,6 +210,11 @@ func (f *File) ReadAt(b []byte, off int64) (n int, err error) {
 	atomic.StoreInt64(&f.at, off)
 	n, err = f.Read(b)
 	atomic.StoreInt64(&f.at, prev)
+	if int64(n) == int64(len(f.fileData.data))-off {
+		if n < len(b) {
+			err = io.EOF
+		}
+	}
 	return
 }
 

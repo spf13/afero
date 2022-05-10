@@ -232,9 +232,20 @@ func TestFileReadAtSeekOffset(t *testing.T) {
 		t.Fatal("expected 0")
 	}
 
-	b := make([]byte, 4)
+	b := make([]byte, 4, 5)
 	n, err := f.ReadAt(b, 0)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 4 {
+		t.Fail()
+	}
+	if string(b) != "TEST" {
+		t.Fail()
+	}
+
+	n, err = f.ReadAt(b[:cap(b)], 0)
+	if err != io.EOF {
 		t.Fatal(err)
 	}
 	if n != 4 {
