@@ -88,6 +88,10 @@ func (r *ReadOnlyFs) Mkdir(n string, p os.FileMode) error {
 }
 
 func (r *ReadOnlyFs) MkdirAll(n string, p os.FileMode) error {
+	fi, err := r.source.Stat(n)
+	if err == nil && fi.IsDir() {
+		return nil
+	}
 	return syscall.EPERM
 }
 
