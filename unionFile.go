@@ -41,6 +41,20 @@ func (f *UnionFile) Close() error {
 	return BADFD
 }
 
+func (f *UnionFile) Chmod(mode os.FileMode) error {
+	if f.Layer != nil {
+		err := f.Layer.Chmod(mode)
+		if err == nil && f.Base != nil {
+			err = f.Base.Chmod(mode)
+		}
+		return err
+	}
+	if f.Base != nil {
+		return f.Base.Chmod(mode)
+	}
+	return BADFD
+}
+
 func (f *UnionFile) Read(s []byte) (int, error) {
 	if f.Layer != nil {
 		n, err := f.Layer.Read(s)

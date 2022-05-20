@@ -81,13 +81,13 @@ func TestFileDataModeRace(t *testing.T) {
 		t.Errorf("Failed to read correct value, was %v", s.Mode())
 	}
 
-	SetMode(&d, someOtherMode)
+	Chmod(&d, someOtherMode)
 	if s.Mode() != someOtherMode {
 		t.Errorf("Failed to set Mode, was %v", s.Mode())
 	}
 
 	go func() {
-		SetMode(&d, someMode)
+		Chmod(&d, someMode)
 	}()
 
 	if s.Mode() != someMode && s.Mode() != someOtherMode {

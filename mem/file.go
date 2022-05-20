@@ -25,7 +25,11 @@ import (
 	"time"
 )
 
-const FilePathSeparator = string(filepath.Separator)
+const (
+	FilePathSeparator = string(filepath.Separator)
+
+	chmodBits = os.ModePerm | os.ModeSetuid | os.ModeSetgid | os.ModeSticky // Only a subset of bits are allowed to be changed. Documented under os.Chmod()
+)
 
 type File struct {
 	// atomic requires 64-bit alignment for struct field access
@@ -67,11 +71,20 @@ func (d *FileData) Name() string {
 }
 
 func CreateFile(name string) *FileData {
-	return &FileData{name: name, mode: os.ModeTemporary, modtime: time.Now()}
+	return &FileData{
+		name:    name,
+		modtime: time.Now(),
+	}
 }
 
 func CreateDir(name string) *FileData {
-	return &FileData{name: name, memDir: &DirMap{}, dir: true, modtime: time.Now()}
+	return &FileData{
+		name:    name,
+		mode:    os.ModeDir,
+		memDir:  &DirMap{},
+		dir:     true,
+		modtime: time.Now(),
+	}
 }
 
 func ChangeFileName(f *FileData, newname string) {
@@ -80,9 +93,9 @@ func ChangeFileName(f *FileData, newname string) {
 	f.Unlock()
 }
 
-func SetMode(f *FileData, mode os.FileMode) {
+func Chmod(f *FileData, mode os.FileMode) {
 	f.Lock()
-	f.mode = mode
+	f.mode = (f.mode & ^chmodBits) | (mode & chmodBits)
 	f.Unlock()
 }
 
@@ -128,6 +141,11 @@ func (f *File) Close() error {
 		setModTime(f.fileData, time.Now())
 	}
 	f.fileData.Unlock()
+	return nil
+}
+
+func (f *File) Chmod(mode os.FileMode) error {
+	Chmod(f.fileData, mode)
 	return nil
 }
 

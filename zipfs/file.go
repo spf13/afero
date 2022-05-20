@@ -104,6 +104,10 @@ func (f *File) Write(p []byte) (n int, err error) { return 0, syscall.EPERM }
 
 func (f *File) WriteAt(p []byte, off int64) (n int, err error) { return 0, syscall.EPERM }
 
+func (f *File) Chmod(mode os.FileMode) error {
+	return syscall.EPERM
+}
+
 func (f *File) Name() string {
 	if f.zipfile == nil {
 		return string(filepath.Separator)

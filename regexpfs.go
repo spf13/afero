@@ -178,6 +178,10 @@ func (f *RegexpFile) WriteAt(s []byte, o int64) (int, error) {
 	return f.f.WriteAt(s, o)
 }
 
+func (f *RegexpFile) Chmod(mode os.FileMode) error {
+	return f.f.Chmod(mode)
+}
+
 func (f *RegexpFile) Name() string {
 	return f.f.Name()
 }
