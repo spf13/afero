@@ -2,7 +2,7 @@ package zipfs
 
 import (
 	"archive/zip"
-	"io/fs"
+	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -119,7 +119,7 @@ func TestZipFsNoDirEntry(t *testing.T) {
 		"testDir1":              true,
 		"testDir1/testFile":     false,
 	}
-	err = afero.Walk(zfs, "", func(path string, info fs.FileInfo, err error) error {
+	err = afero.Walk(zfs, "", func(path string, info os.FileInfo, err error) error {
 		path = filepath.ToSlash(path)
 		if isDir, ok := expected[path]; ok {
 			if isDir != info.IsDir() {
