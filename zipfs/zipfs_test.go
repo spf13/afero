@@ -1,12 +1,13 @@
 package zipfs
 
 import (
-	"github.com/spf13/afero"
-
 	"archive/zip"
+	"io/fs"
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/spf13/afero"
 )
 
 func TestZipFS(t *testing.T) {
@@ -99,5 +100,64 @@ func TestZipFS(t *testing.T) {
 		} else {
 			t.Errorf("glob: %s: got %#v, expected %#v", s.glob, entries, s.entries)
 		}
+	}
+}
+
+func TestZipFsNoDirEntry(t *testing.T) {
+	zrc, err := zip.OpenReader("testdata/no_dir_entry.zip")
+	if err != nil {
+		t.Fatal(err)
+	}
+	zfs := New(&zrc.Reader)
+
+	// Test Walk
+	expected := map[string]bool{
+		"":                      true,
+		"sub":                   true,
+		"sub/testDir2":          true,
+		"sub/testDir2/testFile": false,
+		"testDir1":              true,
+		"testDir1/testFile":     false,
+	}
+	err = afero.Walk(zfs, "", func(path string, info fs.FileInfo, err error) error {
+		path = filepath.ToSlash(path)
+		if isDir, ok := expected[path]; ok {
+			if isDir != info.IsDir() {
+				t.Error("file", path, "isDir:", info.IsDir(), "but expected:", isDir)
+			}
+			delete(expected, path)
+		} else {
+			t.Error("Unexpected file", path, "isDir:", info.IsDir())
+		}
+		return nil
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	if len(expected) > 0 {
+		t.Errorf("Files %v is not found in zip", expected)
+	}
+
+	// Test ReadDir
+	dir, err := afero.ReadDir(zfs, "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected = map[string]bool{
+		"sub":      true,
+		"testDir1": true,
+	}
+	for _, d := range dir {
+		if isDir, ok := expected[d.Name()]; ok {
+			if isDir != d.IsDir() {
+				t.Error("file", d.Name(), "isDir:", d.IsDir(), "but expected:", isDir)
+			}
+			delete(expected, d.Name())
+		} else {
+			t.Error("Unexpected file", d.Name(), "isDir:", d.IsDir())
+		}
+	}
+	if len(expected) > 0 {
+		t.Errorf("Files %v is not found in zip", expected)
 	}
 }
