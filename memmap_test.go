@@ -536,6 +536,33 @@ func TestMemFsMkdirAllNoClobber(t *testing.T) {
 	}
 }
 
+func TestMemFsMkdirInConcurrency(t *testing.T) {
+	t.Parallel()
+
+	const dir = "test_dir"
+	const n = 1000
+
+	for i := 0; i < n; i++ {
+		fs := NewMemMapFs()
+		c1 := make(chan error, 1)
+		c2 := make(chan error, 1)
+
+		go func() {
+			c1 <- fs.Mkdir(dir, 0755)
+		}()
+		go func() {
+			c2 <- fs.Mkdir(dir, 0755)
+		}()
+
+		// Only one attempt of creating the directory should succeed.
+		err1 := <-c1
+		err2 := <-c2
+		if err1 == nil && err2 == nil {
+			t.Fatalf("run #%v, more than one success, err1: %v err2: %v", i, err1, err2)
+		}
+	}
+}
+
 func TestMemFsDirMode(t *testing.T) {
 	fs := NewMemMapFs()
 	err := fs.Mkdir("/testDir1", 0644)
