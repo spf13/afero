@@ -153,7 +153,7 @@ func (m *MemMapFs) Mkdir(name string, perm os.FileMode) error {
 	m.registerWithParent(item, perm)
 	m.mu.Unlock()
 
-	return m.setFileMode(name, perm|os.ModeDir)
+	return nil
 }
 
 func (m *MemMapFs) MkdirAll(path string, perm os.FileMode) error {
