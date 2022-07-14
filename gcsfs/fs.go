@@ -302,6 +302,9 @@ func (fs *Fs) Remove(name string) error {
 		}
 		var infos []os.FileInfo
 		infos, err = dir.Readdir(0)
+		if err != nil {
+			return err
+		}
 		if len(infos) > 0 {
 			return syscall.ENOTEMPTY
 		}
@@ -345,6 +348,9 @@ func (fs *Fs) RemoveAll(path string) error {
 
 	var infos []os.FileInfo
 	infos, err = dir.Readdir(0)
+	if err != nil {
+		return err
+	}
 	for _, info := range infos {
 		nameToRemove := fs.normSeparators(info.Name())
 		err = fs.RemoveAll(path + fs.separator + nameToRemove)

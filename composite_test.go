@@ -79,7 +79,7 @@ func TestUnionCreateExisting(t *testing.T) {
 	fh.Close()
 
 	fh, _ = base.Open("/home/test/file.txt")
-	data, err = ioutil.ReadAll(fh)
+	data, _ = ioutil.ReadAll(fh)
 	if string(data) != "This is a test" {
 		t.Errorf("Got wrong data in base file")
 	}
@@ -326,9 +326,9 @@ func TestUnionCacheWrite(t *testing.T) {
 		t.Errorf("Failed to write file")
 	}
 
-	fh.Seek(0, os.SEEK_SET)
+	fh.Seek(0, io.SeekStart)
 	buf := make([]byte, 4)
-	_, err = fh.Read(buf)
+	_, _ = fh.Read(buf)
 	fh.Write([]byte(" IS A"))
 	fh.Close()
 

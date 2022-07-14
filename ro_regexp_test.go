@@ -16,12 +16,12 @@ func TestFilterReadOnly(t *testing.T) {
 
 func TestFilterReadonlyRemoveAndRead(t *testing.T) {
 	mfs := &MemMapFs{}
-	fh, err := mfs.Create("/file.txt")
+	fh, _ := mfs.Create("/file.txt")
 	fh.Write([]byte("content here"))
 	fh.Close()
 
 	fs := NewReadOnlyFs(mfs)
-	err = fs.Remove("/file.txt")
+	err := fs.Remove("/file.txt")
 	if err == nil {
 		t.Errorf("Did not fail to remove file")
 	}

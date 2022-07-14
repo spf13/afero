@@ -496,7 +496,7 @@ func TestGcsOpenFile(t *testing.T) {
 				t.Fatalf("failed to close a file \"%s\": %s", name, err)
 			}
 
-			file, err = gcsAfs.OpenFile(name, os.O_CREATE, 0600)
+			_, err = gcsAfs.OpenFile(name, os.O_CREATE, 0600)
 			if !errors.Is(err, syscall.EPERM) {
 				t.Errorf("%v: open for write: got %v, expected %v", name, err, syscall.EPERM)
 			}

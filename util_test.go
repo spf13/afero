@@ -185,7 +185,7 @@ func createZeroSizedFileInTempDir() (File, error) {
 func createNonZeroSizedFileInTempDir() (File, error) {
 	f, err := createZeroSizedFileInTempDir()
 	if err != nil {
-		// no file ??
+		return nil, err
 	}
 	byteString := []byte("byteString")
 	err = WriteFile(testFS, f.Name(), byteString, 0644)
@@ -200,7 +200,7 @@ func createNonZeroSizedFileInTempDir() (File, error) {
 func deleteFileInTempDir(f File) {
 	err := testFS.Remove(f.Name())
 	if err != nil {
-		// now what?
+		panic(err)
 	}
 }
 
@@ -217,7 +217,7 @@ func createEmptyTempDir() (string, error) {
 func createTempDirWithZeroLengthFiles() (string, error) {
 	d, dirErr := createEmptyTempDir()
 	if dirErr != nil {
-		//now what?
+		return "", dirErr
 	}
 	filePrefix := "_path_test_"
 	_, fileErr := TempFile(testFS, d, filePrefix) // dir is os.TempDir()
@@ -235,7 +235,7 @@ func createTempDirWithZeroLengthFiles() (string, error) {
 func createTempDirWithNonZeroLengthFiles() (string, error) {
 	d, dirErr := createEmptyTempDir()
 	if dirErr != nil {
-		//now what?
+		return "", dirErr
 	}
 	filePrefix := "_path_test_"
 	f, fileErr := TempFile(testFS, d, filePrefix) // dir is os.TempDir()
@@ -406,7 +406,7 @@ func TestGetTempDir(t *testing.T) {
 func deleteTempDir(d string) {
 	err := os.RemoveAll(d)
 	if err != nil {
-		// now what?
+		panic(err)
 	}
 }
 
