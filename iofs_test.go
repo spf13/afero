@@ -6,9 +6,11 @@ package afero
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"runtime"
 	"testing"
 	"testing/fstest"
@@ -61,6 +63,77 @@ func TestIOFS(t *testing.T) {
 			t.Error(err)
 		}
 	})
+
+}
+
+func TestIOFSNativeDirEntryWhenPossible(t *testing.T) {
+	t.Parallel()
+
+	osfs := NewBasePathFs(NewOsFs(), t.TempDir())
+
+	err := osfs.MkdirAll("dir1/dir2", os.ModePerm)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i := 1; i <= 2; i++ {
+		f, err := osfs.Create(fmt.Sprintf("dir1/dir2/test%d.txt", i))
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.Close()
+	}
+
+	dir2, err := osfs.Open("dir1/dir2")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assertDirEntries := func(entries []fs.DirEntry) {
+		if len(entries) != 2 {
+			t.Fatalf("expected 2, got %d", len(entries))
+		}
+		for _, entry := range entries {
+			if _, ok := entry.(dirEntry); ok {
+				t.Fatal("DirEntry not native")
+			}
+		}
+	}
+
+	dirEntries, err := dir2.(fs.ReadDirFile).ReadDir(-1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertDirEntries(dirEntries)
+
+	iofs := NewIOFS(osfs)
+
+	fileCount := 0
+	err = fs.WalkDir(iofs, "", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !d.IsDir() {
+			fileCount++
+		}
+
+		if _, ok := d.(dirEntry); ok {
+			t.Fatal("DirEntry not native")
+		}
+
+		return nil
+
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if fileCount != 2 {
+		t.Fatalf("expected 2, got %d", fileCount)
+	}
+
 }
 
 func TestFromIOFS(t *testing.T) {
@@ -415,4 +488,49 @@ func assertPermissionError(t *testing.T, err error) {
 	if perr.Err != fs.ErrPermission {
 		t.Errorf("Expected (*fs.PathError).Err == fs.ErrPermisson, got %[1]T (%[1]v)", err)
 	}
+}
+
+func BenchmarkWalkDir(b *testing.B) {
+	osfs := NewBasePathFs(NewOsFs(), b.TempDir())
+
+	createSomeFiles := func(dirname string) {
+		for i := 0; i < 10; i++ {
+			f, err := osfs.Create(filepath.Join(dirname, fmt.Sprintf("test%d.txt", i)))
+			if err != nil {
+				b.Fatal(err)
+			}
+			f.Close()
+		}
+	}
+
+	depth := 10
+	for level := depth; level > 0; level-- {
+		dirname := ""
+		for i := 0; i < level; i++ {
+			dirname = filepath.Join(dirname, fmt.Sprintf("dir%d", i))
+			err := osfs.MkdirAll(dirname, 0755)
+			if err != nil && !os.IsExist(err) {
+				b.Fatal(err)
+			}
+		}
+		createSomeFiles(dirname)
+	}
+
+	iofs := NewIOFS(osfs)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		err := fs.WalkDir(iofs, "", func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			return nil
+
+		})
+
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+
 }

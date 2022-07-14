@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"sort"
 	"time"
 )
 
@@ -67,10 +68,22 @@ func (iofs IOFS) Glob(pattern string) ([]string, error) {
 }
 
 func (iofs IOFS) ReadDir(name string) ([]fs.DirEntry, error) {
-	items, err := ReadDir(iofs.Fs, name)
+	f, err := iofs.Fs.Open(name)
 	if err != nil {
 		return nil, iofs.wrapError("readdir", name, err)
 	}
+
+	defer f.Close()
+
+	if rdf, ok := f.(fs.ReadDirFile); ok {
+		return rdf.ReadDir(-1)
+	}
+
+	items, err := f.Readdir(-1)
+	if err != nil {
+		return nil, iofs.wrapError("readdir", name, err)
+	}
+	sort.Sort(byName(items))
 
 	ret := make([]fs.DirEntry, len(items))
 	for i := range items {
