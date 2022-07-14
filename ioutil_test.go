@@ -37,13 +37,13 @@ func TestReadFile(t *testing.T) {
 
 	testFS.Create("this_exists.go")
 	filename := "rumpelstilzchen"
-	contents, err := fsutil.ReadFile(filename)
+	_, err := fsutil.ReadFile(filename)
 	if err == nil {
 		t.Fatalf("ReadFile %s: error expected, none found", filename)
 	}
 
 	filename = "this_exists.go"
-	contents, err = fsutil.ReadFile(filename)
+	contents, err := fsutil.ReadFile(filename)
 	if err != nil {
 		t.Fatalf("ReadFile %s: %v", filename, err)
 	}

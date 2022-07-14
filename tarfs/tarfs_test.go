@@ -266,7 +266,7 @@ func TestOpenFile(t *testing.T) {
 		}
 		file.Close()
 
-		file, err = afs.OpenFile(f.name, os.O_CREATE, 0600)
+		_, err = afs.OpenFile(f.name, os.O_CREATE, 0600)
 		if !errors.Is(err, syscall.EPERM) {
 			t.Errorf("%v: open for write: got %v, expected %v", f.name, err, syscall.EPERM)
 		}

@@ -85,10 +85,10 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 		return 0, afero.ErrFileClosed
 	}
 	switch whence {
-	case os.SEEK_SET:
-	case os.SEEK_CUR:
+	case io.SeekStart:
+	case io.SeekCurrent:
 		offset += f.offset
-	case os.SEEK_END:
+	case io.SeekEnd:
 		offset += int64(f.zipfile.UncompressedSize64)
 	default:
 		return 0, syscall.EINVAL
