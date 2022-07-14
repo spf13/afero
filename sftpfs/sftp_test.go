@@ -215,6 +215,9 @@ func MakeSSHKeyPair(bits int, pubKeyPath, privateKeyPath string) error {
 
 	// generate and write private key as PEM
 	privateKeyFile, err := os.Create(privateKeyPath)
+	if err != nil {
+		return err
+	}
 	defer privateKeyFile.Close()
 	if err != nil {
 		return err

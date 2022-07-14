@@ -214,7 +214,7 @@ func TestMultipleOpenFiles(t *testing.T) {
 		if err != nil {
 			t.Error("fh.Write failed: " + err.Error())
 		}
-		_, err = fh1.Seek(0, os.SEEK_SET)
+		_, err = fh1.Seek(0, io.SeekStart)
 		if err != nil {
 			t.Error(err)
 		}

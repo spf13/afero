@@ -186,7 +186,7 @@ func (f *File) Readdirnames(n int) (names []string, err error) {
 func (f *File) Read(b []byte) (n int, err error) {
 	f.fileData.Lock()
 	defer f.fileData.Unlock()
-	if f.closed == true {
+	if f.closed {
 		return 0, ErrFileClosed
 	}
 	if len(b) > 0 && int(f.at) == len(f.fileData.data) {
@@ -214,7 +214,7 @@ func (f *File) ReadAt(b []byte, off int64) (n int, err error) {
 }
 
 func (f *File) Truncate(size int64) error {
-	if f.closed == true {
+	if f.closed {
 		return ErrFileClosed
 	}
 	if f.readOnly {
@@ -236,7 +236,7 @@ func (f *File) Truncate(size int64) error {
 }
 
 func (f *File) Seek(offset int64, whence int) (int64, error) {
-	if f.closed == true {
+	if f.closed {
 		return 0, ErrFileClosed
 	}
 	switch whence {
@@ -251,7 +251,7 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 }
 
 func (f *File) Write(b []byte) (n int, err error) {
-	if f.closed == true {
+	if f.closed {
 		return 0, ErrFileClosed
 	}
 	if f.readOnly {
@@ -330,8 +330,8 @@ func (s *FileInfo) Size() int64 {
 
 var (
 	ErrFileClosed        = errors.New("File is closed")
-	ErrOutOfRange        = errors.New("Out of range")
-	ErrTooLarge          = errors.New("Too large")
+	ErrOutOfRange        = errors.New("out of range")
+	ErrTooLarge          = errors.New("too large")
 	ErrFileNotFound      = os.ErrNotExist
 	ErrFileExists        = os.ErrExist
 	ErrDestinationExists = os.ErrExist

@@ -98,7 +98,7 @@ func TestOpenFile(t *testing.T) {
 		io.WriteString(f, "|append")
 		f.Close()
 
-		f, err = fs.OpenFile(path, os.O_RDONLY, 0600)
+		f, _ = fs.OpenFile(path, os.O_RDONLY, 0600)
 		contents, _ := ioutil.ReadAll(f)
 		expectedContents := "initial|append"
 		if string(contents) != expectedContents {
@@ -700,7 +700,7 @@ func removeAllTestFiles(t *testing.T) {
 func equal(name1, name2 string) (r bool) {
 	switch runtime.GOOS {
 	case "windows":
-		r = strings.ToLower(name1) == strings.ToLower(name2)
+		r = strings.EqualFold(name1, name2)
 	default:
 		r = name1 == name2
 	}
