@@ -303,8 +303,8 @@ Like, `RegexpFs`, files will not be created when the predicate returns false
 and directories are always not filtered.
 
 ```go
-pred := func(path string) bool {
-	return strings.HasSuffix(path, ".txt")
+pred := func(isDir bool, path string) bool {
+	return isDir || strings.HasSuffix(path, ".txt")
 }
 fs := afero.NewFilePredicateFs(afero.NewMemMapFs(), pred)
 _, err := fs.Create("/file.html")
