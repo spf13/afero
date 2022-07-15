@@ -16,6 +16,8 @@ import (
 	"testing"
 	"testing/fstest"
 	"time"
+
+	"github.com/spf13/afero/internal/common"
 )
 
 func TestIOFS(t *testing.T) {
@@ -105,7 +107,7 @@ func TestIOFSNativeDirEntryWhenPossible(t *testing.T) {
 			t.Fatalf("expected %d, got %d", numFiles, len(entries))
 		}
 		for i, entry := range entries {
-			if _, ok := entry.(dirEntry); ok {
+			if _, ok := entry.(common.FileInfoDirEntry); ok {
 				t.Fatal("DirEntry not native")
 			}
 			if ordered && entry.Name() != fmt.Sprintf("test%d.txt", i) {
@@ -138,7 +140,7 @@ func TestIOFSNativeDirEntryWhenPossible(t *testing.T) {
 			fileCount++
 		}
 
-		if _, ok := d.(dirEntry); ok {
+		if _, ok := d.(common.FileInfoDirEntry); ok {
 			t.Fatal("DirEntry not native")
 		}
 
