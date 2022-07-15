@@ -1,6 +1,7 @@
 package afero
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -13,6 +14,10 @@ type FilePredicateFs struct {
 	pred   func(string) bool
 	source Fs
 }
+
+var (
+	_ fs.ReadDirFile = (*PredicateFile)(nil)
+)
 
 func NewFilePredicateFs(source Fs, pred func(string) bool) Fs {
 	return &FilePredicateFs{source: source, pred: pred}
@@ -189,6 +194,25 @@ func (f *PredicateFile) Readdir(c int) (fi []os.FileInfo, err error) {
 		}
 	}
 	return fi, nil
+}
+
+func (f *PredicateFile) ReadDir(n int) (filtered []fs.DirEntry, err error) {
+	var entreis []fs.DirEntry
+	if rdf, ok := f.f.(fs.ReadDirFile); ok {
+		entreis, err = rdf.ReadDir(n)
+	} else {
+		entreis, err = readDirFile{f.f}.ReadDir(n)
+	}
+	if err != nil {
+		return nil, err
+	}
+	for _, e := range entreis {
+		if e.IsDir() || f.pred(filepath.Join(f.f.Name(), e.Name())) {
+			filtered = append(filtered, e)
+		}
+	}
+	return filtered, nil
+
 }
 
 func (f *PredicateFile) Readdirnames(c int) (n []string, err error) {
