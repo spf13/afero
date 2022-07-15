@@ -18,14 +18,19 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/spf13/afero/internal/common"
 )
 
 const FilePathSeparator = string(filepath.Separator)
+
+var _ fs.ReadDirFile = &File{}
 
 type File struct {
 	// atomic requires 64-bit alignment for struct field access
@@ -181,6 +186,19 @@ func (f *File) Readdirnames(n int) (names []string, err error) {
 		_, names[i] = filepath.Split(f.Name())
 	}
 	return names, err
+}
+
+// Implements fs.ReadDirFile
+func (f *File) ReadDir(n int) ([]fs.DirEntry, error) {
+	fi, err := f.Readdir(n)
+	if err != nil {
+		return nil, err
+	}
+	di := make([]fs.DirEntry, len(fi))
+	for i, f := range fi {
+		di[i] = common.FileInfoDirEntry{FileInfo: f}
+	}
+	return di, nil
 }
 
 func (f *File) Read(b []byte) (n int, err error) {

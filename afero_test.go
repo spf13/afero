@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	iofs "io/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -530,22 +531,43 @@ func TestReaddirSimple(t *testing.T) {
 
 func TestReaddir(t *testing.T) {
 	defer removeAllTestFiles(t)
-	for num := 0; num < 6; num++ {
+	const nums = 6
+	for num := 0; num < nums; num++ {
 		outputs := make([]string, len(Fss))
 		infos := make([]string, len(Fss))
 		for i, fs := range Fss {
 			testSubDir := setupTestDir(t, fs)
-			//tDir := filepath.Dir(testSubDir)
 			root, err := fs.Open(testSubDir)
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer root.Close()
 
-			for j := 0; j < 6; j++ {
+			infosn := make([]string, nums)
+
+			for j := 0; j < nums; j++ {
 				info, err := root.Readdir(num)
 				outputs[i] += fmt.Sprintf("%v  Error: %v\n", myFileInfo(info), err)
-				infos[i] += fmt.Sprintln(len(info), err)
+				s := fmt.Sprintln(len(info), err)
+				infosn[j] = s
+				infos[i] += s
+			}
+			root.Close()
+
+			// Also check fs.ReadDirFile interface if implemented
+			if _, ok := root.(iofs.ReadDirFile); ok {
+				root, err = fs.Open(testSubDir)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer root.Close()
+
+				for j := 0; j < nums; j++ {
+					dirEntries, err := root.(iofs.ReadDirFile).ReadDir(num)
+					s := fmt.Sprintln(len(dirEntries), err)
+					if s != infosn[j] {
+						t.Fatalf("%s: %s != %s", fs.Name(), s, infosn[j])
+					}
+				}
 			}
 		}
 
