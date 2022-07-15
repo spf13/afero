@@ -26,8 +26,8 @@ func TestFilePredicateFs(t *testing.T) {
 		return strings.HasSuffix(filepath.Dir(path), ".hidden")
 	}
 
-	pred := func(path string) bool {
-		return nonEmpty(path) && txtExts(path) && !inHiddenDir(path)
+	pred := func(isDir bool, path string) bool {
+		return isDir || (nonEmpty(path) && txtExts(path) && !inHiddenDir(path))
 	}
 
 	fs := &FilePredicateFs{pred: pred, source: mfs}
