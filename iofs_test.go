@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -76,7 +77,17 @@ func TestIOFSNativeDirEntryWhenPossible(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for i := 1; i <= 2; i++ {
+	const numFiles = 10
+
+	var fileNumbers []int
+	for i := 0; i < numFiles; i++ {
+		fileNumbers = append(fileNumbers, i)
+	}
+	rand.Shuffle(len(fileNumbers), func(i, j int) {
+		fileNumbers[i], fileNumbers[j] = fileNumbers[j], fileNumbers[i]
+	})
+
+	for _, i := range fileNumbers {
 		f, err := osfs.Create(fmt.Sprintf("dir1/dir2/test%d.txt", i))
 		if err != nil {
 			t.Fatal(err)
@@ -89,13 +100,16 @@ func TestIOFSNativeDirEntryWhenPossible(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assertDirEntries := func(entries []fs.DirEntry) {
-		if len(entries) != 2 {
-			t.Fatalf("expected 2, got %d", len(entries))
+	assertDirEntries := func(entries []fs.DirEntry, ordered bool) {
+		if len(entries) != numFiles {
+			t.Fatalf("expected %d, got %d", numFiles, len(entries))
 		}
-		for _, entry := range entries {
+		for i, entry := range entries {
 			if _, ok := entry.(dirEntry); ok {
 				t.Fatal("DirEntry not native")
+			}
+			if ordered && entry.Name() != fmt.Sprintf("test%d.txt", i) {
+				t.Fatalf("expected %s, got %s", fmt.Sprintf("test%d.txt", i), entry.Name())
 			}
 		}
 	}
@@ -104,9 +118,15 @@ func TestIOFSNativeDirEntryWhenPossible(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertDirEntries(dirEntries)
+	assertDirEntries(dirEntries, false)
 
 	iofs := NewIOFS(osfs)
+
+	dirEntries, err = iofs.ReadDir("dir1/dir2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertDirEntries(dirEntries, true)
 
 	fileCount := 0
 	err = fs.WalkDir(iofs, "", func(path string, d fs.DirEntry, err error) error {
@@ -130,8 +150,8 @@ func TestIOFSNativeDirEntryWhenPossible(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if fileCount != 2 {
-		t.Fatalf("expected 2, got %d", fileCount)
+	if fileCount != numFiles {
+		t.Fatalf("expected %d, got %d", numFiles, fileCount)
 	}
 
 }
