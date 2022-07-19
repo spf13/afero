@@ -76,7 +76,12 @@ func (iofs IOFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	defer f.Close()
 
 	if rdf, ok := f.(fs.ReadDirFile); ok {
-		return rdf.ReadDir(-1)
+		items, err := rdf.ReadDir(-1)
+		if err != nil {
+			return nil, iofs.wrapError("readdir", name, err)
+		}
+		sort.Slice(items, func(i, j int) bool { return items[i].Name() < items[j].Name() })
+		return items, nil
 	}
 
 	items, err := f.Readdir(-1)
