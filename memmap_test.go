@@ -692,3 +692,22 @@ func TestMemFsLstatIfPossible(t *testing.T) {
 		t.Fatalf("Function indicated lstat was called. This should never be true.")
 	}
 }
+
+func TestStrictDirectories(t *testing.T) {
+	t.Parallel()
+
+	fs := NewMemMapFsWithOptions(EnableStrictDirectories)
+
+	err := WriteFile(fs, "/bar/test.txt", []byte("hello, world"), 0777)
+	if err == nil {
+		t.Fatalf("Expected an error with strict directories")
+	}
+
+	if err := fs.Mkdir("bar", 0777); err != nil {
+		t.Fatalf("mkdir must function")
+	}
+
+	if err := WriteFile(fs, "/bar/test.txt", []byte("hello, world"), 0777); err != nil {
+		t.Fatalf("Expected no error with the directory created, recieved: %s", err)
+	}
+}
