@@ -71,6 +71,16 @@ func (d *FileData) Name() string {
 	return d.name
 }
 
+func (d *FileData) HasChildren() bool {
+	d.Lock()
+	defer d.Unlock()
+
+	if d.dir && d.memDir.Len() > 0 {
+		return true
+	}
+	return false
+}
+
 func CreateFile(name string) *FileData {
 	return &FileData{name: name, mode: os.ModeTemporary, modtime: time.Now()}
 }
