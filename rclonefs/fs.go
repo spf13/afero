@@ -2,7 +2,6 @@ package rclonefs
 
 import (
 	"context"
-	"fmt"
 	"os/user"
 	"path/filepath"
 	"strings"
@@ -19,7 +18,7 @@ type RCFS struct {
 	Cwd string
 }
 
-func (rcfs *RCFS) CreateRCFS(path string) (*RCFS, error) {
+func CreateRCFS(path string) (*RCFS, error) {
 	u, e := user.Current()
 	if e != nil {
 		return nil, e
@@ -43,9 +42,6 @@ func (rcfs *RCFS) CreateRCFS(path string) (*RCFS, error) {
 	}
 
 	vfs := vfs.New(rfs, nil)
-
-	data, _ := vfs.ReadFile("mock.json")
-	fmt.Printf("%s\n", string(data))
 
 	return &RCFS{Fs: vfs, Cwd: cwd}, nil
 }
