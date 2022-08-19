@@ -131,13 +131,6 @@ func (rcfs *RCFS) Chtimes(name string, atime time.Time, mtime time.Time) error {
 	return rcfs.Fs.Chtimes(name, atime, mtime)
 }
 
-func (rcfs *RCFS) ReadFile(name string) ([]byte, error) {
-	name = rcfs.AbsPath(name)
-
-	return rcfs.Fs.ReadFile(name)
-}
-
-
 
 
 
