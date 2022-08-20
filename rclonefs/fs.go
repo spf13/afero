@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -69,8 +70,9 @@ func (rcfs *RCFS) Create(name string) (afero.File, error) {
 }
 
 func (rcfs *RCFS) Mkdir(name string, perm os.FileMode) error {
-	// TODO
-	return nil
+	name = rcfs.AbsPath(name)
+
+	return rcfs.Fs.Mkdir(name, perm)
 }
 
 func (rcfs *RCFS) MkdirAll(name string, perm os.FileMode) error {
@@ -108,44 +110,45 @@ func (rcfs *RCFS) Remove(name string) error {
 
 func (rcfs *RCFS) RemoveAll(path string) error {
 	path = rcfs.AbsPath(path)
-	
-	afero.Walk(rcfs, path, func(path string, info fs.FileInfo, err error) error {
+
+	fileList := make([]string, 0)
+	dirList := make([]string, 0)
+
+	e := afero.Walk(rcfs, path, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
 		if info.IsDir() {
-			return nil
+			dirList = append(dirList, path)
 		} else {
-			rcfs.Remove(path)
-			return nil
+			fileList = append(fileList, path)
 		}
+
+		return nil
 	})
 
-	for {
-		if ok, err := afero.IsEmpty(rcfs, path); err == nil {
-			if ok {
-				rcfs.Remove(path)
-				break
-			}
-		} else {
-			return err
-		}
-
-		afero.Walk(rcfs, path, func(path string, info fs.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-
-			if ok, err := afero.IsEmpty(rcfs, path); ok {
-				rcfs.Remove(path)
-				return nil
-			} else {
-				return err
-			}
-		})
+	if e != nil {
+		return e
 	}
 
+	for _, f := range fileList {
+		if e := rcfs.Remove(f); e != nil {
+			return e
+		}
+	}
+
+	sort.Slice(dirList, func(i, j int) bool {
+		return len(dirList[i]) > len(dirList[j])
+	})
+
+	for _, d := range dirList {
+		if e := rcfs.Remove(d); e != nil {
+			return e
+		}
+	}
+
+	rcfs.Remove(path)
 	return nil
 }
 

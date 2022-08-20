@@ -8,14 +8,12 @@ import (
 )
 
 func main() {
-	RFS, _ := rclonefs.CreateRCFS("pcloud_mv1:/cfg/json")
+	RFS, _ := rclonefs.CreateRCFS("pcloud_mv1:/cfg")
 
-
-	f, e := RFS.Create("../obj3.json")
-	if e != nil {
-		fmt.Printf("Error: %v\n", e)
+	err := RFS.RemoveAll("yml")
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
 
-	defer f.Close()
 }
