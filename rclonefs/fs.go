@@ -2,6 +2,8 @@ package rclonefs
 
 import (
 	"context"
+	"fmt"
+	"io/fs"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -9,7 +11,7 @@ import (
 	"time"
 
 	_ "github.com/rclone/rclone/backend/all"
-	"github.com/rclone/rclone/fs"
+	rclfs "github.com/rclone/rclone/fs"
 	"github.com/rclone/rclone/fs/config"
 	"github.com/rclone/rclone/fs/config/configfile"
 	"github.com/rclone/rclone/vfs"
@@ -38,8 +40,9 @@ func CreateRCFS(path string) (*RCFS, error) {
 
 	rootdir, cwd, _ := strings.Cut(path, ":")
 	rootdir += ":"
+	cwd = filepath.Join("/", cwd)
 
-	rfs, e := fs.NewFs(context.Background(), rootdir)
+	rfs, e := rclfs.NewFs(context.Background(), rootdir)
 	if e != nil {
 		return nil, e
 	}
@@ -104,7 +107,9 @@ func (rcfs *RCFS) Remove(name string) error {
 }
 
 func (rcfs *RCFS) RemoveAll(path string) error {
-	// TODO
+	path = rcfs.AbsPath(path)
+	afero.Walk(rcfs, path, printNode)
+
 	return nil
 }
 
@@ -131,8 +136,32 @@ func (rcfs *RCFS) Chtimes(name string, atime time.Time, mtime time.Time) error {
 	return rcfs.Fs.Chtimes(name, atime, mtime)
 }
 
+func printNode(path string, info fs.FileInfo, err error) error {
+	if err != nil {
+		fmt.Printf("prevent panic by handling failure accessing a path %q: %v\n", path, err)
+		return err
+	}
+	if info.IsDir() {
+		fmt.Printf("visited dir: %q\n", path)
+		return nil
+	} else {
+		fmt.Printf("visited file: %q\n", path)
+		return nil
+	}
+}
+/*
+func rmNode(path string, info fs.FileInfo, err error) error {
+	if err != nil {
+		return err
+	}
 
-
+	if info.IsDir() {
+		return nil
+	} else {
+		a
+	}
+}
+*/
 
 
 
