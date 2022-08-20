@@ -108,6 +108,7 @@ func (rcfs *RCFS) Remove(name string) error {
 
 func (rcfs *RCFS) RemoveAll(path string) error {
 	path = rcfs.AbsPath(path)
+	
 	afero.Walk(rcfs, path, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -120,6 +121,30 @@ func (rcfs *RCFS) RemoveAll(path string) error {
 			return nil
 		}
 	})
+
+	for {
+		if ok, err := afero.IsEmpty(rcfs, path); err == nil {
+			if ok {
+				rcfs.Remove(path)
+				break
+			}
+		} else {
+			return err
+		}
+
+		afero.Walk(rcfs, path, func(path string, info fs.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			if ok, err := afero.IsEmpty(rcfs, path); ok {
+				rcfs.Remove(path)
+				return nil
+			} else {
+				return err
+			}
+		})
+	}
 
 	return nil
 }
