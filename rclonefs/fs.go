@@ -2,7 +2,7 @@ package rclonefs
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"io/fs"
 	"os"
 	"os/user"
@@ -157,13 +157,11 @@ func (rcfs *RCFS) Rename(oldname, newname string) error {
 }
 
 func (rcfs *RCFS) Chmod(name string, mode os.FileMode) error {
-	// TODO
-	return nil
+	return errors.New("Chmod is not supported")
 }
 
 func (rcfs *RCFS) Chown(name string, uid, gid int) error {
-	// TODO
-	return nil
+	return errors.New("Chown is not supported")
 }
 
 func (rcfs *RCFS) Chtimes(name string, atime time.Time, mtime time.Time) error {
@@ -171,49 +169,3 @@ func (rcfs *RCFS) Chtimes(name string, atime time.Time, mtime time.Time) error {
 
 	return rcfs.Fs.Chtimes(name, atime, mtime)
 }
-
-func printNode(path string, info fs.FileInfo, err error) error {
-	if err != nil {
-		fmt.Printf("prevent panic by handling failure accessing a path %q: %v\n", path, err)
-		return err
-	}
-	if info.IsDir() {
-		fmt.Printf("visited dir: %q\n", path)
-		return nil
-	} else {
-		fmt.Printf("visited file: %q\n", path)
-		return nil
-	}
-}
-/*
-func rmNode(path string, info fs.FileInfo, err error) error {
-	if err != nil {
-		return err
-	}
-
-	if info.IsDir() {
-		return nil
-	} else {
-		a
-	}
-}
-*/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
