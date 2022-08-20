@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	RFS, _ := rclonefs.CreateRCFS("pcloud_mv1:cfg")
+	RFS, _ := rclonefs.CreateRCFS("pcloud_mv1:/cfg")
 
 	name := "ycfg"
 
