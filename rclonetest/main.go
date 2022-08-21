@@ -8,12 +8,14 @@ import (
 )
 
 func main() {
-	RFS, _ := rclonefs.CreateRCFS("pcloud_mv1:")
+	RFS, _ := rclonefs.CreateRCFS("pcloud_mv1:/cfg/json")
 
-	err := RFS.MkdirAll("/data/passwords/sites/github/", 0750)
+	file, err := RFS.OpenFile("../../obj1.json", os.O_RDWR | os.O_TRUNC, 0666)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
 
+	file.WriteString("{\"game\":\"Max Payne\"}")
+	file.Close()
 }
