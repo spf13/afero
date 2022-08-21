@@ -76,7 +76,35 @@ func (rcfs *RCFS) Mkdir(name string, perm os.FileMode) error {
 }
 
 func (rcfs *RCFS) MkdirAll(name string, perm os.FileMode) error {
-	// TODO
+	name = rcfs.AbsPath(name)
+	name = strings.Trim(name, "/")
+
+	var (
+		front string = "/"
+		current string
+		back string
+		ok bool
+	)
+
+	for {
+		current, back, ok = strings.Cut(name, "/")
+		if !ok {
+			front = front + name
+			if e := rcfs.Fs.Mkdir(front, perm); e != nil && !os.IsExist(e) {
+				return e
+			}
+			break
+		}
+
+		front = front + current + "/"
+
+		if e := rcfs.Fs.Mkdir(front, perm); e != nil && !os.IsExist(e) {
+			return e
+		}
+
+		name = back
+	}
+
 	return nil
 }
 
