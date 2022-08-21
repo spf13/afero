@@ -24,15 +24,20 @@ type RCFS struct {
 	Cwd	string
 }
 
-func CreateRCFS(path string) (*RCFS, error) {
-	u, e := user.Current()
-	if e != nil {
-		return nil, e
+func CreateRCFS(path, cfg string) (*RCFS, error) {
+	var cfgpath string
+
+	if strings.Compare(cfg, "") == 0 {
+		u, e := user.Current()
+		if e != nil {
+			return nil, e
+		}
+		cfgpath = filepath.Join(u.HomeDir, ".config/rclone/rclone.conf")
+	} else {
+		cfgpath = cfg
 	}
 
-	cfgpath := filepath.Join(u.HomeDir, ".config/rclone/rclone.conf")
-
-	e = config.SetConfigPath(cfgpath)
+	e := config.SetConfigPath(cfgpath)
 	if e != nil {
 		return nil, e
 	}
