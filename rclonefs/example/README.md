@@ -19,13 +19,13 @@ you put during the first step, is pcloud1.
 name> pcloud
 ```
 
-3. Put the file person.json or any other to the root
+3. Put the file employee.yml or any other to the root
 directory of your PCloud storage.
 4. Make sure that your configuration works. For example,
 run this command:
 
 ```
-rclone cat pcloud1:person.json
+rclone cat pcloud1:employee.yml
 ```
 
 pcloud1 is the name of your remote storage:
@@ -34,21 +34,33 @@ pcloud1 is the name of your remote storage:
 - you will see the content of the file in your console.
 
 If your cloud storage contains buckets (Amazon S3,
-minio, Backblaze B2) and the file mock.json is put into
+minio, Backblaze B2) and the file employee.yml is put into
 the bucket1, the access to the file is:
 
 ```go
-TODO
+rclone cat minio1:bucket1/employee.yml
 ```
 
-5. Put the name of your remote storage with the full
+minio1 is the name of your cloud storage.
+
+The data is stored in the file rclone.conf. On Linux,
+its default path is:
+
+```
+${HOME}/.config/rclone/rclone.conf
+```
+
+5. Create "/cfg/json" directory in your remote storage. 
+It will be your working directory in the example.
+
+6. Put the name of your remote storage with the full
 path '/cfg/json' to the file 'cloud.txt'
 
 ```
 pcloud_mv1:/cfg/json
 ```
 
-6. Run the example:
+7. Run the example:
 
 ```
 go run example.go
