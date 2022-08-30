@@ -64,9 +64,8 @@ func (f *File) Read(b []byte) (n int, err error) {
 	return f.fd.Read(b)
 }
 
-// TODO
 func (f *File) ReadAt(b []byte, off int64) (n int, err error) {
-	return 0, nil
+	return f.fd.ReadAt(b, off)
 }
 
 func (f *File) Readdir(count int) (res []os.FileInfo, err error) {
