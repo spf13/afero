@@ -3,9 +3,12 @@ package afero
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -690,5 +693,86 @@ func TestMemFsLstatIfPossible(t *testing.T) {
 	}
 	if lstatCalled {
 		t.Fatalf("Function indicated lstat was called. This should never be true.")
+	}
+}
+
+func TestMemMapFsConfurrentMkdir(t *testing.T) {
+	const dir = "test_dir"
+	const n = 1000
+	mfs := NewMemMapFs().(*MemMapFs)
+
+	allFilePaths := make([]string, 0, n)
+
+	// run concurrency test
+	var wg sync.WaitGroup
+	for i := 0; i < n; i++ {
+		fp := filepath.Join(
+			dir,
+			fmt.Sprintf("%02d", n%10),
+			fmt.Sprintf("%d.txt", i),
+		)
+		allFilePaths = append(allFilePaths, fp)
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			if err := mfs.MkdirAll(filepath.Dir(fp), 0755); err != nil {
+				t.Error(err)
+			}
+
+			wt, err := mfs.Create(fp)
+			if err != nil {
+				t.Error(err)
+			}
+			defer func() {
+				if err := wt.Close(); err != nil {
+					t.Error(err)
+				}
+			}()
+
+			// write 30 bytes
+			for j := 0; j < 10; j++ {
+				_, err := wt.Write([]byte("000"))
+				if err != nil {
+					t.Error(err)
+				}
+			}
+		}()
+	}
+	wg.Wait()
+
+	// Test1: find all files by full path access
+	for _, fp := range allFilePaths {
+		info, err := mfs.Stat(fp)
+		if err != nil {
+			t.Error(err)
+		}
+
+		if info.Size() != 30 {
+			t.Errorf("file size should be 30, but got %d", info.Size())
+		}
+
+	}
+
+	// Test2: find all files by walk
+	foundFiles := make([]string, 0, n)
+	wErr := Walk(mfs, dir, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			t.Error(err)
+		}
+		if info.IsDir() {
+			return nil // skip dir
+		}
+		if strings.HasSuffix(info.Name(), ".txt") {
+			foundFiles = append(foundFiles, path)
+		}
+		return nil
+	})
+	if wErr != nil {
+		t.Error(wErr)
+	}
+	if len(foundFiles) != n {
+		t.Errorf("found %d files, but expect %d", len(foundFiles), n)
 	}
 }
