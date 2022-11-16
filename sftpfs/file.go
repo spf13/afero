@@ -44,6 +44,10 @@ func (f *File) Close() error {
 	return f.fd.Close()
 }
 
+func (f *File) Chmod(mode os.FileMode) error {
+	return f.fd.Chmod(mode)
+}
+
 func (f *File) Name() string {
 	return f.fd.Name()
 }

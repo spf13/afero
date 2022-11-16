@@ -213,6 +213,10 @@ type fromIOFSFile struct {
 	name string
 }
 
+func (f fromIOFSFile) Chmod(mode os.FileMode) error {
+	return notImplemented("chmod", f.name)
+}
+
 func (f fromIOFSFile) ReadAt(p []byte, off int64) (n int, err error) {
 	readerAt, ok := f.File.(io.ReaderAt)
 	if !ok {

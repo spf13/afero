@@ -617,7 +617,7 @@ func TestMemFsChmod(t *testing.T) {
 		t.Fatal("mkdir failed to create a directory: mode =", info.Mode())
 	}
 
-	err = fs.Chmod(file, 0)
+	err = fs.Chmod(file, os.ModeTemporary|0355)
 	if err != nil {
 		t.Error("Failed to run chmod:", err)
 	}
@@ -626,9 +626,29 @@ func TestMemFsChmod(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.Mode().String() != "d---------" {
-		t.Error("chmod should not change file type. New mode =", info.Mode())
+	if info.Mode().String() != "d-wxr-xr-x" {
+		t.Error("incorrect file mode after chmod:", info.Mode())
 	}
+
+	f, err := fs.Open(file)
+	if err != nil {
+		t.Error("failed to open file:", err)
+	}
+
+	err = f.Chmod(os.ModeNamedPipe | 0744)
+	if err != nil {
+		t.Error("Failed to run chmod:", err)
+	}
+
+	info, err = fs.Stat(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().String() != "drwxr--r--" {
+		t.Error("incorrect file mode after chmod:", info.Mode())
+	}
+
+	f.Close()
 }
 
 // can't use Mkdir to get around which permissions we're allowed to set

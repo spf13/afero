@@ -18,6 +18,7 @@ package gcsfs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -173,6 +174,10 @@ func (o *GcsFile) WriteAt(b []byte, off int64) (n int, err error) {
 	written, err := o.resource.WriteAt(b, off)
 	o.fhOffset += int64(written)
 	return written, err
+}
+
+func (o *GcsFile) Chmod(mode os.FileMode) error {
+	return errors.New("method Chmod is not implemented in GCS")
 }
 
 func (o *GcsFile) Name() string {

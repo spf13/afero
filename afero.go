@@ -42,6 +42,7 @@ type File interface {
 	io.Writer
 	io.WriterAt
 
+	Chmod(mode os.FileMode) error
 	Name() string
 	Readdir(count int) ([]os.FileInfo, error)
 	Readdirnames(n int) ([]string, error)
