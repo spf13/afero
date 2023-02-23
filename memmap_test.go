@@ -776,3 +776,60 @@ func TestMemMapFsConfurrentMkdir(t *testing.T) {
 		t.Errorf("found %d files, but expect %d", len(foundFiles), n)
 	}
 }
+
+func TestMemFsRenameDir(t *testing.T) {
+	const srcPath = "/src"
+	const dstPath = "/dst"
+	const subDir = "dir"
+	const subFile = "file.txt"
+
+	fs := NewMemMapFs()
+
+	err := fs.MkdirAll(srcPath+FilePathSeparator+subDir, 0777)
+	if err != nil {
+		t.Fatalf("MkDirAll failed: %s", err)
+	}
+
+	f, err := fs.Create(srcPath + FilePathSeparator + subFile)
+	if err != nil {
+		t.Fatalf("Create failed: %s", err)
+	}
+	if err = f.Close(); err != nil {
+		t.Fatalf("Close failed: %s", err)
+	}
+
+	err = fs.Rename(srcPath, dstPath)
+	if err != nil {
+		t.Fatalf("Rename failed: %s", err)
+	}
+
+	_, err = fs.Stat(srcPath + FilePathSeparator + subDir)
+	if err == nil {
+		t.Fatalf("SubDir still exists in the source dir")
+	}
+
+	_, err = fs.Stat(srcPath + FilePathSeparator + subFile)
+	if err == nil {
+		t.Fatalf("SubFile still exists in the source dir")
+	}
+
+	_, err = fs.Stat(dstPath + FilePathSeparator + subDir)
+	if err != nil {
+		t.Fatalf("SubDir stat in the destination dir: %s", err)
+	}
+
+	_, err = fs.Stat(dstPath + FilePathSeparator + subFile)
+	if err != nil {
+		t.Fatalf("SubFile stat in the destination dir: %s", err)
+	}
+
+	err = fs.Mkdir(srcPath, 0777)
+	if err != nil {
+		t.Fatalf("Cannot recreate the source dir: %s", err)
+	}
+
+	err = fs.Mkdir(srcPath+FilePathSeparator+subDir, 0777)
+	if err != nil {
+		t.Errorf("Cannot recreate the subdir in the source dir: %s", err)
+	}
+}
