@@ -63,7 +63,7 @@ func TestWriteFile(t *testing.T) {
 		"build bigger and better idiot-proof programs, and the Universe trying " +
 		"to produce bigger and better idiots. So far, the Universe is winning."
 
-	if err := fsutil.WriteFile(filename, []byte(data), 0644); err != nil {
+	if err := fsutil.WriteFile(filename, []byte(data), 0o644); err != nil {
 		t.Fatalf("WriteFile %s: %v", filename, err)
 	}
 
@@ -83,7 +83,7 @@ func TestWriteFile(t *testing.T) {
 
 func TestReadDir(t *testing.T) {
 	testFS = &MemMapFs{}
-	testFS.Mkdir("/i-am-a-dir", 0777)
+	testFS.Mkdir("/i-am-a-dir", 0o777)
 	testFS.Create("/this_exists.go")
 	dirname := "rumpelstilzchen"
 	_, err := ReadDir(testFS, dirname)

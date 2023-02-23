@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	defaultFileMode = 0755
+	defaultFileMode = 0o755
 	gsPrefix        = "gs://"
 )
 
@@ -42,7 +42,7 @@ type Fs struct {
 	buckets       map[string]stiface.BucketHandle
 	rawGcsObjects map[string]*GcsFile
 
-	autoRemoveEmptyFolders bool //trigger for creating "virtual folders" (not required by GCSs)
+	autoRemoveEmptyFolders bool // trigger for creating "virtual folders" (not required by GCSs)
 }
 
 func NewGcsFs(ctx context.Context, client stiface.Client) *Fs {
@@ -71,6 +71,7 @@ func (fs *Fs) ensureTrailingSeparator(s string) string {
 	}
 	return s
 }
+
 func (fs *Fs) ensureNoLeadingSeparator(s string) string {
 	if len(s) > 0 && strings.HasPrefix(s, fs.separator) {
 		s = s[len(fs.separator):]
@@ -200,7 +201,7 @@ func (fs *Fs) MkdirAll(path string, perm os.FileMode) error {
 		if f == "" && i != 0 {
 			continue // it's the last item - it should be empty
 		}
-		//Don't force a delimiter prefix
+		// Don't force a delimiter prefix
 		if root != "" {
 			root = root + fs.separator + f
 		} else {

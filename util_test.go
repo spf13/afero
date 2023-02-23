@@ -36,8 +36,8 @@ func TestDirExists(t *testing.T) {
 	}
 
 	// First create a couple directories so there is something in the filesystem
-	//testFS := new(MemMapFs)
-	testFS.MkdirAll("/foo/bar", 0777)
+	// testFS := new(MemMapFs)
+	testFS.MkdirAll("/foo/bar", 0o777)
 
 	data := []test{
 		{".", true},
@@ -155,7 +155,8 @@ func TestReaderContains(t *testing.T) {
 		{"", nil, false},
 		{"", [][]byte{[]byte("a")}, false},
 		{"a", [][]byte{[]byte("")}, false},
-		{"", [][]byte{[]byte("")}, false}} {
+		{"", [][]byte{[]byte("")}, false},
+	} {
 		result := readerContainsAny(strings.NewReader(this.v1), this.v2...)
 		if result != this.expect {
 			t.Errorf("[%d] readerContains: got %t but expected %t", i, result, this.expect)
@@ -188,7 +189,7 @@ func createNonZeroSizedFileInTempDir() (File, error) {
 		return nil, err
 	}
 	byteString := []byte("byteString")
-	err = WriteFile(testFS, f.Name(), byteString, 0644)
+	err = WriteFile(testFS, f.Name(), byteString, 0o644)
 	if err != nil {
 		// delete the file
 		deleteFileInTempDir(f)
@@ -229,7 +230,6 @@ func createTempDirWithZeroLengthFiles() (string, error) {
 	}
 	// the dir now has one, zero length file in it
 	return d, nil
-
 }
 
 func createTempDirWithNonZeroLengthFiles() (string, error) {
@@ -246,7 +246,7 @@ func createTempDirWithNonZeroLengthFiles() (string, error) {
 		return "", fileErr
 	}
 	byteString := []byte("byteString")
-	fileErr = WriteFile(testFS, f.Name(), byteString, 0644)
+	fileErr = WriteFile(testFS, f.Name(), byteString, 0o644)
 	if fileErr != nil {
 		// delete the file
 		deleteFileInTempDir(f)
@@ -257,7 +257,6 @@ func createTempDirWithNonZeroLengthFiles() (string, error) {
 
 	// the dir now has one, zero length file in it
 	return d, nil
-
 }
 
 func TestExists(t *testing.T) {
@@ -292,7 +291,6 @@ func TestExists(t *testing.T) {
 			t.Errorf("Test %d failed. Expected %q got %q", i, d.expectedErr, err)
 		}
 	}
-
 }
 
 func TestSafeWriteToDisk(t *testing.T) {

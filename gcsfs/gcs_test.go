@@ -122,7 +122,7 @@ func TestMain(m *testing.M) {
 	gcsAfs = &afero.Afero{Fs: &GcsFs{NewGcsFs(ctx, mockClient)}}
 
 	// Uncomment to use the real, not mocked, client
-	//gcsAfs = &Afero{Fs: &GcsFs{gcsfs.NewGcsFs(ctx, client)}}
+	// gcsAfs = &Afero{Fs: &GcsFs{gcsfs.NewGcsFs(ctx, client)}}
 
 	exitCode = m.Run()
 }
@@ -341,7 +341,7 @@ func TestGcsSeek(t *testing.T) {
 				t.Fatalf("opening %v: %v", name, err)
 			}
 
-			var tests = []struct {
+			tests := []struct {
 				offIn  int64
 				whence int
 				offOut int64
@@ -477,7 +477,7 @@ func TestGcsOpenFile(t *testing.T) {
 		}
 
 		for _, name := range names {
-			file, err := gcsAfs.OpenFile(name, os.O_RDONLY, 0400)
+			file, err := gcsAfs.OpenFile(name, os.O_RDONLY, 0o400)
 			if !f.exists {
 				if (f.name != "" && !errors.Is(err, syscall.ENOENT)) ||
 					(f.name == "" && !errors.Is(err, ErrNoBucketInName)) {
@@ -496,7 +496,7 @@ func TestGcsOpenFile(t *testing.T) {
 				t.Fatalf("failed to close a file \"%s\": %s", name, err)
 			}
 
-			_, err = gcsAfs.OpenFile(name, os.O_CREATE, 0600)
+			_, err = gcsAfs.OpenFile(name, os.O_CREATE, 0o600)
 			if !errors.Is(err, syscall.EPERM) {
 				t.Errorf("%v: open for write: got %v, expected %v", name, err, syscall.EPERM)
 			}
@@ -714,7 +714,7 @@ func TestGcsMkdir(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		emptyDirName := bucketName
 
-		err := gcsAfs.Mkdir(emptyDirName, 0755)
+		err := gcsAfs.Mkdir(emptyDirName, 0o755)
 		if err == nil {
 			t.Fatal("did not fail upon creation of an empty folder")
 		}
@@ -723,7 +723,7 @@ func TestGcsMkdir(t *testing.T) {
 		dirName := filepath.Join(bucketName, "a-test-dir")
 		var err error
 
-		err = gcsAfs.Mkdir(dirName, 0755)
+		err = gcsAfs.Mkdir(dirName, 0o755)
 		if err != nil {
 			t.Fatal("failed to create a folder with error", err)
 		}
@@ -739,7 +739,7 @@ func TestGcsMkdir(t *testing.T) {
 			t.Errorf("%s: mode is not directory", dirName)
 		}
 
-		if info.Mode() != os.ModeDir|0755 {
+		if info.Mode() != os.ModeDir|0o755 {
 			t.Errorf("%s: wrong permissions, expected drwxr-xr-x, got %s", dirName, info.Mode())
 		}
 
@@ -754,7 +754,7 @@ func TestGcsMkdirAll(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		emptyDirName := bucketName
 
-		err := gcsAfs.MkdirAll(emptyDirName, 0755)
+		err := gcsAfs.MkdirAll(emptyDirName, 0o755)
 		if err == nil {
 			t.Fatal("did not fail upon creation of an empty folder")
 		}
@@ -762,7 +762,7 @@ func TestGcsMkdirAll(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		dirName := filepath.Join(bucketName, "a/b/c")
 
-		err := gcsAfs.MkdirAll(dirName, 0755)
+		err := gcsAfs.MkdirAll(dirName, 0o755)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -774,7 +774,7 @@ func TestGcsMkdirAll(t *testing.T) {
 		if !info.Mode().IsDir() {
 			t.Errorf("%s: mode is not directory", filepath.Join(bucketName, "a"))
 		}
-		if info.Mode() != os.ModeDir|0755 {
+		if info.Mode() != os.ModeDir|0o755 {
 			t.Errorf("%s: wrong permissions, expected drwxr-xr-x, got %s", filepath.Join(bucketName, "a"), info.Mode())
 		}
 		info, err = gcsAfs.Stat(filepath.Join(bucketName, "a/b"))
@@ -784,7 +784,7 @@ func TestGcsMkdirAll(t *testing.T) {
 		if !info.Mode().IsDir() {
 			t.Errorf("%s: mode is not directory", filepath.Join(bucketName, "a/b"))
 		}
-		if info.Mode() != os.ModeDir|0755 {
+		if info.Mode() != os.ModeDir|0o755 {
 			t.Errorf("%s: wrong permissions, expected drwxr-xr-x, got %s", filepath.Join(bucketName, "a/b"), info.Mode())
 		}
 		info, err = gcsAfs.Stat(dirName)
@@ -794,7 +794,7 @@ func TestGcsMkdirAll(t *testing.T) {
 		if !info.Mode().IsDir() {
 			t.Errorf("%s: mode is not directory", dirName)
 		}
-		if info.Mode() != os.ModeDir|0755 {
+		if info.Mode() != os.ModeDir|0o755 {
 			t.Errorf("%s: wrong permissions, expected drwxr-xr-x, got %s", dirName, info.Mode())
 		}
 
@@ -816,7 +816,7 @@ func TestGcsRemoveAll(t *testing.T) {
 		aDir := filepath.Join(bucketName, "a")
 		bDir := filepath.Join(aDir, "b")
 
-		err := gcsAfs.MkdirAll(bDir, 0755)
+		err := gcsAfs.MkdirAll(bDir, 0o755)
 		if err != nil {
 			t.Fatal(err)
 		}

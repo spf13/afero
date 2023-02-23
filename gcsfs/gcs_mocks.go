@@ -166,7 +166,7 @@ func (w *writerMock) Close() error {
 	if w.file == nil {
 		var err error
 		if strings.HasSuffix(w.name, "/") {
-			err = w.fs.Mkdir(w.name, 0755)
+			err = w.fs.Mkdir(w.name, 0o755)
 			if err != nil {
 				return err
 			}
