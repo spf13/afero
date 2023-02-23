@@ -161,7 +161,7 @@ func TestSeek(t *testing.T) {
 			t.Fatalf("opening %v: %v", f.name, err)
 		}
 
-		var tests = []struct {
+		tests := []struct {
 			offin  int64
 			whence int
 			offout int64
@@ -252,7 +252,7 @@ func TestClose(t *testing.T) {
 
 func TestOpenFile(t *testing.T) {
 	for _, f := range files {
-		file, err := afs.OpenFile(f.name, os.O_RDONLY, 0400)
+		file, err := afs.OpenFile(f.name, os.O_RDONLY, 0o400)
 		if !f.exists {
 			if !errors.Is(err, syscall.ENOENT) {
 				t.Errorf("%v: got %v, expected%v", f.name, err, syscall.ENOENT)
@@ -266,7 +266,7 @@ func TestOpenFile(t *testing.T) {
 		}
 		file.Close()
 
-		_, err = afs.OpenFile(f.name, os.O_CREATE, 0600)
+		_, err = afs.OpenFile(f.name, os.O_CREATE, 0o600)
 		if !errors.Is(err, syscall.EPERM) {
 			t.Errorf("%v: open for write: got %v, expected %v", f.name, err, syscall.EPERM)
 		}

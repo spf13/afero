@@ -66,7 +66,6 @@ func TestIOFS(t *testing.T) {
 			t.Error(err)
 		}
 	})
-
 }
 
 func TestIOFSNativeDirEntryWhenPossible(t *testing.T) {
@@ -145,7 +144,6 @@ func TestIOFSNativeDirEntryWhenPossible(t *testing.T) {
 		}
 
 		return nil
-
 	})
 
 	if err != nil {
@@ -155,7 +153,6 @@ func TestIOFSNativeDirEntryWhenPossible(t *testing.T) {
 	if fileCount != numFiles {
 		t.Fatalf("expected %d, got %d", numFiles, fileCount)
 	}
-
 }
 
 func TestFromIOFS(t *testing.T) {
@@ -360,7 +357,6 @@ func TestFromIOFS_File(t *testing.T) {
 		// MapFS files implements io.ReaderAt
 		b := make([]byte, 2)
 		_, err := file.ReadAt(b, 2)
-
 		if err != nil {
 			t.Errorf("ReadAt failed: %v", err)
 			return
@@ -420,7 +416,7 @@ func TestFromIOFS_File(t *testing.T) {
 				return
 			}
 
-			var expectedItems = []struct {
+			expectedItems := []struct {
 				Name  string
 				IsDir bool
 				Size  int64
@@ -472,7 +468,7 @@ func TestFromIOFS_File(t *testing.T) {
 				return
 			}
 
-			var expectedItems = []string{"dir1", "dir2", "test.txt"}
+			expectedItems := []string{"dir1", "dir2", "test.txt"}
 
 			if len(expectedItems) != len(items) {
 				t.Errorf("Items count mismatch, expected %d, got %d", len(expectedItems), len(items))
@@ -530,7 +526,7 @@ func BenchmarkWalkDir(b *testing.B) {
 		dirname := ""
 		for i := 0; i < level; i++ {
 			dirname = filepath.Join(dirname, fmt.Sprintf("dir%d", i))
-			err := osfs.MkdirAll(dirname, 0755)
+			err := osfs.MkdirAll(dirname, 0o755)
 			if err != nil && !os.IsExist(err) {
 				b.Fatal(err)
 			}
@@ -547,12 +543,9 @@ func BenchmarkWalkDir(b *testing.B) {
 				return err
 			}
 			return nil
-
 		})
-
 		if err != nil {
 			b.Fatal(err)
 		}
 	}
-
 }

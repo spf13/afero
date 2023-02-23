@@ -44,7 +44,7 @@ func setupGlobDirReusePath(t *testing.T, fs Fs, path string) string {
 
 func setupGlobFiles(t *testing.T, fs Fs, path string) string {
 	testSubDir := filepath.Join(path, "globs", "bobs")
-	err := fs.MkdirAll(testSubDir, 0700)
+	err := fs.MkdirAll(testSubDir, 0o700)
 	if err != nil && !os.IsExist(err) {
 		t.Fatal(err)
 	}
@@ -84,7 +84,7 @@ func TestGlob(t *testing.T) {
 		}
 	}
 
-	var globTests = []struct {
+	globTests := []struct {
 		pattern, result string
 	}{
 		{testDir + "/globs/bobs/matcher", testDir + "/globs/bobs/matcher"},
@@ -136,7 +136,7 @@ func TestGlobSymlink(t *testing.T) {
 		t.Skipf("skipping on %s", runtime.GOOS)
 	}
 
-	var globSymlinkTests = []struct {
+	globSymlinkTests := []struct {
 		path, dest string
 		brokenLink bool
 	}{

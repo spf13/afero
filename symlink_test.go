@@ -38,14 +38,14 @@ func TestSymlinkIfPossible(t *testing.T) {
 	pathFileMem := filepath.Join(memWorkDir, "aferom.txt")
 	osPath := filepath.Join(workDir, "afero.txt")
 
-	WriteFile(osFs, osPath, []byte("Hi, Afero!"), 0777)
-	WriteFile(memFs, filepath.Join(pathFileMem), []byte("Hi, Afero!"), 0777)
+	WriteFile(osFs, osPath, []byte("Hi, Afero!"), 0o777)
+	WriteFile(memFs, filepath.Join(pathFileMem), []byte("Hi, Afero!"), 0o777)
 
 	testLink := func(l Linker, source, destination string, output *string) {
 		if fs, ok := l.(Fs); ok {
 			dir := filepath.Dir(destination)
 			if dir != "" {
-				fs.MkdirAll(dir, 0777)
+				fs.MkdirAll(dir, 0o777)
 			}
 		}
 
@@ -117,14 +117,14 @@ func TestReadlinkIfPossible(t *testing.T) {
 	pathFileMem := filepath.Join(memWorkDir, "aferom.txt")
 	osPath := filepath.Join(workDir, "afero.txt")
 
-	WriteFile(osFs, osPath, []byte("Hi, Afero!"), 0777)
-	WriteFile(memFs, filepath.Join(pathFileMem), []byte("Hi, Afero!"), 0777)
+	WriteFile(osFs, osPath, []byte("Hi, Afero!"), 0o777)
+	WriteFile(memFs, filepath.Join(pathFileMem), []byte("Hi, Afero!"), 0o777)
 
 	createLink := func(l Linker, source, destination string) error {
 		if fs, ok := l.(Fs); ok {
 			dir := filepath.Dir(destination)
 			if dir != "" {
-				fs.MkdirAll(dir, 0777)
+				fs.MkdirAll(dir, 0o777)
 			}
 		}
 

@@ -146,7 +146,7 @@ func (o *gcsFileResource) ReadAt(p []byte, off int64) (n int, err error) {
 		return 0, err
 	}
 
-	//Then read at the correct offset.
+	// Then read at the correct offset.
 	r, err := o.obj.NewRangeReader(o.ctx, off, -1)
 	if err != nil {
 		return 0, err
@@ -160,7 +160,7 @@ func (o *gcsFileResource) ReadAt(p []byte, off int64) (n int, err error) {
 }
 
 func (o *gcsFileResource) WriteAt(b []byte, off int64) (n int, err error) {
-	//If the writer is opened and at the correct offset we're good!
+	// If the writer is opened and at the correct offset we're good!
 	if off == o.offset && o.writer != nil {
 		n, err = o.writer.Write(b)
 		o.offset += int64(n)
@@ -251,7 +251,7 @@ func (o *gcsFileResource) Truncate(wantedSize int64) error {
 	}
 
 	for written < wantedSize {
-		//Bulk up padding writes
+		// Bulk up padding writes
 		paddingBytes := bytes.Repeat([]byte(" "), min(maxWriteSize, int(wantedSize-written)))
 
 		n := 0

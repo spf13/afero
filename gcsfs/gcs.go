@@ -76,39 +76,51 @@ func NewGcsFSFromClientWithSeparator(ctx context.Context, client *storage.Client
 func (fs *GcsFs) Name() string {
 	return fs.source.Name()
 }
+
 func (fs *GcsFs) Create(name string) (afero.File, error) {
 	return fs.source.Create(name)
 }
+
 func (fs *GcsFs) Mkdir(name string, perm os.FileMode) error {
 	return fs.source.Mkdir(name, perm)
 }
+
 func (fs *GcsFs) MkdirAll(path string, perm os.FileMode) error {
 	return fs.source.MkdirAll(path, perm)
 }
+
 func (fs *GcsFs) Open(name string) (afero.File, error) {
 	return fs.source.Open(name)
 }
+
 func (fs *GcsFs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error) {
 	return fs.source.OpenFile(name, flag, perm)
 }
+
 func (fs *GcsFs) Remove(name string) error {
 	return fs.source.Remove(name)
 }
+
 func (fs *GcsFs) RemoveAll(path string) error {
 	return fs.source.RemoveAll(path)
 }
+
 func (fs *GcsFs) Rename(oldname, newname string) error {
 	return fs.source.Rename(oldname, newname)
 }
+
 func (fs *GcsFs) Stat(name string) (os.FileInfo, error) {
 	return fs.source.Stat(name)
 }
+
 func (fs *GcsFs) Chmod(name string, mode os.FileMode) error {
 	return fs.source.Chmod(name, mode)
 }
+
 func (fs *GcsFs) Chtimes(name string, atime time.Time, mtime time.Time) error {
 	return fs.source.Chtimes(name, atime, mtime)
 }
+
 func (fs *GcsFs) Chown(name string, uid, gid int) error {
 	return fs.source.Chown(name, uid, gid)
 }

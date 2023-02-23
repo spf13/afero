@@ -9,7 +9,7 @@ import (
 
 func TestBasePath(t *testing.T) {
 	baseFs := &MemMapFs{}
-	baseFs.MkdirAll("/base/path/tmp", 0777)
+	baseFs.MkdirAll("/base/path/tmp", 0o777)
 	bp := NewBasePathFs(baseFs, "/base/path")
 
 	if _, err := bp.Create("/tmp/foo"); err != nil {
@@ -23,8 +23,8 @@ func TestBasePath(t *testing.T) {
 
 func TestBasePathRoot(t *testing.T) {
 	baseFs := &MemMapFs{}
-	baseFs.MkdirAll("/base/path/foo/baz", 0777)
-	baseFs.MkdirAll("/base/path/boo/", 0777)
+	baseFs.MkdirAll("/base/path/foo/baz", 0o777)
+	baseFs.MkdirAll("/base/path/boo/", 0o777)
 	bp := NewBasePathFs(baseFs, "/base/path")
 
 	rd, err := ReadDir(bp, string(os.PathSeparator))
@@ -56,7 +56,6 @@ func TestRealPath(t *testing.T) {
 	subDir := filepath.Join(baseDir, "s1")
 
 	realPath, err := bp.RealPath("/s1")
-
 	if err != nil {
 		t.Errorf("Got error %s", err)
 	}
@@ -77,7 +76,6 @@ func TestRealPath(t *testing.T) {
 		// is not inside the base file system.
 		// The user will receive an os.ErrNotExist later.
 		surrealPath, err := bp.RealPath(anotherDir)
-
 		if err != nil {
 			t.Errorf("Got error %s", err)
 		}
@@ -88,7 +86,6 @@ func TestRealPath(t *testing.T) {
 			t.Errorf("Expected \n%s got \n%s", excpected, surrealPath)
 		}
 	}
-
 }
 
 func TestNestedBasePaths(t *testing.T) {
@@ -119,7 +116,7 @@ func TestNestedBasePaths(t *testing.T) {
 		}
 
 		for _, s := range specs {
-			if err := s.BaseFs.MkdirAll(s.FileName, 0755); err != nil {
+			if err := s.BaseFs.MkdirAll(s.FileName, 0o755); err != nil {
 				t.Errorf("Got error %s", err.Error())
 			}
 			if _, err := s.BaseFs.Stat(s.FileName); err != nil {
@@ -143,9 +140,9 @@ func TestNestedBasePaths(t *testing.T) {
 
 func TestBasePathOpenFile(t *testing.T) {
 	baseFs := &MemMapFs{}
-	baseFs.MkdirAll("/base/path/tmp", 0777)
+	baseFs.MkdirAll("/base/path/tmp", 0o777)
 	bp := NewBasePathFs(baseFs, "/base/path")
-	f, err := bp.OpenFile("/tmp/file.txt", os.O_CREATE, 0600)
+	f, err := bp.OpenFile("/tmp/file.txt", os.O_CREATE, 0o600)
 	if err != nil {
 		t.Fatalf("failed to open file: %v", err)
 	}
@@ -156,7 +153,7 @@ func TestBasePathOpenFile(t *testing.T) {
 
 func TestBasePathCreate(t *testing.T) {
 	baseFs := &MemMapFs{}
-	baseFs.MkdirAll("/base/path/tmp", 0777)
+	baseFs.MkdirAll("/base/path/tmp", 0o777)
 	bp := NewBasePathFs(baseFs, "/base/path")
 	f, err := bp.Create("/tmp/file.txt")
 	if err != nil {
@@ -169,7 +166,7 @@ func TestBasePathCreate(t *testing.T) {
 
 func TestBasePathTempFile(t *testing.T) {
 	baseFs := &MemMapFs{}
-	baseFs.MkdirAll("/base/path/tmp", 0777)
+	baseFs.MkdirAll("/base/path/tmp", 0o777)
 	bp := NewBasePathFs(baseFs, "/base/path")
 
 	tDir, err := TempDir(bp, "/tmp", "")

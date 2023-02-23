@@ -1,12 +1,12 @@
 package zipfs
 
 import (
-	"github.com/spf13/afero"
-
 	"archive/zip"
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/spf13/afero"
 )
 
 func TestZipFS(t *testing.T) {
