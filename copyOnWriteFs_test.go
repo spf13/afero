@@ -16,9 +16,9 @@ func TestCopyOnWrite(t *testing.T) {
 
 	compositeFs := NewCopyOnWriteFs(NewReadOnlyFs(NewOsFs()), osFs)
 
-	var dir = filepath.Join(writeDir, "some/path")
+	dir := filepath.Join(writeDir, "some/path")
 
-	err = compositeFs.MkdirAll(dir, 0744)
+	err = compositeFs.MkdirAll(dir, 0o744)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,13 +31,13 @@ func TestCopyOnWrite(t *testing.T) {
 	// We want the composite file system to behave like the OS file system
 	// on Mkdir and MkdirAll
 	for _, fs := range []Fs{osFs, compositeFs} {
-		err = fs.Mkdir(dir, 0744)
+		err = fs.Mkdir(dir, 0o744)
 		if err == nil || !os.IsExist(err) {
 			t.Errorf("Mkdir: Got %q for %T", err, fs)
 		}
 
 		// MkdirAll does not return an error when the directory already exists
-		err = fs.MkdirAll(dir, 0744)
+		err = fs.MkdirAll(dir, 0o744)
 		if err != nil {
 			t.Errorf("MkdirAll:  Got %q for %T", err, fs)
 		}
@@ -49,7 +49,7 @@ func TestCopyOnWriteFileInMemMapBase(t *testing.T) {
 	base := &MemMapFs{}
 	layer := &MemMapFs{}
 
-	if err := WriteFile(base, "base.txt", []byte("base"), 0755); err != nil {
+	if err := WriteFile(base, "base.txt", []byte("base"), 0o755); err != nil {
 		t.Fatalf("Failed to write file: %s", err)
 	}
 

@@ -36,7 +36,7 @@ import (
 // GcsFs is the Afero version adapted for GCS
 type GcsFile struct {
 	openFlags int
-	fhOffset  int64 //File handle specific offset
+	fhOffset  int64 // File handle specific offset
 	closed    bool
 	ReadDirIt stiface.ObjectIterator
 	resource  *gcsFileResource
@@ -105,13 +105,13 @@ func (o *GcsFile) Seek(newOffset int64, whence int) (int64, error) {
 		return 0, ErrFileClosed
 	}
 
-	//Since this is an expensive operation; let's make sure we need it
+	// Since this is an expensive operation; let's make sure we need it
 	if (whence == 0 && newOffset == o.fhOffset) || (whence == 1 && newOffset == 0) {
 		return o.fhOffset, nil
 	}
 	log.Printf("WARNING: Seek behavior triggered, highly inefficent. Offset before seek is at %d\n", o.fhOffset)
 
-	//Fore the reader/writers to be reopened (at correct offset)
+	// Fore the reader/writers to be reopened (at correct offset)
 	err := o.Sync()
 	if err != nil {
 		return 0, err
@@ -197,7 +197,7 @@ func (o *GcsFile) readdirImpl(count int) ([]*FileInfo, error) {
 
 	path := o.resource.fs.ensureTrailingSeparator(o.resource.name)
 	if o.ReadDirIt == nil {
-		//log.Printf("Querying path : %s\n", path)
+		// log.Printf("Querying path : %s\n", path)
 		bucketName, bucketPath := o.resource.fs.splitName(path)
 
 		o.ReadDirIt = o.resource.fs.client.Bucket(bucketName).Objects(
@@ -246,7 +246,7 @@ func (o *GcsFile) readdirImpl(count int) ([]*FileInfo, error) {
 		//	break
 		//}
 	}
-	//return res, nil
+	// return res, nil
 }
 
 func (o *GcsFile) Readdir(count int) ([]os.FileInfo, error) {

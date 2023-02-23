@@ -234,11 +234,11 @@ func MakeSSHKeyPair(bits int, pubKeyPath, privateKeyPath string) error {
 		return err
 	}
 
-	return ioutil.WriteFile(pubKeyPath, ssh.MarshalAuthorizedKey(pub), 0655)
+	return ioutil.WriteFile(pubKeyPath, ssh.MarshalAuthorizedKey(pub), 0o655)
 }
 
 func TestSftpCreate(t *testing.T) {
-	os.Mkdir("./test", 0777)
+	os.Mkdir("./test", 0o777)
 	MakeSSHKeyPair(1024, "./test/id_rsa.pub", "./test/id_rsa")
 
 	go RunSftpServer("./test/")
@@ -250,12 +250,12 @@ func TestSftpCreate(t *testing.T) {
 	}
 	defer ctx.Disconnect()
 
-	var fs = New(ctx.sftpc)
+	fs := New(ctx.sftpc)
 
-	fs.MkdirAll("test/dir1/dir2/dir3", os.FileMode(0777))
-	fs.Mkdir("test/foo", os.FileMode(0000))
-	fs.Chmod("test/foo", os.FileMode(0700))
-	fs.Mkdir("test/bar", os.FileMode(0777))
+	fs.MkdirAll("test/dir1/dir2/dir3", os.FileMode(0o777))
+	fs.Mkdir("test/foo", os.FileMode(0o000))
+	fs.Chmod("test/foo", os.FileMode(0o700))
+	fs.Mkdir("test/bar", os.FileMode(0o777))
 
 	file, err := fs.Create("file1")
 	if err != nil {

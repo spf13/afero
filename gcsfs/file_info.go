@@ -110,6 +110,7 @@ func (fi *FileInfo) Name() string {
 func (fi *FileInfo) Size() int64 {
 	return fi.size
 }
+
 func (fi *FileInfo) Mode() os.FileMode {
 	if fi.IsDir() {
 		return os.ModeDir | fi.fileMode

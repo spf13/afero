@@ -66,8 +66,8 @@ func TestFileDataModTimeRace(t *testing.T) {
 
 func TestFileDataModeRace(t *testing.T) {
 	t.Parallel()
-	const someMode = 0777
-	const someOtherMode = 0660
+	const someMode = 0o777
+	const someOtherMode = 0o660
 
 	d := FileData{
 		mode: someMode,
@@ -167,7 +167,7 @@ func TestFileDataIsDirRace(t *testing.T) {
 		s.Unlock()
 	}()
 
-	//just logging the value to trigger a read:
+	// just logging the value to trigger a read:
 	t.Logf("Value is %v", s.IsDir())
 }
 
@@ -196,10 +196,10 @@ func TestFileDataSizeRace(t *testing.T) {
 		s.Unlock()
 	}()
 
-	//just logging the value to trigger a read:
+	// just logging the value to trigger a read:
 	t.Logf("Value is %v", s.Size())
 
-	//Testing the Dir size case
+	// Testing the Dir size case
 	d.dir = true
 	if s.Size() != int64(42) {
 		t.Errorf("Failed to read correct value for dir, was %v", s.Size())

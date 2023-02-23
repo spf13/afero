@@ -28,8 +28,10 @@ import (
 	"testing"
 )
 
-var testName = "test.txt"
-var Fss = []Fs{&MemMapFs{}, &OsFs{}}
+var (
+	testName = "test.txt"
+	Fss      = []Fs{&MemMapFs{}, &OsFs{}}
+)
 
 var testRegistry map[Fs][]string = make(map[Fs][]string)
 
@@ -45,7 +47,6 @@ func testDir(fs Fs) string {
 
 func tmpFile(fs Fs) File {
 	x, err := TempFile(fs, "", "afero")
-
 	if err != nil {
 		panic(fmt.Sprint("unable to work with temp file", err))
 	}
@@ -55,7 +56,7 @@ func tmpFile(fs Fs) File {
 	return x
 }
 
-//Read with length 0 should not return EOF.
+// Read with length 0 should not return EOF.
 func TestRead0(t *testing.T) {
 	for _, fs := range Fss {
 		f := tmpFile(fs)
@@ -83,7 +84,7 @@ func TestOpenFile(t *testing.T) {
 		tmp := testDir(fs)
 		path := filepath.Join(tmp, testName)
 
-		f, err := fs.OpenFile(path, os.O_RDWR|os.O_CREATE, 0600)
+		f, err := fs.OpenFile(path, os.O_RDWR|os.O_CREATE, 0o600)
 		if err != nil {
 			t.Error(fs.Name(), "OpenFile (O_CREATE) failed:", err)
 			continue
@@ -91,7 +92,7 @@ func TestOpenFile(t *testing.T) {
 		io.WriteString(f, "initial")
 		f.Close()
 
-		f, err = fs.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0600)
+		f, err = fs.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0o600)
 		if err != nil {
 			t.Error(fs.Name(), "OpenFile (O_APPEND) failed:", err)
 			continue
@@ -99,7 +100,7 @@ func TestOpenFile(t *testing.T) {
 		io.WriteString(f, "|append")
 		f.Close()
 
-		f, _ = fs.OpenFile(path, os.O_RDONLY, 0600)
+		f, _ = fs.OpenFile(path, os.O_RDONLY, 0o600)
 		contents, _ := ioutil.ReadAll(f)
 		expectedContents := "initial|append"
 		if string(contents) != expectedContents {
@@ -107,7 +108,7 @@ func TestOpenFile(t *testing.T) {
 		}
 		f.Close()
 
-		f, err = fs.OpenFile(path, os.O_RDWR|os.O_TRUNC, 0600)
+		f, err = fs.OpenFile(path, os.O_RDWR|os.O_TRUNC, 0o600)
 		if err != nil {
 			t.Error(fs.Name(), "OpenFile (O_TRUNC) failed:", err)
 			continue
@@ -333,7 +334,7 @@ func TestSeek(t *testing.T) {
 			whence int
 			out    int64
 		}
-		var tests = []test{
+		tests := []test{
 			{0, 1, int64(len(data))},
 			{0, 0, 0},
 			{5, 0, 5},
@@ -424,7 +425,7 @@ func setupTestDirReusePath(t *testing.T, fs Fs, path string) string {
 
 func setupTestFiles(t *testing.T, fs Fs, path string) string {
 	testSubDir := filepath.Join(path, "more", "subdirectories", "for", "testing", "we")
-	err := fs.MkdirAll(testSubDir, 0700)
+	err := fs.MkdirAll(testSubDir, 0o700)
 	if err != nil && !os.IsExist(err) {
 		t.Fatal(err)
 	}
@@ -637,7 +638,7 @@ func TestReaddirAll(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		var namesRoot = []string{}
+		namesRoot := []string{}
 		for _, e := range rootInfo {
 			namesRoot = append(namesRoot, e.Name())
 		}
@@ -652,7 +653,7 @@ func TestReaddirAll(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		var namesSub = []string{}
+		namesSub := []string{}
 		for _, e := range subInfo {
 			namesSub = append(namesSub, e.Name())
 		}
