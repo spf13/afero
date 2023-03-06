@@ -100,6 +100,7 @@ func TestIOFSNativeDirEntryWhenPossible(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer dir2.Close()
 
 	assertDirEntries := func(entries []fs.DirEntry, ordered bool) {
 		if len(entries) != numFiles {
