@@ -226,7 +226,7 @@ func TestMultipleOpenFiles(t *testing.T) {
 		if err != nil {
 			t.Error("fs.OpenFile failed: " + err.Error())
 		}
-		_, err = fh2.Seek(0, os.SEEK_END)
+		_, err = fh2.Seek(0, io.SeekEnd)
 		if err != nil {
 			t.Error(err)
 		}
