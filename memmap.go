@@ -177,9 +177,13 @@ func normalizePath(path string) string {
 		return FilePathSeparator
 	case "..":
 		return FilePathSeparator
-	default:
-		return path
 	}
+
+	// If path isn't rooted make it rooted
+	if !strings.HasPrefix(path, FilePathSeparator) {
+		path = FilePathSeparator + path
+	}
+	return path
 }
 
 func (m *MemMapFs) Open(name string) (File, error) {
@@ -351,6 +355,7 @@ func (m *MemMapFs) Stat(name string) (os.FileInfo, error) {
 
 func (m *MemMapFs) Chmod(name string, mode os.FileMode) error {
 	mode &= chmodBits
+	name = normalizePath(name)
 
 	m.mu.RLock()
 	f, ok := m.getData()[name]

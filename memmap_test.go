@@ -833,3 +833,105 @@ func TestMemFsRenameDir(t *testing.T) {
 		t.Errorf("Cannot recreate the subdir in the source dir: %s", err)
 	}
 }
+
+func TestMemFsMkDir(t *testing.T) {
+	t.Parallel()
+
+	fs := NewMemMapFs()
+
+	// Creating a folder at "dir" or "/dir" or "./dir" should create the 'dir' directory at root
+	err := fs.Mkdir("a", 0o777)
+	if err != nil {
+		t.Fatalf("MkDir failed: %s", err)
+	}
+
+	err = fs.Mkdir("/b", 0o777)
+	if err != nil {
+		t.Fatalf("MkDir failed: %s", err)
+	}
+
+	err = fs.Mkdir("./c", 0o777)
+	if err != nil {
+		t.Fatalf("MkDir failed: %s", err)
+	}
+
+	// Listing root should return all folders
+	files, err := ReadDir(fs, "/")
+	if err != nil {
+		t.Fatalf("ReadDir failed: %s", err)
+	}
+
+	if len(files) != 3 {
+		t.Fatalf("Expected 3 files, got %d", len(files))
+	}
+
+	var foundA, foundB, foundC bool
+	for _, file := range files {
+		if !file.IsDir() {
+			t.Fatalf("Expected to find a directory not a file: %s", file.Name())
+		}
+		if file.Name() == "a" {
+			foundA = true
+		} else if file.Name() == "b" {
+			foundB = true
+		} else if file.Name() == "c" {
+			foundC = true
+		}
+	}
+
+	if !foundA || !foundB || !foundC {
+		t.Fatalf("Expected to find all files, but didn't")
+	}
+}
+
+func TestMemFsCreateFileNested(t *testing.T) {
+	t.Parallel()
+
+	fs := NewMemMapFs()
+
+	err := fs.Mkdir("dir", 0o777)
+	if err != nil {
+		t.Fatalf("MkDir failed: %s", err)
+	}
+
+	// Creating a file at "dir/a.txt" or "/dir/a.txt" or "./dir/a.txt" should create in the dir directory
+	err = WriteFile(fs, "dir/a.txt", []byte("test"), 0o777)
+	if err != nil {
+		t.Fatalf("WriteFile failed: %s", err)
+	}
+
+	err = WriteFile(fs, "/dir/b.txt", []byte("test"), 0o777)
+	if err != nil {
+		t.Fatalf("WriteFile failed: %s", err)
+	}
+
+	err = WriteFile(fs, "./dir/c.txt", []byte("test"), 0o777)
+	if err != nil {
+		t.Fatalf("WriteFile failed: %s", err)
+	}
+
+	// Listing dir should return all the files
+	files, err := ReadDir(fs, "/dir")
+	if err != nil {
+		t.Fatalf("ReadDir failed: %s", err)
+	}
+
+	if len(files) != 3 {
+		t.Fatalf("Expected 3 files, got %d", len(files))
+	}
+
+	var foundA, foundB, foundC bool
+	for _, file := range files {
+		if file.Name() == "a.txt" {
+			foundA = true
+		} else if file.Name() == "b.txt" {
+			foundB = true
+		} else if file.Name() == "c.txt" {
+			foundC = true
+		}
+	}
+
+	if !foundA || !foundB || !foundC {
+		t.Fatalf("Expected to find all files, but didn't")
+	}
+}
