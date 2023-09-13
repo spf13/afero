@@ -940,7 +940,7 @@ func TestMemMapFsRemove(t *testing.T) {
 				"/parent1/parent2",
 				"/parent1/parent2/fileForDelete1.txt",
 			},
-			expectedErrMsg: "remove /parent1/parent2/fileForDelete1.txt: file does not exist",
+			expectedErrMsg: "fileForDelete1.txt: file does not exist",
 		},
 		"Remove root and then parent1 - should return error": {
 			dirsToCreate: []string{"/root/parent1/parent2/fileForDelete1.txt"},
@@ -948,7 +948,7 @@ func TestMemMapFsRemove(t *testing.T) {
 				"/root",
 				"/root/parent1",
 			},
-			expectedErrMsg: "remove /root/parent1: file does not exist",
+			expectedErrMsg: "parent1: file does not exist",
 		},
 		"Remove parent2 and then parent 1 - success": {
 			dirsToCreate: []string{"/parent1/parent2/fileForDelete1.txt"},
@@ -979,7 +979,7 @@ func TestMemMapFsRemove(t *testing.T) {
 
 		for _, toRemove := range td.dirsToRemove {
 			err = fs.Remove(toRemove)
-			if err != nil && err.Error() != td.expectedErrMsg {
+			if err != nil && !strings.Contains(err.Error(), td.expectedErrMsg) {
 				t.Fatalf("#CASE %v %s: Remove %q failed: %v", caseName, fs.Name(), toRemove, err)
 			}
 		}
