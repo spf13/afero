@@ -833,3 +833,88 @@ func TestMemFsRenameDir(t *testing.T) {
 		t.Errorf("Cannot recreate the subdir in the source dir: %s", err)
 	}
 }
+
+func TestMemMapFsRename(t *testing.T) {
+	t.Parallel()
+
+	fs := &MemMapFs{}
+	tDir := testDir(fs)
+	rFrom := "/renamefrom"
+	rTo := "/renameto"
+	rExists := "/renameexists"
+
+	type test struct {
+		dirs   []string
+		from   string
+		to     string
+		exists string
+	}
+
+	parts := strings.Split(tDir, "/")
+	root := "/"
+	if len(parts) > 1 {
+		root = filepath.Join("/", parts[1])
+	}
+
+	testData := make([]test, 0, len(parts))
+
+	i := len(parts)
+	for i > 0 {
+		prefix := strings.Join(parts[:i], "/")
+		suffix := strings.Join(parts[i:], "/")
+		testData = append(testData, test{
+			dirs: []string{
+				filepath.Join(prefix, rFrom, suffix),
+				filepath.Join(prefix, rExists, suffix),
+			},
+			from:   filepath.Join(prefix, rFrom),
+			to:     filepath.Join(prefix, rTo),
+			exists: filepath.Join(prefix, rExists),
+		})
+		i--
+	}
+
+	for _, data := range testData {
+		err := fs.RemoveAll(root)
+		if err != nil {
+			t.Fatalf("%s: RemoveAll %q failed: %v", fs.Name(), root, err)
+		}
+
+		for _, dir := range data.dirs {
+			err = fs.MkdirAll(dir, os.FileMode(0775))
+			if err != nil {
+				t.Fatalf("%s: MkdirAll %q failed: %v", fs.Name(), dir, err)
+			}
+		}
+
+		dataCnt := len(fs.getData())
+		err = fs.Rename(data.from, data.to)
+		if err != nil {
+			t.Fatalf("%s: rename %q, %q failed: %v", fs.Name(), data.from, data.to, err)
+		}
+		err = fs.Mkdir(data.from, os.FileMode(0775))
+		if err != nil {
+			t.Fatalf("%s: Mkdir %q failed: %v", fs.Name(), data.from, err)
+		}
+
+		err = fs.Rename(data.from, data.exists)
+		if err != nil {
+			t.Errorf("%s: rename %q, %q failed: %v", fs.Name(), data.from, data.exists, err)
+		}
+
+		for p := range fs.getData() {
+			if strings.Contains(p, data.from) {
+				t.Errorf("File was not renamed to renameto: %v", p)
+			}
+		}
+
+		_, err = fs.Stat(data.to)
+		if err != nil {
+			t.Errorf("%s: stat %q failed: %v", fs.Name(), data.to, err)
+		}
+
+		if dataCnt != len(fs.getData()) {
+			t.Errorf("invalid data len: expected %v, get %v", dataCnt, len(fs.getData()))
+		}
+	}
+}
