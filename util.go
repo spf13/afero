@@ -24,10 +24,6 @@ import (
 	"path/filepath"
 	"strings"
 	"unicode"
-
-	"golang.org/x/text/runes"
-	"golang.org/x/text/transform"
-	"golang.org/x/text/unicode/norm"
 )
 
 // Filepath separator defined by os.Separator.
@@ -155,14 +151,6 @@ func UnicodeSanitize(s string) string {
 	}
 
 	return string(target)
-}
-
-// Transform characters with accents into plain forms.
-func NeuterAccents(s string) string {
-	t := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
-	result, _, _ := transform.String(t, string(s))
-
-	return result
 }
 
 func (a Afero) FileContainsBytes(filename string, subslice []byte) (bool, error) {
