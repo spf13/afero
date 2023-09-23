@@ -918,3 +918,70 @@ func TestMemMapFsRename(t *testing.T) {
 		}
 	}
 }
+
+func TestMemMapFsRemove(t *testing.T) {
+	t.Parallel()
+
+	testData := map[string]struct {
+		dirsToCreate   []string
+		dirsToRemove   []string
+		expectedErrMsg string
+	}{
+		"Remove child before - success": {
+			dirsToCreate: []string{"/parent1/parent2/fileForDelete1.txt"},
+			dirsToRemove: []string{
+				"/parent1/parent2/fileForDelete1.txt",
+				"/parent1/parent2",
+			},
+		},
+		"Remove parent before - should return error": {
+			dirsToCreate: []string{"/parent1/parent2/fileForDelete1.txt"},
+			dirsToRemove: []string{
+				"/parent1/parent2",
+				"/parent1/parent2/fileForDelete1.txt",
+			},
+			expectedErrMsg: "remove /parent1/parent2/fileForDelete1.txt: file does not exist",
+		},
+		"Remove root and then parent1 - should return error": {
+			dirsToCreate: []string{"/root/parent1/parent2/fileForDelete1.txt"},
+			dirsToRemove: []string{
+				"/root",
+				"/root/parent1",
+			},
+			expectedErrMsg: "remove /root/parent1: file does not exist",
+		},
+		"Remove parent2 and then parent 1 - success": {
+			dirsToCreate: []string{"/parent1/parent2/fileForDelete1.txt"},
+			dirsToRemove: []string{
+				"/parent1/parent2",
+				"/parent1",
+			},
+		},
+	}
+
+	fs := &MemMapFs{}
+
+	for caseName, td := range testData {
+		_, err := fs.Stat("/")
+		if err == nil {
+			err = fs.RemoveAll("/")
+			if err != nil {
+				t.Fatalf("%s: RemoveAll %q failed: %v", fs.Name(), "/", err)
+			}
+		}
+
+		for _, toCreate := range td.dirsToCreate {
+			err = fs.MkdirAll(toCreate, os.FileMode(0775))
+			if err != nil && err.Error() != td.expectedErrMsg {
+				t.Fatalf("#CASE %v %s: Mkdir %q failed: %v", caseName, fs.Name(), toCreate, err)
+			}
+		}
+
+		for _, toRemove := range td.dirsToRemove {
+			err = fs.Remove(toRemove)
+			if err != nil && err.Error() != td.expectedErrMsg {
+				t.Fatalf("#CASE %v %s: Remove %q failed: %v", caseName, fs.Name(), toRemove, err)
+			}
+		}
+	}
+}
