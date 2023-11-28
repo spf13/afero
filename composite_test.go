@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -69,7 +68,7 @@ func TestUnionCreateExisting(t *testing.T) {
 		t.Errorf("Failed to write file: %s", err)
 	}
 	fh.Seek(0, 0)
-	data, err := ioutil.ReadAll(fh)
+	data, err := io.ReadAll(fh)
 	if err != nil {
 		t.Errorf("Failed to read file: %s", err)
 	}
@@ -79,7 +78,7 @@ func TestUnionCreateExisting(t *testing.T) {
 	fh.Close()
 
 	fh, _ = base.Open("/home/test/file.txt")
-	data, _ = ioutil.ReadAll(fh)
+	data, _ = io.ReadAll(fh)
 	if string(data) != "This is a test" {
 		t.Errorf("Got wrong data in base file")
 	}

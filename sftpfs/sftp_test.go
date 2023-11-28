@@ -20,7 +20,7 @@ import (
 	"encoding/pem"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -108,7 +108,7 @@ func RunSftpServer(rootpath string) {
 	flag.StringVar(&rootDir, "root", rootpath, "root directory")
 	flag.Parse()
 
-	debugStream := ioutil.Discard
+	debugStream := io.Discard
 
 	// An SSH server is represented by a ServerConfig, which holds
 	// certificate details and handles authentication of ServerConns.
@@ -124,7 +124,7 @@ func RunSftpServer(rootpath string) {
 		},
 	}
 
-	privateBytes, err := ioutil.ReadFile("./test/id_rsa")
+	privateBytes, err := os.ReadFile("./test/id_rsa")
 	if err != nil {
 		log.Fatal("Failed to load private key", err)
 	}
@@ -234,7 +234,7 @@ func MakeSSHKeyPair(bits int, pubKeyPath, privateKeyPath string) error {
 		return err
 	}
 
-	return ioutil.WriteFile(pubKeyPath, ssh.MarshalAuthorizedKey(pub), 0o655)
+	return os.WriteFile(pubKeyPath, ssh.MarshalAuthorizedKey(pub), 0o655)
 }
 
 func TestSftpCreate(t *testing.T) {
