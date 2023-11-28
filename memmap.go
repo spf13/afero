@@ -285,10 +285,22 @@ func (m *MemMapFs) Remove(name string) error {
 	defer m.mu.Unlock()
 
 	if _, ok := m.getData()[name]; ok {
+		descendants := m.findDescendants(name)
+		for i := 1; i <= len(descendants); i++ {
+			descendant := descendants[len(descendants)-i]
+			descName := descendant.Name()
+			err := m.unRegisterWithParent(descName)
+			if err != nil {
+				return &os.PathError{Op: "descendant remove", Path: name, Err: err}
+			}
+			delete(m.getData(), descName)
+		}
+
 		err := m.unRegisterWithParent(name)
 		if err != nil {
 			return &os.PathError{Op: "remove", Path: name, Err: err}
 		}
+
 		delete(m.getData(), name)
 	} else {
 		return &os.PathError{Op: "remove", Path: name, Err: os.ErrNotExist}
@@ -299,14 +311,18 @@ func (m *MemMapFs) Remove(name string) error {
 func (m *MemMapFs) RemoveAll(path string) error {
 	path = normalizePath(path)
 	m.mu.Lock()
-	m.unRegisterWithParent(path)
+	_ = m.unRegisterWithParent(path)
 	m.mu.Unlock()
 
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	for p := range m.getData() {
-		if p == path || strings.HasPrefix(p, path+FilePathSeparator) {
+		separator := FilePathSeparator
+		if path == FilePathSeparator {
+			separator = ""
+		}
+		if p == path || strings.HasPrefix(p, path+separator) {
 			m.mu.RUnlock()
 			m.mu.Lock()
 			delete(m.getData(), p)
