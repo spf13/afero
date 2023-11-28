@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"io"
 	iofs "io/fs"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -101,7 +100,7 @@ func TestOpenFile(t *testing.T) {
 		f.Close()
 
 		f, _ = fs.OpenFile(path, os.O_RDONLY, 0o600)
-		contents, _ := ioutil.ReadAll(f)
+		contents, _ := io.ReadAll(f)
 		expectedContents := "initial|append"
 		if string(contents) != expectedContents {
 			t.Errorf("%v: appending, expected '%v', got: '%v'", fs.Name(), expectedContents, string(contents))
@@ -113,7 +112,7 @@ func TestOpenFile(t *testing.T) {
 			t.Error(fs.Name(), "OpenFile (O_TRUNC) failed:", err)
 			continue
 		}
-		contents, _ = ioutil.ReadAll(f)
+		contents, _ = io.ReadAll(f)
 		if string(contents) != "" {
 			t.Errorf("%v: expected truncated file, got: '%v'", fs.Name(), string(contents))
 		}
