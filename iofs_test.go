@@ -40,7 +40,15 @@ func TestIOFS(t *testing.T) {
 			t.Fatal("OpenFile (O_CREATE) failed:", err)
 		}
 
-		f.Close()
+		_, err = f.WriteString("a")
+		if err != nil {
+			t.Fatal("WriteString failed:", err)
+		}
+
+		err = f.Close()
+		if err != nil {
+			t.Fatal("Close failed:", err)
+		}
 
 		if err := fstest.TestFS(NewIOFS(mmfs), "dir1/dir2/test.txt"); err != nil {
 			t.Error(err)
