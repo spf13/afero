@@ -67,3 +67,27 @@ func TestWalk(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestWalkRemoveRoot(t *testing.T) {
+	defer removeAllTestFiles(t)
+	fs := Fss[0]
+	rootPath := "."
+
+	err := fs.RemoveAll(rootPath)
+	if err != nil {
+		t.Error(err)
+	}
+
+	testRegistry[fs] = append(testRegistry[fs], rootPath)
+	setupTestFiles(t, fs, rootPath)
+
+	walkFn := func(path string, info os.FileInfo, err error) error {
+		fmt.Println(path, info.Name(), info.IsDir(), info.Size(), err)
+		return err
+	}
+
+	err = Walk(fs, rootPath, walkFn)
+	if err != nil {
+		t.Error(err)
+	}
+}

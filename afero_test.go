@@ -32,7 +32,7 @@ var (
 	Fss      = []Fs{&MemMapFs{}, &OsFs{}}
 )
 
-var testRegistry map[Fs][]string = make(map[Fs][]string)
+var testRegistry = make(map[Fs][]string)
 
 func testDir(fs Fs) string {
 	name, err := TempDir(fs, "", "afero")
