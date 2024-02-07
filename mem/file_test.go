@@ -95,7 +95,7 @@ func TestFileDataModeRace(t *testing.T) {
 	}
 }
 
-// See https://github.com/spf13/afero/issues/286.
+// See https://github.com/jimsnab/afero/issues/286.
 func TestFileWriteAt(t *testing.T) {
 	t.Parallel()
 

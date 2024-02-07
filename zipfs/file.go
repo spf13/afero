@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/spf13/afero"
+	"github.com/jimsnab/afero"
 )
 
 type File struct {

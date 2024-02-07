@@ -2,7 +2,7 @@
 
 A FileSystem Abstraction System for Go
 
-[![Test](https://github.com/spf13/afero/actions/workflows/test.yml/badge.svg)](https://github.com/spf13/afero/actions/workflows/test.yml) [![GoDoc](https://godoc.org/github.com/spf13/afero?status.svg)](https://godoc.org/github.com/spf13/afero) [![Join the chat at https://gitter.im/spf13/afero](https://badges.gitter.im/Dev%20Chat.svg)](https://gitter.im/spf13/afero?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Test](https://github.com/jimsnab/afero/actions/workflows/test.yml/badge.svg)](https://github.com/jimsnab/afero/actions/workflows/test.yml) [![GoDoc](https://godoc.org/github.com/jimsnab/afero?status.svg)](https://godoc.org/github.com/jimsnab/afero) [![Join the chat at https://gitter.im/spf13/afero](https://badges.gitter.im/Dev%20Chat.svg)](https://gitter.im/spf13/afero?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 # Overview
 
@@ -50,11 +50,11 @@ A few different ways you could use Afero:
 
 First use go get to install the latest version of the library.
 
-    $ go get github.com/spf13/afero
+    $ go get github.com/jimsnab/afero
 
 Next include Afero in your application.
 ```go
-import "github.com/spf13/afero"
+import "github.com/jimsnab/afero"
 ```
 
 ## Step 2: Declare a backend
@@ -152,7 +152,7 @@ Walk(root string, walkFn filepath.WalkFunc) error
 WriteFile(filename string, data []byte, perm os.FileMode) error
 WriteReader(path string, r io.Reader) (err error)
 ```
-For a complete list see [Afero's GoDoc](https://godoc.org/github.com/spf13/afero)
+For a complete list see [Afero's GoDoc](https://godoc.org/github.com/jimsnab/afero)
 
 They are available under two different approaches to use. You can either call
 them directly where the first parameter of each function will be the file
@@ -417,7 +417,7 @@ Googles very well.
 
 ## Release Notes
 
-See the [Releases Page](https://github.com/spf13/afero/releases).
+See the [Releases Page](https://github.com/jimsnab/afero/releases).
 
 ## Contributing
 
@@ -439,4 +439,4 @@ Names in no particular order:
 ## License
 
 Afero is released under the Apache 2.0 license. See
-[LICENSE.txt](https://github.com/spf13/afero/blob/master/LICENSE.txt)
+[LICENSE.txt](https://github.com/jimsnab/afero/blob/master/LICENSE.txt)
