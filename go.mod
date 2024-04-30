@@ -4,7 +4,6 @@ require (
 	cloud.google.com/go/storage v1.35.1
 	github.com/googleapis/google-cloud-go-testing v0.0.0-20210719221736-1c9a4c676720
 	github.com/pkg/sftp v1.13.6
-	github.com/jimsnab/afero v1.11.0
 	golang.org/x/crypto v0.16.0
 	golang.org/x/oauth2 v0.15.0
 	golang.org/x/text v0.14.0
