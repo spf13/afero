@@ -2,6 +2,7 @@ module github.com/spf13/afero
 
 require (
 	cloud.google.com/go/storage v1.35.1
+	github.com/diskfs/go-diskfs v1.4.0
 	github.com/googleapis/google-cloud-go-testing v0.0.0-20210719221736-1c9a4c676720
 	github.com/pkg/sftp v1.13.6
 	golang.org/x/crypto v0.16.0
