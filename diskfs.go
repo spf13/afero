@@ -1,15 +1,18 @@
 package afero
 
 import (
+	"io"
 	"io/fs"
 	"os"
 	"path"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/diskfs/go-diskfs/filesystem"
 )
 
+// DiskFsFile is
 type DiskFsFile struct {
 	filesystem.File
 
@@ -22,8 +25,12 @@ func (f *DiskFsFile) Name() string {
 	return f.name
 }
 
-func (f *DiskFsFile) ReadAt([]byte, int64) (int, error) {
-	return -1, syscall.EINVAL
+func (f *DiskFsFile) ReadAt(p []byte, off int64) (int, error) {
+	if _, err := f.Seek(off, io.SeekStart); err != nil {
+		return -1, err
+	}
+
+	return f.Read(p)
 }
 
 func (f *DiskFsFile) Readdir(int) ([]fs.FileInfo, error) {
@@ -39,22 +46,27 @@ func (f *DiskFsFile) Stat() (fs.FileInfo, error) {
 }
 
 func (f *DiskFsFile) Sync() error {
+	// no-op
 	return nil
 }
 
-func (f *DiskFsFile) Truncate(int64) error {
-	return syscall.EINVAL
+func (f *DiskFsFile) Truncate(off int64) error {
+	if _, err := f.WriteAt([]byte{0}, io.SeekStart); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (f *DiskFsFile) WriteAt(p []byte, off int64) (int, error) {
-	if _, err := f.File.Seek(off, 0); err != nil {
+	if _, err := f.Seek(off, io.SeekStart); err != nil {
 		return -1, err
 	}
-	return f.File.Write(p)
+	return f.Write(p)
 }
 
 func (f *DiskFsFile) WriteString(s string) (int, error) {
-	return f.File.Write([]byte(s))
+	return f.Write([]byte(s))
 }
 
 type DiskFs struct {
@@ -84,7 +96,19 @@ func (fs *DiskFs) Mkdir(name string, _ os.FileMode) error {
 }
 
 func (fs *DiskFs) MkdirAll(path string, _ os.FileMode) error {
-	return syscall.EINVAL
+	parts := strings.Split(path, "/")
+
+	for i := 1; i <= len(parts); i++ {
+		subPath := strings.Join(parts[:i], string(os.PathSeparator))
+
+		if err := fs.source.Mkdir(subPath); err != nil {
+			if !os.IsExist(err) {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func (fs *DiskFs) Open(name string) (File, error) {
