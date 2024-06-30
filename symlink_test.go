@@ -132,7 +132,7 @@ func TestReadlinkIfPossible(t *testing.T) {
 	}
 
 	testRead := func(r LinkReader, name string, output *string) {
-		_, err := r.ReadlinkIfPossible(name)
+		str, err := r.ReadlinkIfPossible(name)
 		if (err != nil) && (output == nil) {
 			t.Fatalf("Error reading link, expected success, got error: %v", err)
 		} else if (err == nil) && (output != nil) {
@@ -140,6 +140,7 @@ func TestReadlinkIfPossible(t *testing.T) {
 		} else if err != nil && err.Error() != *output && !strings.HasSuffix(err.Error(), *output) {
 			t.Fatalf("Error reading link, expected error '%v', instead received '%v'", *output, err)
 		}
+		t.Logf("str: %v", str)
 	}
 
 	notSupported := ErrNoReadlink.Error()
