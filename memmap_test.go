@@ -6,7 +6,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -916,5 +918,39 @@ func TestMemMapFsRename(t *testing.T) {
 		if dataCnt != len(fs.getData()) {
 			t.Errorf("invalid data len: expected %v, get %v", dataCnt, len(fs.getData()))
 		}
+	}
+}
+
+func TestMemFsList(t *testing.T) {
+	t.Parallel()
+
+	fs := NewMemMapFs()
+
+	if err := WriteFile(fs, "file.txt", []byte("abc"), 0777); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := WriteFile(fs, "another/file.txt", []byte("abc"), 0777); err != nil {
+		t.Fatal(err)
+	}
+
+	files := fs.(*MemMapFs).List()
+	if len(files) != 4 {
+		t.Fatalf("Expected 4 files, got %d", len(files))
+	}
+
+	filenames := make([]string, 0, 4)
+	for file, _ := range files {
+		filenames = append(filenames, file)
+	}
+
+	sort.Strings(filenames)
+	if !reflect.DeepEqual(filenames, []string{
+		string(os.PathSeparator),
+		"another",
+		"another" + string(os.PathSeparator) + "file.txt",
+		"file.txt",
+	}) {
+		t.Fatalf("Expected different files, got: %s", filenames)
 	}
 }
