@@ -14,13 +14,10 @@
 package afero
 
 import (
-	"fmt"
 	"io"
-
 	"log"
 	"os"
 	"path/filepath"
-
 	"sort"
 	"strings"
 	"sync"
@@ -457,9 +454,11 @@ func (m *MemMapFs) Chtimes(name string, atime time.Time, mtime time.Time) error 
 	return nil
 }
 
-func (m *MemMapFs) List() {
-	for _, x := range m.data {
-		y := mem.FileInfo{FileData: x}
-		fmt.Println(x.Name(), y.Size())
+func (m *MemMapFs) List() map[string]*mem.FileInfo {
+	files := make(map[string]*mem.FileInfo)
+	for _, f := range m.data {
+		files[f.Name()] = mem.GetFileInfo(f)
 	}
+
+	return files
 }
