@@ -53,7 +53,7 @@ func (f *File) Stat() (os.FileInfo, error) {
 }
 
 func (f *File) Sync() error {
-	return nil
+	return f.fd.Sync()
 }
 
 func (f *File) Truncate(size int64) error {
