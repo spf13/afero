@@ -339,7 +339,7 @@ func (s *FileInfo) IsDir() bool {
 	defer s.Unlock()
 	return s.dir
 }
-func (s *FileInfo) Sys() interface{} { return nil }
+
 func (s *FileInfo) Size() int64 {
 	if s.IsDir() {
 		return int64(42)
@@ -347,6 +347,12 @@ func (s *FileInfo) Size() int64 {
 	s.Lock()
 	defer s.Unlock()
 	return int64(len(s.data))
+}
+
+func (s *FileInfo) Sys() interface{} {
+	s.Lock()
+	defer s.Unlock()
+	return sysFromFileInfo(s)
 }
 
 var (
