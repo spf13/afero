@@ -1,0 +1,13 @@
+linters-settings:
+    gci:
+        sections:
+            - standard
+            - default
+            - prefix(github.com/spf13/viper)
+
+linters:
+    disable-all: true
+    enable:
+        - gofmt
+        # - gofumpt
+        - staticcheck
