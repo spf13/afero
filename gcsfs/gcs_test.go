@@ -17,9 +17,9 @@ import (
 	"syscall"
 	"testing"
 
+	"cloud.google.com/go/storage"
 	"golang.org/x/oauth2/google"
 
-	"cloud.google.com/go/storage"
 	"github.com/spf13/afero"
 	"github.com/spf13/afero/gcsfs/internal/stiface"
 )
