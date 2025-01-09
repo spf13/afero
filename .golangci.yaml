@@ -11,3 +11,7 @@ linters:
         - gofmt
         # - gofumpt
         - staticcheck
+
+issues:
+    exclude-dirs:
+        - gcsfs/internal/stiface
