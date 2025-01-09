@@ -18,7 +18,6 @@ import (
 	"context"
 	"io"
 
-	"cloud.google.com/go/iam"
 	"cloud.google.com/go/storage"
 	"google.golang.org/api/iterator"
 )
@@ -59,7 +58,7 @@ type BucketHandle interface {
 	If(storage.BucketConditions) BucketHandle
 	Objects(context.Context, *storage.Query) ObjectIterator
 	ACL() ACLHandle
-	IAM() *iam.Handle
+	// IAM() *iam.Handle
 	UserProject(projectID string) BucketHandle
 	Notifications(context.Context) (map[string]*storage.Notification, error)
 	AddNotification(context.Context, *storage.Notification) (*storage.Notification, error)
