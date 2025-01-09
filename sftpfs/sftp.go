@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/pkg/sftp"
+
 	"github.com/spf13/afero"
 )
 

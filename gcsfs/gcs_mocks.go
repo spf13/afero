@@ -18,9 +18,10 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
+	"google.golang.org/api/iterator"
+
 	"github.com/spf13/afero"
 	"github.com/spf13/afero/gcsfs/internal/stiface"
-	"google.golang.org/api/iterator"
 )
 
 // sets filesystem separators to the one, expected (and hard-coded) in the tests
