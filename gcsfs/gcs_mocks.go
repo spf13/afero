@@ -18,8 +18,8 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
-	"github.com/googleapis/google-cloud-go-testing/storage/stiface"
 	"github.com/spf13/afero"
+	"github.com/spf13/afero/gcsfs/internal/stiface"
 	"google.golang.org/api/iterator"
 )
 
