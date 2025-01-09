@@ -3,13 +3,14 @@ linters-settings:
         sections:
             - standard
             - default
-            - prefix(github.com/spf13/viper)
+            - prefix(github.com/spf13/afero)
 
 linters:
     disable-all: true
     enable:
+        - gci
         - gofmt
-        # - gofumpt
+        - gofumpt
         - staticcheck
 
 issues:
