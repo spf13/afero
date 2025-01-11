@@ -26,11 +26,10 @@ import (
 	"sort"
 	"syscall"
 
-	"github.com/googleapis/google-cloud-go-testing/storage/stiface"
-
 	"cloud.google.com/go/storage"
-
 	"google.golang.org/api/iterator"
+
+	"github.com/spf13/afero/gcsfs/internal/stiface"
 )
 
 // GcsFs is the Afero version adapted for GCS

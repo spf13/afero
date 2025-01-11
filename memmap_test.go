@@ -881,7 +881,7 @@ func TestMemMapFsRename(t *testing.T) {
 		}
 
 		for _, dir := range data.dirs {
-			err = fs.MkdirAll(dir, os.FileMode(0775))
+			err = fs.MkdirAll(dir, os.FileMode(0o775))
 			if err != nil {
 				t.Fatalf("%s: MkdirAll %q failed: %v", fs.Name(), dir, err)
 			}
@@ -892,7 +892,7 @@ func TestMemMapFsRename(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: rename %q, %q failed: %v", fs.Name(), data.from, data.to, err)
 		}
-		err = fs.Mkdir(data.from, os.FileMode(0775))
+		err = fs.Mkdir(data.from, os.FileMode(0o775))
 		if err != nil {
 			t.Fatalf("%s: Mkdir %q failed: %v", fs.Name(), data.from, err)
 		}
