@@ -53,7 +53,7 @@ func (f *File) Stat() (os.FileInfo, error) {
 }
 
 func (f *File) Sync() error {
-	return nil
+	return f.fd.Sync()
 }
 
 func (f *File) Truncate(size int64) error {
@@ -100,9 +100,8 @@ func (f *File) Write(b []byte) (n int, err error) {
 	return f.fd.Write(b)
 }
 
-// TODO
 func (f *File) WriteAt(b []byte, off int64) (n int, err error) {
-	return 0, nil
+	return f.fd.WriteAt(b, off)
 }
 
 func (f *File) WriteString(s string) (ret int, err error) {
