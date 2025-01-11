@@ -4,9 +4,7 @@ go 1.21
 
 require (
 	cloud.google.com/go/storage v1.49.0
-	github.com/googleapis/google-cloud-go-testing v0.0.0-20210719221736-1c9a4c676720
 	github.com/pkg/sftp v1.13.7
-	github.com/spf13/afero v1.12.0
 	golang.org/x/crypto v0.32.0
 	golang.org/x/oauth2 v0.25.0
 	golang.org/x/text v0.21.0

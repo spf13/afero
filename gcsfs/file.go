@@ -29,7 +29,7 @@ import (
 	"cloud.google.com/go/storage"
 	"google.golang.org/api/iterator"
 
-	"github.com/spf13/afero/gcsfs/internal/stiface"
+	"github.com/jimsnab/afero/gcsfs/internal/stiface"
 )
 
 // GcsFs is the Afero version adapted for GCS

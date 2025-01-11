@@ -18,7 +18,7 @@ import (
 	"context"
 
 	"cloud.google.com/go/storage"
-	"github.com/spf13/afero/gcsfs/internal/stiface"
+	"github.com/jimsnab/afero/gcsfs/internal/stiface"
 )
 
 func Example_AdaptClient() {
