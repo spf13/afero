@@ -2,6 +2,7 @@ package afero
 
 import (
 	"os"
+	"path/filepath"
 	"regexp"
 	"syscall"
 	"time"
@@ -28,7 +29,7 @@ func (r *RegexpFs) matchesName(name string) error {
 	if r.re == nil {
 		return nil
 	}
-	if r.re.MatchString(name) {
+	if r.re.MatchString(filepath.Base(name)) {
 		return nil
 	}
 	return syscall.ENOENT
