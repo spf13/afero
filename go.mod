@@ -1,9 +1,10 @@
 module github.com/spf13/afero
 
 go 1.21
+toolchain go1.22.5
 
 require (
-	cloud.google.com/go/storage v1.49.0
+	cloud.google.com/go/storage v1.50.0
 	github.com/pkg/sftp v1.13.7
 	golang.org/x/crypto v0.33.0
 	golang.org/x/oauth2 v0.26.0
