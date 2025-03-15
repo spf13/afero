@@ -28,6 +28,14 @@ jobs:
       - name: Test
         run: go test -race -v ./...
 
+      - name: Test gcsfs
+        run: go test -race -v ./...
+        working-directory: ./gcsfs
+
+      - name: Test sftpfs
+        run: go test -race -v ./...
+        working-directory: ./sftpfs
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
