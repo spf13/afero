@@ -431,6 +431,39 @@ See the [Releases Page](https://github.com/spf13/afero/releases).
 4. Push to the branch (`git push origin my-new-feature`)
 5. Create new Pull Request
 
+## Releasing
+
+As of version 1.14.0, Afero moved implementations with third-party libraries to
+their own submodules.
+
+Releasing a new version now requires a few steps:
+
+```
+VERSION=X.Y.Z
+git tag -a v$VERSION -m "Release $VERSION"
+git push origin v$VERSION
+
+cd gcsfs
+go get github.com/spf13/afero@v$VERSION
+go mod tidy
+git commit -am "Update afero to v$VERSION"
+git tag -a gcsfs/v$VERSION -m "Release gcsfs $VERSION"
+git push origin gcsfs/v$VERSION
+cd ..
+
+cd sftpfs
+go get github.com/spf13/afero@v$VERSION
+go mod tidy
+git commit -am "Update afero to v$VERSION"
+git tag -a sftpfs/v$VERSION -m "Release sftpfs $VERSION"
+git push origin sftpfs/v$VERSION
+cd ..
+
+git push
+```
+
+TODO: move these instructions to a Makefile or something
+
 ## Contributors
 
 Names in no particular order:
