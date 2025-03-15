@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        go: ["1.21", "1.22", "1.23", "1.24"]
+        go: ["1.23", "1.24"]
 
     steps:
       - name: Checkout repository
@@ -44,4 +44,4 @@ jobs:
       - name: Lint
         uses: golangci/golangci-lint-action@4696ba8babb6127d732c3c6dde519db15edab9ea # v6.5.1
         with:
-          version: v1.64.5
+          version: v1.64.7
