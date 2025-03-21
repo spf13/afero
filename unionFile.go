@@ -156,7 +156,7 @@ var defaultUnionMergeDirsFn = func(lofi, bofi []os.FileInfo) ([]os.FileInfo, err
 // Readdir will weave the two directories together and
 // return a single view of the overlayed directories.
 // At the end of the directory view, the error is io.EOF if c > 0.
-func (f *UnionFile) Readdir(c int) (ofi []os.FileInfo, err error) {
+func (f *UnionFile) Readdir(count int) (ofi []os.FileInfo, err error) {
 	var merge DirsMerger = f.Merger
 	if merge == nil {
 		merge = defaultUnionMergeDirsFn
@@ -177,7 +177,6 @@ func (f *UnionFile) Readdir(c int) (ofi []os.FileInfo, err error) {
 			if err != nil {
 				return nil, err
 			}
-
 		}
 		merged, err := merge(lfi, bfi)
 		if err != nil {
@@ -187,7 +186,8 @@ func (f *UnionFile) Readdir(c int) (ofi []os.FileInfo, err error) {
 	}
 	files := f.files[f.off:]
 
-	if c <= 0 {
+	// Fixed: Check count <= 0 instead of c != -1
+	if count <= 0 {
 		return files, nil
 	}
 
@@ -195,12 +195,12 @@ func (f *UnionFile) Readdir(c int) (ofi []os.FileInfo, err error) {
 		return nil, io.EOF
 	}
 
-	if c > len(files) {
-		c = len(files)
+	if count > len(files) {
+		count = len(files)
 	}
 
-	defer func() { f.off += c }()
-	return files[:c], nil
+	defer func() { f.off += count }()
+	return files[:count], nil
 }
 
 func (f *UnionFile) Readdirnames(c int) ([]string, error) {
