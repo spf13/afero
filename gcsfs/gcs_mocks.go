@@ -130,7 +130,7 @@ func (o *objectMock) Attrs(_ context.Context) (*storage.ObjectAttrs, error) {
 
 	if info.IsDir() {
 		// we have to mock it here, because of FileInfo logic
-		return nil, ErrObjectDoesNotExist
+		return nil, storage.ErrObjectNotExist
 	}
 
 	return res, nil
