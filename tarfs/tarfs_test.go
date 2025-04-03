@@ -150,6 +150,51 @@ func TestReadAt(t *testing.T) {
 	}
 }
 
+func TestMultipleReads(t *testing.T) {
+	for _, f := range files {
+		if !f.exists {
+			continue
+		}
+
+		readFile := func(file afero.File) {
+			buf := make([]byte, 8)
+			n, err := file.Read(buf)
+			if f.isdir && (err != syscall.EISDIR) {
+				t.Errorf("%v got error %v, expected EISDIR", f.name, err)
+			} else if !f.isdir && (err != nil) {
+				if err != nil {
+					t.Errorf("%v: %v", f.name, err)
+				} else if n != 8 {
+					t.Errorf("%v: got %d read bytes, expected 8", f.name, n)
+				} else if string(buf) != f.content {
+					t.Errorf("%v: got <%s>, expected <%s>", f.name, f.content, string(buf))
+				}
+			}
+
+			_, err = io.ReadAll(file)
+			if f.isdir && (err != syscall.EISDIR) {
+				t.Errorf("%v got error %v, expected EISDIR", f.name, err)
+			} else if !f.isdir && (err != nil) {
+				t.Errorf("reading %v: %v", f.name, err)
+			}
+
+			err = file.Close()
+			if err != nil {
+				t.Errorf("closing %v: %v", f.name, err)
+			}
+		}
+
+		fileA, err := afs.Open(f.name)
+		fileB, err := afs.Open(f.name)
+		if err != nil {
+			t.Fatalf("opening %v: %v", f.name, err)
+		}
+
+		readFile(fileA)
+		readFile(fileB)
+	}
+}
+
 func TestSeek(t *testing.T) {
 	for _, f := range files {
 		if !f.exists {
