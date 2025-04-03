@@ -9,6 +9,7 @@ import (
 	"github.com/aliyun/alibabacloud-oss-go-sdk-v2/oss"
 	"github.com/aliyun/alibabacloud-oss-go-sdk-v2/oss/credentials"
 	"github.com/spf13/afero"
+	"github.com/spf13/afero/ossfs/internal/utils"
 )
 
 const (
@@ -17,8 +18,7 @@ const (
 )
 
 type Fs struct {
-	client      *oss.Client
-	ctx         context.Context
+	utils.ObjectManager
 	bucketName  string
 	separator   string
 	autoSync    bool
@@ -32,8 +32,10 @@ func NewOssFs(accessKeyId, accessKeySecret, region, bucket string) *Fs {
 		WithRegion(region)
 
 	return &Fs{
-		client:      oss.NewClient(ossCfg),
-		ctx:         context.TODO(),
+		ObjectManager: &utils.OssObjectManager{
+			Client: oss.NewClient(ossCfg),
+			Ctx:    context.TODO(),
+		},
 		bucketName:  bucket,
 		separator:   "/",
 		autoSync:    true,

@@ -229,9 +229,10 @@ func (f *File) Readdir(count int) ([]os.FileInfo, error) {
 	}
 
 	req := &oss.ListObjectsV2Request{
-		Bucket:  oss.Ptr(f.fs.bucketName),
-		Prefix:  oss.Ptr(f.fs.ensureAsDir(f.name)),
-		MaxKeys: int32(count),
+		Bucket:    oss.Ptr(f.fs.bucketName),
+		Prefix:    oss.Ptr(f.fs.ensureAsDir(f.name)),
+		MaxKeys:   int32(count),
+		Delimiter: oss.Ptr(f.fs.separator),
 	}
 
 	p := f.fs.client.NewListObjectsV2Paginator(req)
@@ -261,12 +262,12 @@ func (f *File) Readdirnames(n int) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	var dirNames []string
+	var fNames []string
 	for _, fi := range fis {
-		dirNames = append(dirNames, fi.Name())
+		fNames = append(fNames, fi.Name())
 	}
 
-	return dirNames, nil
+	return fNames, nil
 }
 
 func (f *File) Stat() (os.FileInfo, error) {
