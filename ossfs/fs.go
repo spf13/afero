@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/aliyun/alibabacloud-oss-go-sdk-v2/oss"
@@ -53,10 +54,12 @@ func (fs *Fs) WithContext(ctx context.Context) *Fs {
 // Create creates a new empty file and open it, return the open file and error
 // if any happens.
 func (fs *Fs) Create(name string) (afero.File, error) {
-	if _, err := fs.putObjectStr(name, ""); err != nil {
+	n := fs.normFileName(name)
+	r := strings.NewReader("")
+	if _, err := fs.manager.PutObject(fs.ctx, fs.bucketName, n, r); err != nil {
 		return nil, err
 	}
-	return fs.OpenFile(name, defaultFileFlag, defaultFileMode)
+	return NewOssFile(n, defaultFileFlag, fs)
 }
 
 // Mkdir creates a directory in the filesystem, return an error if any
@@ -69,7 +72,8 @@ func (fs *Fs) Mkdir(name string, perm os.FileMode) error {
 // yet.
 func (fs *Fs) MkdirAll(path string, perm os.FileMode) error {
 	dirName := fs.ensureAsDir(path)
-	_, err := fs.putObjectStr(dirName, "")
+	r := strings.NewReader("")
+	_, err := fs.manager.PutObject(fs.ctx, fs.bucketName, dirName, r)
 	return err
 }
 
@@ -80,6 +84,7 @@ func (fs *Fs) Open(name string) (afero.File, error) {
 
 // OpenFile opens a file using the given flags and the given mode.
 func (fs *Fs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error) {
+	name = fs.normFileName(name)
 	file, found := fs.openedFiles[name]
 	if found && file.(*File).openFlag == flag {
 		return file, nil
@@ -103,7 +108,8 @@ func (fs *Fs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, err
 	}
 
 	if f.shouldTruncate() {
-		if _, err := f.fs.putObjectStr(f.name, ""); err != nil {
+		_, err := f.fs.manager.PutObject(fs.ctx, fs.bucketName, f.name, strings.NewReader(""))
+		if err != nil {
 			return nil, err
 		}
 	}

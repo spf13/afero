@@ -13,11 +13,6 @@ import (
 	"github.com/spf13/afero"
 )
 
-func init() {
-	// Ensure OssObjectManager implements ObjectManager interface
-	var _ ObjectManager = (*OssObjectManager)(nil)
-}
-
 var ossDirSeparator string = "/"
 var ossDefaultFileMode fs.FileMode = 0o755
 

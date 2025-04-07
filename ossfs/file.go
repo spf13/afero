@@ -24,13 +24,13 @@ type File struct {
 
 func NewOssFile(name string, flag int, fs *Fs) (*File, error) {
 	return &File{
-		name:        name,
+		name:        fs.normFileName(name),
 		fs:          fs,
 		openFlag:    flag,
 		offset:      0,
 		dirty:       false,
 		closed:      false,
-		isDir:       fs.isDir(name),
+		isDir:       fs.isDir(fs.normFileName(name)),
 		preloaded:   false,
 		preloadedFd: nil,
 	}, nil
@@ -159,7 +159,7 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 	return f.offset, nil
 }
 
-func (f *File) Append(p []byte) (int, error) {
+func (f *File) doAppend(p []byte) (int, error) {
 	if !f.isWriteable() {
 		return 0, syscall.EPERM
 	}
@@ -175,7 +175,7 @@ func (f *File) Write(p []byte) (int, error) {
 		return 0, syscall.EPERM
 	}
 	if f.isAppendOnly() {
-		return f.Append(p)
+		return f.doAppend(p)
 	}
 	n, e := f.doWriteAt(p, f.offset)
 	if e != nil {
@@ -253,7 +253,7 @@ func (f *File) Stat() (os.FileInfo, error) {
 
 func (f *File) Sync() error {
 	if f.preloaded {
-		if _, err := f.fs.putObjectReader(f.name, f.preloadedFd); err != nil {
+		if _, err := f.fs.manager.PutObject(f.fs.ctx, f.fs.bucketName, f.name, f.preloadedFd); err != nil {
 			return err
 		}
 	}
