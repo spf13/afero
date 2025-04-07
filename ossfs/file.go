@@ -80,14 +80,6 @@ func (f *File) isAppendOnly() bool {
 	return f.isWriteable() && f.hasFlag(os.O_APPEND)
 }
 
-func (f *File) shouldTruncate() bool {
-	return f.hasFlag(os.O_TRUNC)
-}
-
-func (f *File) shouldCreateIfNotExists() bool {
-	return f.hasFlag(os.O_CREATE)
-}
-
 func (f *File) Close() error {
 	f.Sync()
 	f.closed = true

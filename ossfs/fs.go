@@ -101,13 +101,17 @@ func (fs *Fs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, err
 		return nil, err
 	}
 
-	if !existed && f.shouldCreateIfNotExists() {
+	if !existed && !f.hasFlag(os.O_CREATE) {
+		return nil, afero.ErrFileNotFound
+	}
+
+	if !existed && f.hasFlag(os.O_CREATE) {
 		if _, err := fs.Create(f.name); err != nil {
 			return nil, err
 		}
 	}
 
-	if f.shouldTruncate() {
+	if f.hasFlag(os.O_TRUNC) {
 		_, err := f.fs.manager.PutObject(fs.ctx, fs.bucketName, f.name, strings.NewReader(""))
 		if err != nil {
 			return nil, err
@@ -122,7 +126,7 @@ func (fs *Fs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, err
 // Remove removes a file identified by name, returning an error, if any
 // happens.
 func (fs *Fs) Remove(name string) error {
-	return fs.manager.DeleteObject(fs.ctx, fs.bucketName, name)
+	return fs.manager.DeleteObject(fs.ctx, fs.bucketName, fs.normFileName(name))
 }
 
 // RemoveAll removes a directory path and any children it contains. It
