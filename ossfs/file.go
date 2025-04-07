@@ -1,13 +1,11 @@
 package ossfs
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"slices"
 	"syscall"
 
-	"github.com/aliyun/alibabacloud-oss-go-sdk-v2/oss"
 	"github.com/spf13/afero"
 )
 
@@ -16,7 +14,7 @@ type File struct {
 	fs          *Fs
 	openFlag    int
 	offset      int64
-	fi          *FileInfo
+	fi          os.FileInfo
 	dirty       bool
 	closed      bool
 	isDir       bool
@@ -57,7 +55,7 @@ func (f *File) freshFileInfo() error {
 	return nil
 }
 
-func (f *File) getFileInfo() (*FileInfo, error) {
+func (f *File) getFileInfo() (os.FileInfo, error) {
 	if f.dirty {
 		if err := f.freshFileInfo(); err != nil {
 			return nil, err
@@ -125,18 +123,12 @@ func (f *File) ReadAt(p []byte, off int64) (int, error) {
 	if !f.isReadable() || f.isDir {
 		return 0, syscall.EPERM
 	}
-	req := &oss.GetObjectRequest{
-		Bucket:        oss.Ptr(f.fs.bucketName),
-		Key:           oss.Ptr(f.name),
-		Range:         oss.Ptr(fmt.Sprintf("bytes=%v-%v", off, off+int64(len(p)))),
-		RangeBehavior: oss.Ptr("standard"),
-	}
-	res, err := f.fs.client.GetObject(f.fs.ctx, req)
+	reader, cleanUp, err := f.fs.manager.GetObjectPart(f.fs.ctx, f.fs.bucketName, f.name, f.offset, f.offset+off)
 	if err != nil {
 		return 0, err
 	}
-	defer res.Body.Close()
-	buf, _ := io.ReadAll(res.Body)
+	defer cleanUp()
+	buf, _ := io.ReadAll(reader)
 	p = slices.Concat(p, buf)
 	_ = p
 	return len(buf), nil
@@ -161,7 +153,7 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 		newOffset = max + offset
 	}
 	if newOffset < 0 || newOffset > max {
-		return 0, syscall.ERANGE
+		return 0, afero.ErrOutOfRange
 	}
 	f.offset = newOffset
 	return f.offset, nil
@@ -228,29 +220,8 @@ func (f *File) Readdir(count int) ([]os.FileInfo, error) {
 		return nil, syscall.EPERM
 	}
 
-	req := &oss.ListObjectsV2Request{
-		Bucket:    oss.Ptr(f.fs.bucketName),
-		Prefix:    oss.Ptr(f.fs.ensureAsDir(f.name)),
-		MaxKeys:   int32(count),
-		Delimiter: oss.Ptr(f.fs.separator),
-	}
-
-	p := f.fs.client.NewListObjectsV2Paginator(req)
-
-	var fis []os.FileInfo
-
-	for p.HasNext() {
-		page, err := p.NextPage(f.fs.ctx)
-		if err != nil {
-			return nil, err
-		}
-		for _, objProps := range page.Contents {
-			fi := NewFileInfoWithObjProp(oss.ToString(objProps.Key), f.fs, objProps)
-			fis = append(fis, fi)
-		}
-	}
-
-	return fis, nil
+	fis, err := f.fs.manager.ListObjects(f.fs.ctx, f.fs.bucketName, f.fs.ensureAsDir(f.name), count)
+	return fis, err
 }
 
 func (f *File) Readdirnames(n int) ([]string, error) {
@@ -282,7 +253,7 @@ func (f *File) Stat() (os.FileInfo, error) {
 
 func (f *File) Sync() error {
 	if f.preloaded {
-		if _, err := f.fs.putObjectReader(f.name, f); err != nil {
+		if _, err := f.fs.putObjectReader(f.name, f.preloadedFd); err != nil {
 			return err
 		}
 	}

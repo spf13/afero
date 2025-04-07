@@ -18,12 +18,13 @@ const (
 )
 
 type Fs struct {
-	utils.ObjectManager
+	manager     utils.ObjectManager
 	bucketName  string
 	separator   string
 	autoSync    bool
 	openedFiles map[string]afero.File
 	preloadFs   afero.Fs
+	ctx         context.Context
 }
 
 func NewOssFs(accessKeyId, accessKeySecret, region, bucket string) *Fs {
@@ -32,16 +33,21 @@ func NewOssFs(accessKeyId, accessKeySecret, region, bucket string) *Fs {
 		WithRegion(region)
 
 	return &Fs{
-		ObjectManager: &utils.OssObjectManager{
+		manager: &utils.OssObjectManager{
 			Client: oss.NewClient(ossCfg),
-			Ctx:    context.TODO(),
 		},
 		bucketName:  bucket,
 		separator:   "/",
 		autoSync:    true,
 		openedFiles: make(map[string]afero.File),
 		preloadFs:   afero.NewMemMapFs(),
+		ctx:         context.Background(),
 	}
+}
+
+func (fs *Fs) WithContext(ctx context.Context) *Fs {
+	fs.ctx = ctx
+	return fs
 }
 
 // Create creates a new empty file and open it, return the open file and error
@@ -85,7 +91,7 @@ func (fs *Fs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, err
 	}
 
 	existed := false
-	existed, err = fs.isObjectExists(name)
+	existed, err = fs.manager.IsObjectExist(fs.ctx, fs.bucketName, name)
 	if err != nil {
 		return nil, err
 	}
@@ -110,29 +116,21 @@ func (fs *Fs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, err
 // Remove removes a file identified by name, returning an error, if any
 // happens.
 func (fs *Fs) Remove(name string) error {
-	req := &oss.DeleteObjectRequest{
-		Bucket: oss.Ptr(fs.bucketName),
-		Key:    oss.Ptr(name),
-	}
-	_, err := fs.client.DeleteObject(fs.ctx, req)
-	return err
+	return fs.manager.DeleteObject(fs.ctx, fs.bucketName, name)
 }
 
 // RemoveAll removes a directory path and any children it contains. It
 // does not fail if the path does not exist (return nil).
 func (fs *Fs) RemoveAll(path string) error {
-	req := &oss.ListObjectsV2Request{
-		Bucket: oss.Ptr(fs.bucketName),
-		Prefix: oss.Ptr(fs.ensureAsDir(path)),
+	dir := fs.ensureAsDir(path)
+	fis, err := fs.manager.ListAllObjects(fs.ctx, fs.bucketName, dir)
+	if err != nil {
+		return err
 	}
-	p := fs.client.NewListObjectsV2Paginator(req)
-	for p.HasNext() {
-		page, err := p.NextPage(fs.ctx)
+	for _, fi := range fis {
+		err = fs.manager.DeleteObject(fs.ctx, fs.bucketName, fi.Name())
 		if err != nil {
 			return err
-		}
-		for _, obj := range page.Contents {
-			fs.Remove(oss.ToString(obj.Key))
 		}
 	}
 	return nil
@@ -140,26 +138,23 @@ func (fs *Fs) RemoveAll(path string) error {
 
 // Rename renames a file.
 func (fs *Fs) Rename(oldname, newname string) error {
-	_, err := fs.copyObject(oldname, newname)
+	err := fs.manager.CopyObject(fs.ctx, fs.bucketName, oldname, newname)
 	if err != nil {
 		return err
 	}
-	_, err = fs.deleteObject(oldname)
+	err = fs.manager.DeleteObject(fs.ctx, fs.bucketName, oldname)
 	return err
 }
 
 // Stat returns a FileInfo describing the named file, or an error, if any
 // happens.
-func (fs *Fs) Stat(name string) (*FileInfo, error) {
-	req := &oss.HeadObjectRequest{
-		Bucket: oss.Ptr(fs.bucketName),
-		Key:    oss.Ptr(name),
-	}
-	res, err := fs.client.HeadObject(fs.ctx, req)
+func (fs *Fs) Stat(name string) (os.FileInfo, error) {
+	fi, err := fs.manager.GetObjectMeta(fs.ctx, fs.bucketName, name)
 	if err != nil {
 		return nil, err
 	}
-	return NewFileInfo(name, fs, res), nil
+
+	return fi, err
 }
 
 // The name of this FileSystem
