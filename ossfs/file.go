@@ -44,11 +44,25 @@ func (f *File) preload() error {
 			return e
 		}
 	}
-	preloadedFs, err := f.fs.preloadFs.Create(f.name)
+	pfd, err := f.fs.preloadFs.Create(f.name)
 	if err != nil {
 		return err
 	}
-	f.preloadedFd = preloadedFs
+	r, clean, e := f.fs.manager.GetObject(f.fs.ctx, f.fs.bucketName, f.name)
+	if e != nil {
+		return e
+	}
+	defer clean()
+	p, err := io.ReadAll(r)
+	if err != nil {
+		return err
+	}
+	_, err = pfd.WriteAt(p, 0)
+	if err != nil {
+		return err
+	}
+	pfd.Seek(f.offset, io.SeekStart)
+	f.preloadedFd = pfd
 	return nil
 }
 
