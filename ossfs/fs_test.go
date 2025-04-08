@@ -53,6 +53,7 @@ func TestNewOssFs(t *testing.T) {
 }
 
 func TestFsWithContext(t *testing.T) {
+	type bgMeta string
 	tests := []struct {
 		name     string
 		fs       *Fs
@@ -64,9 +65,9 @@ func TestFsWithContext(t *testing.T) {
 			fs: &Fs{
 				ctx: context.Background(),
 			},
-			ctx: context.WithValue(context.Background(), "testKey", "testValue"),
+			ctx: context.WithValue(context.Background(), bgMeta("testKey"), bgMeta("testValue")),
 			expected: &Fs{
-				ctx: context.WithValue(context.Background(), "testKey", "testValue"),
+				ctx: context.WithValue(context.Background(), bgMeta("testKey"), bgMeta("testValue")),
 			},
 		},
 		{
@@ -404,4 +405,58 @@ func TestFsRename(t *testing.T) {
 		assert.ErrorIs(t, err, afero.ErrFileNotFound)
 		m.AssertExpectations(t)
 	})
+}
+
+func TestFsStat(t *testing.T) {
+	m := &mocks.ObjectManager{}
+	bucket := "test-bucket"
+	ctx := context.TODO()
+
+	fs := &Fs{
+		manager:    m,
+		bucketName: bucket,
+		ctx:        ctx,
+		separator:  "/",
+	}
+
+	t.Run("stat file success", func(t *testing.T) {
+		expectedInfo := &mocks.FileInfo{}
+		m.On("GetObjectMeta", fs.ctx, bucket, "test.txt").Return(expectedInfo, nil).Once()
+		info, err := fs.Stat("test.txt")
+		assert.Nil(t, err)
+		assert.Equal(t, expectedInfo, info)
+		m.AssertExpectations(t)
+	})
+
+	t.Run("stat prefixed file path success", func(t *testing.T) {
+		expectedInfo := &mocks.FileInfo{}
+		m.On("GetObjectMeta", fs.ctx, bucket, "path/to/test.txt").Return(expectedInfo, nil).Once()
+		info, err := fs.Stat("/path/to/test.txt")
+		assert.Nil(t, err)
+		assert.Equal(t, expectedInfo, info)
+		m.AssertExpectations(t)
+	})
+
+	t.Run("stat dir path success", func(t *testing.T) {
+		expectedInfo := &mocks.FileInfo{}
+		m.On("GetObjectMeta", fs.ctx, bucket, "path/to/dir/").Return(expectedInfo, nil).Once()
+		info, err := fs.Stat("/path/to/dir/")
+		assert.Nil(t, err)
+		assert.Equal(t, expectedInfo, info)
+		m.AssertExpectations(t)
+	})
+
+	t.Run("stat non-existent file", func(t *testing.T) {
+		m.On("GetObjectMeta", fs.ctx, bucket, "nonexistent.txt").Return(nil, os.ErrNotExist).Once()
+		_, err := fs.Stat("nonexistent.txt")
+		assert.NotNil(t, err)
+		assert.ErrorIs(t, err, os.ErrNotExist)
+		m.AssertExpectations(t)
+	})
+}
+
+func TestFsName(t *testing.T) {
+	fs := &Fs{}
+	name := fs.Name()
+	assert.Equal(t, "OssFs", name)
 }

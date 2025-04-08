@@ -101,17 +101,17 @@ func (fs *Fs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, err
 		return nil, err
 	}
 
-	if !existed && !f.hasFlag(os.O_CREATE) {
+	if !existed && f.openFlag&os.O_CREATE == 0 {
 		return nil, afero.ErrFileNotFound
 	}
 
-	if !existed && f.hasFlag(os.O_CREATE) {
+	if !existed && f.openFlag*os.O_CREATE != 0 {
 		if _, err := fs.Create(f.name); err != nil {
 			return nil, err
 		}
 	}
 
-	if f.hasFlag(os.O_TRUNC) {
+	if f.openFlag&os.O_TRUNC != 0 {
 		_, err := f.fs.manager.PutObject(fs.ctx, fs.bucketName, f.name, strings.NewReader(""))
 		if err != nil {
 			return nil, err
@@ -159,7 +159,7 @@ func (fs *Fs) Rename(oldname, newname string) error {
 // Stat returns a FileInfo describing the named file, or an error, if any
 // happens.
 func (fs *Fs) Stat(name string) (os.FileInfo, error) {
-	fi, err := fs.manager.GetObjectMeta(fs.ctx, fs.bucketName, name)
+	fi, err := fs.manager.GetObjectMeta(fs.ctx, fs.bucketName, fs.normFileName(name))
 	if err != nil {
 		return nil, err
 	}

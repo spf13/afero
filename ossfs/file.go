@@ -1,9 +1,10 @@
 package ossfs
 
 import (
+	"errors"
 	"io"
 	"os"
-	"slices"
+	"strconv"
 	"syscall"
 
 	"github.com/spf13/afero"
@@ -37,6 +38,12 @@ func NewOssFile(name string, flag int, fs *Fs) (*File, error) {
 }
 
 func (f *File) preload() error {
+	pfs := f.fs.preloadFs
+	if _, err := pfs.Stat(f.name); err == nil {
+		if e := pfs.Remove(f.name); e != nil {
+			return e
+		}
+	}
 	preloadedFs, err := f.fs.preloadFs.Create(f.name)
 	if err != nil {
 		return err
@@ -64,39 +71,16 @@ func (f *File) getFileInfo() (os.FileInfo, error) {
 	return f.fi, nil
 }
 
-func (f *File) hasFlag(flag int) bool {
-	return f.openFlag&flag != 0
-}
-
 func (f *File) isReadable() bool {
-	return !f.closed && (f.hasFlag(os.O_RDONLY) || f.hasFlag(os.O_RDWR))
+	return !f.closed && (f.openFlag == os.O_RDONLY || f.openFlag == os.O_RDWR)
 }
 
 func (f *File) isWriteable() bool {
-	return !f.closed && (f.hasFlag(os.O_WRONLY) || f.hasFlag(os.O_RDWR))
+	return !f.closed && (f.openFlag == os.O_WRONLY || f.openFlag == os.O_RDWR)
 }
 
 func (f *File) isAppendOnly() bool {
-	return f.isWriteable() && f.hasFlag(os.O_APPEND)
-}
-
-func (f *File) Close() error {
-	f.Sync()
-	f.closed = true
-	delete(f.fs.openedFiles, f.name)
-	if f.preloaded {
-		err := f.fs.preloadFs.Remove(f.name)
-		if err != nil {
-			return err
-		}
-		err = f.preloadedFd.Close()
-		if err != nil {
-			return err
-		}
-		f.preloadedFd = nil
-		f.preloaded = false
-	}
-	return nil
+	return f.isWriteable() && f.openFlag&os.O_APPEND != 0
 }
 
 func (f *File) Read(p []byte) (int, error) {
@@ -115,15 +99,12 @@ func (f *File) ReadAt(p []byte, off int64) (int, error) {
 	if !f.isReadable() || f.isDir {
 		return 0, syscall.EPERM
 	}
-	reader, cleanUp, err := f.fs.manager.GetObjectPart(f.fs.ctx, f.fs.bucketName, f.name, f.offset, f.offset+off)
+	reader, cleanUp, err := f.fs.manager.GetObjectPart(f.fs.ctx, f.fs.bucketName, f.name, off, off+int64(len(p)))
 	if err != nil {
 		return 0, err
 	}
 	defer cleanUp()
-	buf, _ := io.ReadAll(reader)
-	p = slices.Concat(p, buf)
-	_ = p
-	return len(buf), nil
+	return reader.Read(p)
 }
 
 func (f *File) Seek(offset int64, whence int) (int64, error) {
@@ -143,6 +124,8 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 		newOffset = offset
 	case io.SeekEnd:
 		newOffset = max + offset
+	default:
+		return 0, errors.New("Invalid whence value: " + strconv.Itoa(whence))
 	}
 	if newOffset < 0 || newOffset > max {
 		return 0, afero.ErrOutOfRange
@@ -201,6 +184,25 @@ func (f *File) WriteAt(p []byte, off int64) (int, error) {
 		return 0, syscall.EPERM
 	}
 	return f.doWriteAt(p, off)
+}
+
+func (f *File) Close() error {
+	f.Sync()
+	f.closed = true
+	delete(f.fs.openedFiles, f.name)
+	if f.preloaded {
+		err := f.fs.preloadFs.Remove(f.name)
+		if err != nil {
+			return err
+		}
+		err = f.preloadedFd.Close()
+		if err != nil {
+			return err
+		}
+		f.preloadedFd = nil
+		f.preloaded = false
+	}
+	return nil
 }
 
 func (f *File) Name() string {
