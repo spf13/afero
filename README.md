@@ -2,11 +2,10 @@
 
 A FileSystem Abstraction System for Go
 
-[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/spf13/afero/ci.yaml?branch=master&style=flat-square)](https://github.com/spf13/afero/actions?query=workflow%3ACI)
-[![Join the chat at https://gitter.im/spf13/afero](https://badges.gitter.im/Dev%20Chat.svg)](https://gitter.im/spf13/afero?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Go Report Card](https://goreportcard.com/badge/github.com/spf13/afero?style=flat-square)](https://goreportcard.com/report/github.com/spf13/afero)
-![Go Version](https://img.shields.io/badge/go%20version-%3E=1.23-61CFDD.svg?style=flat-square)
-[![PkgGoDev](https://pkg.go.dev/badge/mod/github.com/spf13/afero)](https://pkg.go.dev/mod/github.com/spf13/afero)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/spf13/afero/ci.yaml?style=flat-square)](https://github.com/spf13/afero/actions/workflows/ci.yaml)
+[![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/mod/github.com/spf13/afero)
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/spf13/afero?style=flat-square&color=61CFDD)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/spf13/afero/badge?style=flat-square)](https://deps.dev/go/github.com%252Fspf13%252Fafero)
 
 # Overview
 
