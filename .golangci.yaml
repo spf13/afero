@@ -7,14 +7,15 @@ linters:
   enable:
     - govet
     - ineffassign
-    # - misspell
+    - misspell
     - nolintlint
     # - revive
+    - staticcheck
     - unused
 
   disable:
     - errcheck
-    - staticcheck
+    # - staticcheck
 
   settings:
     misspell:
@@ -31,9 +32,9 @@ formatters:
   enable:
     - gci
     - gofmt
-    # - gofumpt
+    - gofumpt
     - goimports
-    # - golines
+    - golines
 
   settings:
     gci:

@@ -73,7 +73,10 @@ func (o *objectMock) NewWriter(_ context.Context) stiface.Writer {
 	return &writerMock{name: o.name, fs: o.fs}
 }
 
-func (o *objectMock) NewRangeReader(_ context.Context, offset, length int64) (stiface.Reader, error) {
+func (o *objectMock) NewRangeReader(
+	_ context.Context,
+	offset, length int64,
+) (stiface.Reader, error) {
 	if o.name == "" {
 		return nil, ErrEmptyObjectName
 	}
@@ -126,7 +129,11 @@ func (o *objectMock) Attrs(_ context.Context) (*storage.ObjectAttrs, error) {
 		return nil, err
 	}
 
-	res := &storage.ObjectAttrs{Name: normSeparators(o.name), Size: info.Size(), Updated: info.ModTime()}
+	res := &storage.ObjectAttrs{
+		Name:    normSeparators(o.name),
+		Size:    info.Size(),
+		Updated: info.ModTime(),
+	}
 
 	if info.IsDir() {
 		// we have to mock it here, because of FileInfo logic
@@ -240,7 +247,14 @@ func (it *objectItMock) Next() (*storage.ObjectAttrs, error) {
 			if err != nil {
 				return nil, err
 			}
-			it.infos = append(it.infos, &storage.ObjectAttrs{Name: normSeparators(info.Name()), Size: info.Size(), Updated: info.ModTime()})
+			it.infos = append(
+				it.infos,
+				&storage.ObjectAttrs{
+					Name:    normSeparators(info.Name()),
+					Size:    info.Size(),
+					Updated: info.ModTime(),
+				},
+			)
 		} else {
 			var fInfos []os.FileInfo
 			fInfos, err = it.dir.Readdir(0)

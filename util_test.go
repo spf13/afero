@@ -102,7 +102,7 @@ func TestIsEmpty(t *testing.T) {
 	nonEmptyNonZeroLengthFilesDirectory, _ := createTempDirWithNonZeroLengthFiles()
 	defer deleteTempDir(nonEmptyNonZeroLengthFilesDirectory)
 	nonExistentFile := os.TempDir() + "/this-file-does-not-exist.txt"
-	nonExistentDir := os.TempDir() + "/this/direcotry/does/not/exist/"
+	nonExistentDir := os.TempDir() + "/this/directory/does/not/exist/"
 
 	fileDoesNotExist := fmt.Errorf("%q path does not exist", nonExistentFile)
 	dirDoesNotExist := fmt.Errorf("%q path does not exist", nonExistentDir)
@@ -125,11 +125,24 @@ func TestIsEmpty(t *testing.T) {
 	for i, d := range data {
 		exists, err := IsEmpty(testFS, d.input)
 		if d.expectedResult != exists {
-			t.Errorf("Test %d %q failed exists. Expected result %t got %t", i, d.input, d.expectedResult, exists)
+			t.Errorf(
+				"Test %d %q failed exists. Expected result %t got %t",
+				i,
+				d.input,
+				d.expectedResult,
+				exists,
+			)
 		}
 		if d.expectedErr != nil {
 			if d.expectedErr.Error() != err.Error() {
-				t.Errorf("Test %d failed with err. Expected %q(%#v) got %q(%#v)", i, d.expectedErr, d.expectedErr, err, err)
+				t.Errorf(
+					"Test %d failed with err. Expected %q(%#v) got %q(%#v)",
+					i,
+					d.expectedErr,
+					d.expectedErr,
+					err,
+					err,
+				)
 			}
 		} else {
 			if d.expectedErr != err {
@@ -267,7 +280,7 @@ func TestExists(t *testing.T) {
 	emptyDirectory, _ := createEmptyTempDir()
 	defer deleteTempDir(emptyDirectory)
 	nonExistentFile := os.TempDir() + "/this-file-does-not-exist.txt"
-	nonExistentDir := os.TempDir() + "/this/direcotry/does/not/exist/"
+	nonExistentDir := os.TempDir() + "/this/directory/does/not/exist/"
 
 	type test struct {
 		input          string
@@ -320,7 +333,12 @@ func TestSafeWriteToDisk(t *testing.T) {
 		e := SafeWriteReader(testFS, d.filename, reader)
 		if d.expectedErr != nil {
 			if d.expectedErr.Error() != e.Error() {
-				t.Errorf("Test %d failed. Expected error %q but got %q", i, d.expectedErr.Error(), e.Error())
+				t.Errorf(
+					"Test %d failed. Expected error %q but got %q",
+					i,
+					d.expectedErr.Error(),
+					e.Error(),
+				)
 			}
 		} else {
 			if d.expectedErr != e {
@@ -359,14 +377,24 @@ func TestWriteToDisk(t *testing.T) {
 	for i, d := range data {
 		e := WriteReader(testFS, d.filename, reader)
 		if d.expectedErr != e {
-			t.Errorf("Test %d failed. WriteToDisk Error Expected %q but got %q", i, d.expectedErr, e)
+			t.Errorf(
+				"Test %d failed. WriteToDisk Error Expected %q but got %q",
+				i,
+				d.expectedErr,
+				e,
+			)
 		}
 		contents, e := ReadFile(testFS, d.filename)
 		if e != nil {
 			t.Errorf("Test %d failed. Could not read file %s. Reason: %s\n", i, d.filename, e)
 		}
 		if randomString != string(contents) {
-			t.Errorf("Test %d failed. Expected contents %q but got %q", i, randomString, string(contents))
+			t.Errorf(
+				"Test %d failed. Expected contents %q but got %q",
+				i,
+				randomString,
+				string(contents),
+			)
 		}
 		reader.Seek(0, 0)
 	}
@@ -384,7 +412,10 @@ func TestGetTempDir(t *testing.T) {
 	}{
 		{"", dir},
 		{testDir + "  Foo bar  ", dir + testDir + "  Foo bar  " + FilePathSeparator},
-		{testDir + "Foo.Bar/foo_Bar-Foo", dir + testDir + "Foo.Bar/foo_Bar-Foo" + FilePathSeparator},
+		{
+			testDir + "Foo.Bar/foo_Bar-Foo",
+			dir + testDir + "Foo.Bar/foo_Bar-Foo" + FilePathSeparator,
+		},
 		{testDir + "fOO,bar:foo%bAR", dir + testDir + "fOObarfoo%bAR" + FilePathSeparator},
 		{testDir + "FOo/BaR.html", dir + testDir + "FOo/BaR.html" + FilePathSeparator},
 		{testDir + "трям/трям", dir + testDir + "трям/трям" + FilePathSeparator},
@@ -431,9 +462,21 @@ func TestFullBaseFsPath(t *testing.T) {
 			ExpectedPath string
 		}
 		specs := []spec{
-			{BaseFs: level3Fs, FileName: "f.txt", ExpectedPath: filepath.Join(ds.Dir1, ds.Dir2, ds.Dir3, "f.txt")},
-			{BaseFs: level3Fs, FileName: "", ExpectedPath: filepath.Join(ds.Dir1, ds.Dir2, ds.Dir3, "")},
-			{BaseFs: level2Fs, FileName: "f.txt", ExpectedPath: filepath.Join(ds.Dir1, ds.Dir2, "f.txt")},
+			{
+				BaseFs:       level3Fs,
+				FileName:     "f.txt",
+				ExpectedPath: filepath.Join(ds.Dir1, ds.Dir2, ds.Dir3, "f.txt"),
+			},
+			{
+				BaseFs:       level3Fs,
+				FileName:     "",
+				ExpectedPath: filepath.Join(ds.Dir1, ds.Dir2, ds.Dir3, ""),
+			},
+			{
+				BaseFs:       level2Fs,
+				FileName:     "f.txt",
+				ExpectedPath: filepath.Join(ds.Dir1, ds.Dir2, "f.txt"),
+			},
 			{BaseFs: level2Fs, FileName: "", ExpectedPath: filepath.Join(ds.Dir1, ds.Dir2, "")},
 			{BaseFs: level1Fs, FileName: "f.txt", ExpectedPath: filepath.Join(ds.Dir1, "f.txt")},
 			{BaseFs: level1Fs, FileName: "", ExpectedPath: filepath.Join(ds.Dir1, "")},

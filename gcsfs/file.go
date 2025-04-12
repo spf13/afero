@@ -108,7 +108,10 @@ func (o *GcsFile) Seek(newOffset int64, whence int) (int64, error) {
 	if (whence == 0 && newOffset == o.fhOffset) || (whence == 1 && newOffset == 0) {
 		return o.fhOffset, nil
 	}
-	log.Printf("WARNING: Seek behavior triggered, highly inefficent. Offset before seek is at %d\n", o.fhOffset)
+	log.Printf(
+		"WARNING: Seek behavior triggered, highly inefficent. Offset before seek is at %d\n",
+		o.fhOffset,
+	)
 
 	// Fore the reader/writers to be reopened (at correct offset)
 	err := o.Sync()

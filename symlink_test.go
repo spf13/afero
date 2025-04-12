@@ -79,7 +79,12 @@ func TestSymlinkIfPossible(t *testing.T) {
 	testLink(osFs, osPath, filepath.Join(workDir, "os/link.txt"), nil)
 	testLink(overlayFs1, osPath, filepath.Join(workDir, "overlay/link1.txt"), &notSupported)
 	testLink(overlayFs2, pathFileMem, filepath.Join(workDir, "overlay2/link2.txt"), nil)
-	testLink(overlayFsMemOnly, pathFileMem, filepath.Join(memWorkDir, "overlay3/link.txt"), &notSupported)
+	testLink(
+		overlayFsMemOnly,
+		pathFileMem,
+		filepath.Join(memWorkDir, "overlay3/link.txt"),
+		&notSupported,
+	)
 	testLink(basePathFs, "afero.txt", "basepath/link.txt", nil)
 	testLink(basePathFsMem, pathFileMem, "link/file.txt", &notSupported)
 	testLink(roFs, osPath, filepath.Join(workDir, "ro/link.txt"), &notSupported)

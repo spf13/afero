@@ -291,7 +291,11 @@ func TestFromIOFS(t *testing.T) {
 			}
 
 			if lenFile := len(fsys["dir1/dir2/hello.txt"].Data); int64(lenFile) != stat.Size() {
-				t.Errorf("dir1/dir2/hello.txt stat told invalid size: expected %d, got %d", lenFile, stat.Size())
+				t.Errorf(
+					"dir1/dir2/hello.txt stat told invalid size: expected %d, got %d",
+					lenFile,
+					stat.Size(),
+				)
 				return
 			}
 		})
@@ -427,21 +431,40 @@ func TestFromIOFS_File(t *testing.T) {
 			}
 
 			if len(expectedItems) != len(items) {
-				t.Errorf("Items count mismatch, expected %d, got %d", len(expectedItems), len(items))
+				t.Errorf(
+					"Items count mismatch, expected %d, got %d",
+					len(expectedItems),
+					len(items),
+				)
 				return
 			}
 
 			for i, item := range items {
 				if item.Name() != expectedItems[i].Name {
-					t.Errorf("Item %d: expected name %s, got %s", i, expectedItems[i].Name, item.Name())
+					t.Errorf(
+						"Item %d: expected name %s, got %s",
+						i,
+						expectedItems[i].Name,
+						item.Name(),
+					)
 				}
 
 				if item.IsDir() != expectedItems[i].IsDir {
-					t.Errorf("Item %d: expected IsDir %t, got %t", i, expectedItems[i].IsDir, item.IsDir())
+					t.Errorf(
+						"Item %d: expected IsDir %t, got %t",
+						i,
+						expectedItems[i].IsDir,
+						item.IsDir(),
+					)
 				}
 
 				if item.Size() != expectedItems[i].Size {
-					t.Errorf("Item %d: expected IsDir %d, got %d", i, expectedItems[i].Size, item.Size())
+					t.Errorf(
+						"Item %d: expected IsDir %d, got %d",
+						i,
+						expectedItems[i].Size,
+						item.Size(),
+					)
 				}
 			}
 		})
@@ -471,7 +494,11 @@ func TestFromIOFS_File(t *testing.T) {
 			expectedItems := []string{"dir1", "dir2", "test.txt"}
 
 			if len(expectedItems) != len(items) {
-				t.Errorf("Items count mismatch, expected %d, got %d", len(expectedItems), len(items))
+				t.Errorf(
+					"Items count mismatch, expected %d, got %d",
+					len(expectedItems),
+					len(items),
+				)
 				return
 			}
 
