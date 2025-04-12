@@ -223,7 +223,10 @@ func MakeSSHKeyPair(bits int, pubKeyPath, privateKeyPath string) error {
 		return err
 	}
 
-	privateKeyPEM := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}
+	privateKeyPEM := &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
+	}
 	if err := pem.Encode(privateKeyFile, privateKeyPEM); err != nil {
 		return err
 	}

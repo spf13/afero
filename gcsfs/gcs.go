@@ -48,7 +48,11 @@ func NewGcsFS(ctx context.Context, opts ...option.ClientOption) (afero.Fs, error
 }
 
 // NewGcsFSWithSeparator is the same as NewGcsFS, but the files system will use the provided folder separator.
-func NewGcsFSWithSeparator(ctx context.Context, folderSeparator string, opts ...option.ClientOption) (afero.Fs, error) {
+func NewGcsFSWithSeparator(
+	ctx context.Context,
+	folderSeparator string,
+	opts ...option.ClientOption,
+) (afero.Fs, error) {
 	client, err := storage.NewClient(ctx, opts...)
 	if err != nil {
 		return nil, err
@@ -65,7 +69,11 @@ func NewGcsFSFromClient(ctx context.Context, client *storage.Client) (afero.Fs, 
 }
 
 // NewGcsFSFromClientWithSeparator is the same as NewGcsFSFromClient, but the file system will use the provided folder separator.
-func NewGcsFSFromClientWithSeparator(ctx context.Context, client *storage.Client, folderSeparator string) (afero.Fs, error) {
+func NewGcsFSFromClientWithSeparator(
+	ctx context.Context,
+	client *storage.Client,
+	folderSeparator string,
+) (afero.Fs, error) {
 	c := stiface.AdaptClient(client)
 
 	return &GcsFs{NewGcsFsWithSeparator(ctx, c, folderSeparator)}, nil

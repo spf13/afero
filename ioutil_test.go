@@ -152,6 +152,7 @@ func TestTempFile(t *testing.T) {
 				pattern: "foo-*.bar",
 			},
 			want: func(t *testing.T, base string) {
+				//nolint: staticcheck
 				if !(strings.HasPrefix(base, "foo-") || strings.HasPrefix(base, "bar")) ||
 					len(base) <= len("foo-*.bar") {
 					t.Errorf("TempFile() file = %v, invalid file name", base)

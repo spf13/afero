@@ -185,7 +185,14 @@ func TestSeek(t *testing.T) {
 			}
 
 			if n != s.offout {
-				t.Errorf("%v: (off: %v, whence: %v): got %v, expected %v", f.name, s.offin, s.whence, n, s.offout)
+				t.Errorf(
+					"%v: (off: %v, whence: %v): got %v, expected %v",
+					f.name,
+					s.offin,
+					s.whence,
+					n,
+					s.offout,
+				)
 			}
 		}
 

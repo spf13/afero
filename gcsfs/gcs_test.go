@@ -55,7 +55,10 @@ var dirs = []struct {
 	name     string
 	children []string
 }{
-	{"", []string{"sub", "testDir1", "testFile"}}, // in this case it will be prepended with bucket name
+	{
+		"",
+		[]string{"sub", "testDir1", "testFile"},
+	}, // in this case it will be prepended with bucket name
 	{"sub", []string{"testDir2"}},
 	{"sub/testDir2", []string{"testFile"}},
 	{"testDir1", []string{"testFile"}},
@@ -365,7 +368,14 @@ func TestGcsSeek(t *testing.T) {
 				}
 
 				if n != s.offOut {
-					t.Errorf("%v: (off: %v, whence: %v): got %v, expected %v", f.name, s.offIn, s.whence, n, s.offOut)
+					t.Errorf(
+						"%v: (off: %v, whence: %v): got %v, expected %v",
+						f.name,
+						s.offIn,
+						s.whence,
+						n,
+						s.offOut,
+					)
 				}
 			}
 		}
@@ -693,7 +703,10 @@ func TestGcsGlob(t *testing.T) {
 		prefixedEntries := [][]string{{}, {}}
 		for _, entry := range s.entries {
 			prefixedEntries[0] = append(prefixedEntries[0], filepath.Join(bucketName, entry))
-			prefixedEntries[1] = append(prefixedEntries[1], string(os.PathSeparator)+filepath.Join(bucketName, entry))
+			prefixedEntries[1] = append(
+				prefixedEntries[1],
+				string(os.PathSeparator)+filepath.Join(bucketName, entry),
+			)
 		}
 
 		for i, prefixedGlob := range prefixedGlobs {
@@ -775,7 +788,11 @@ func TestGcsMkdirAll(t *testing.T) {
 			t.Errorf("%s: mode is not directory", filepath.Join(bucketName, "a"))
 		}
 		if info.Mode() != os.ModeDir|0o755 {
-			t.Errorf("%s: wrong permissions, expected drwxr-xr-x, got %s", filepath.Join(bucketName, "a"), info.Mode())
+			t.Errorf(
+				"%s: wrong permissions, expected drwxr-xr-x, got %s",
+				filepath.Join(bucketName, "a"),
+				info.Mode(),
+			)
 		}
 		info, err = gcsAfs.Stat(filepath.Join(bucketName, "a/b"))
 		if err != nil {
@@ -785,7 +802,11 @@ func TestGcsMkdirAll(t *testing.T) {
 			t.Errorf("%s: mode is not directory", filepath.Join(bucketName, "a/b"))
 		}
 		if info.Mode() != os.ModeDir|0o755 {
-			t.Errorf("%s: wrong permissions, expected drwxr-xr-x, got %s", filepath.Join(bucketName, "a/b"), info.Mode())
+			t.Errorf(
+				"%s: wrong permissions, expected drwxr-xr-x, got %s",
+				filepath.Join(bucketName, "a/b"),
+				info.Mode(),
+			)
 		}
 		info, err = gcsAfs.Stat(dirName)
 		if err != nil {
@@ -800,7 +821,11 @@ func TestGcsMkdirAll(t *testing.T) {
 
 		err = gcsAfs.RemoveAll(filepath.Join(bucketName, "a"))
 		if err != nil {
-			t.Fatalf("failed to remove the folder %s with error: %s", filepath.Join(bucketName, "a"), err)
+			t.Fatalf(
+				"failed to remove the folder %s with error: %s",
+				filepath.Join(bucketName, "a"),
+				err,
+			)
 		}
 	})
 }

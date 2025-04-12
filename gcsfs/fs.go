@@ -158,7 +158,9 @@ func (fs *Fs) Create(name string) (*GcsFile, error) {
 }
 
 func (fs *Fs) Mkdir(name string, _ os.FileMode) error {
-	name = fs.ensureNoLeadingSeparator(fs.ensureTrailingSeparator(fs.normSeparators(ensureNoPrefix(name))))
+	name = fs.ensureNoLeadingSeparator(
+		fs.ensureTrailingSeparator(fs.normSeparators(ensureNoPrefix(name))),
+	)
 	if err := validateName(name); err != nil {
 		return err
 	}
@@ -181,7 +183,9 @@ func (fs *Fs) Mkdir(name string, _ os.FileMode) error {
 }
 
 func (fs *Fs) MkdirAll(path string, perm os.FileMode) error {
-	path = fs.ensureNoLeadingSeparator(fs.ensureTrailingSeparator(fs.normSeparators(ensureNoPrefix(path))))
+	path = fs.ensureNoLeadingSeparator(
+		fs.ensureTrailingSeparator(fs.normSeparators(ensureNoPrefix(path))),
+	)
 	if err := validateName(path); err != nil {
 		return err
 	}
@@ -404,7 +408,9 @@ func (fs *Fs) Chmod(_ string, _ os.FileMode) error {
 }
 
 func (fs *Fs) Chtimes(_ string, _, _ time.Time) error {
-	return errors.New("method Chtimes is not implemented. Create, Delete, Updated times are read only fields in GCS and set implicitly")
+	return errors.New(
+		"method Chtimes is not implemented. Create, Delete, Updated times are read only fields in GCS and set implicitly",
+	)
 }
 
 func (fs *Fs) Chown(_ string, _, _ int) error {

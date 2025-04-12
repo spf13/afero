@@ -60,7 +60,9 @@ func TestRead0(t *testing.T) {
 	for _, fs := range Fss {
 		f := tmpFile(fs)
 		defer f.Close()
-		f.WriteString("Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
+		f.WriteString(
+			"Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+		)
 
 		var b []byte
 		// b := make([]byte, 0)
@@ -103,7 +105,12 @@ func TestOpenFile(t *testing.T) {
 		contents, _ := io.ReadAll(f)
 		expectedContents := "initial|append"
 		if string(contents) != expectedContents {
-			t.Errorf("%v: appending, expected '%v', got: '%v'", fs.Name(), expectedContents, string(contents))
+			t.Errorf(
+				"%v: appending, expected '%v', got: '%v'",
+				fs.Name(),
+				expectedContents,
+				string(contents),
+			)
 		}
 		f.Close()
 
@@ -158,7 +165,11 @@ func TestCreate(t *testing.T) {
 			continue
 		}
 		if string(buf) != secondContent {
-			t.Error(fs.Name(), "Content should be", "\""+secondContent+"\" but is \""+string(buf)+"\"")
+			t.Error(
+				fs.Name(),
+				"Content should be",
+				"\""+secondContent+"\" but is \""+string(buf)+"\"",
+			)
 			f.Close()
 			continue
 		}
@@ -351,7 +362,15 @@ func TestSeek(t *testing.T) {
 					// http://code.google.com/p/go/issues/detail?id=91
 					break
 				}
-				t.Errorf("#%d: Seek(%v, %v) = %v, %v want %v, nil", i, tt.in, tt.whence, off, err, tt.out)
+				t.Errorf(
+					"#%d: Seek(%v, %v) = %v, %v want %v, nil",
+					i,
+					tt.in,
+					tt.whence,
+					off,
+					err,
+					tt.out,
+				)
 			}
 		}
 	}
