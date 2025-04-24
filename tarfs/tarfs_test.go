@@ -185,6 +185,9 @@ func TestMultipleReads(t *testing.T) {
 		}
 
 		fileA, err := afs.Open(f.name)
+		if err != nil {
+			t.Fatalf("opening %v: %v", f.name, err)
+		}
 		fileB, err := afs.Open(f.name)
 		if err != nil {
 			t.Fatalf("opening %v: %v", f.name, err)
