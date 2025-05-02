@@ -398,6 +398,10 @@ implement:
 * SSH
 * S3
 
+## Third-party library
+
+- Alibaba Cloud OSS: [messikiller/afero-oss](https://github.com/messikiller/afero-oss)
+
 # About the project
 
 ## What's in the name
