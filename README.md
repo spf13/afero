@@ -293,7 +293,7 @@ A thin wrapper around the source Fs providing a read only view.
 ```go
 fs := afero.NewReadOnlyFs(afero.NewOsFs())
 _, err := fs.Create("/file.txt")
-// err = syscall.EPERM
+// err = os.ErrPermission 
 ```
 
 # RegexpFs
