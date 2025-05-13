@@ -11,6 +11,8 @@ import (
 	"sort"
 	"time"
 
+	"fmt"
+
 	"github.com/spf13/afero/internal/common"
 )
 
@@ -158,6 +160,14 @@ type FromIOFS struct {
 }
 
 var _ Fs = FromIOFS{}
+
+func (f FromIOFS) OpenRoot(name string) (Root, error) {
+	sub, err := fs.Sub(f.FS, name)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrInvalidRoot, err)
+	}
+	return NewRootFs(FromIOFS{sub}, name)
+}
 
 func (f FromIOFS) Create(name string) (File, error) { return nil, notImplemented("create", name) }
 
