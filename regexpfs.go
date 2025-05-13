@@ -24,6 +24,10 @@ type RegexpFile struct {
 	re *regexp.Regexp
 }
 
+func (r *RegexpFs) OpenRoot(name string) (Root, error) {
+	return NewRootFs(r, name)
+}
+
 func (r *RegexpFs) matchesName(name string) error {
 	if r.re == nil {
 		return nil

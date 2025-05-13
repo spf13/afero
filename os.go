@@ -15,6 +15,7 @@
 package afero
 
 import (
+	"fmt"
 	"os"
 	"time"
 )
@@ -29,6 +30,18 @@ type OsFs struct{}
 
 func NewOsFs() Fs {
 	return &OsFs{}
+}
+
+func (OsFs) OpenRoot(name string) (Root, error) {
+	osRoot, err := os.OpenRoot(name)
+	if err != nil {
+		return nil, fmt.Errorf("%w. %w", ErrInvalidRoot, err)
+	}
+	fsRoot, err := NewRootFs(FromIOFS{osRoot.FS()}, name)
+	if err != nil {
+		return nil, fmt.Errorf("%w. %w", ErrInvalidRoot, err)
+	}
+	return fsRoot, nil
 }
 
 func (OsFs) Name() string { return "OsFs" }
