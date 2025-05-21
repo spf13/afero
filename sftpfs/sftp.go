@@ -117,7 +117,7 @@ func (s Fs) RemoveAll(path string) error {
 }
 
 func (s Fs) Rename(oldname, newname string) error {
-	return s.client.Rename(oldname, newname)
+	return s.client.PosixRename(oldname, newname)
 }
 
 func (s Fs) Stat(name string) (os.FileInfo, error) {
