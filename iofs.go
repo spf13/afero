@@ -9,8 +9,6 @@ import (
 	"sort"
 	"time"
 
-	"fmt"
-
 	"github.com/spf13/afero/internal/common"
 )
 
