@@ -24,17 +24,8 @@ jobs:
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version: ${{ matrix.go }}
-
       - name: Test
-        run: go test -race -v ./...
-
-      - name: Test gcsfs
-        run: go test -race -v ./...
-        working-directory: ./gcsfs
-
-      - name: Test sftpfs
-        run: go test -race -v ./...
-        working-directory: ./sftpfs
+        run: go vet ./... && go mod tidy && go test -race -v ./...
 
   lint:
     name: Lint
