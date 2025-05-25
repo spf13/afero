@@ -80,7 +80,7 @@ func (r *rootFs) isClosed() bool {
 // Close closes a Root. It is an error to use it after this.
 func (r *rootFs) Close() error {
 	if r.isClosed() {
-		return fmt.Errorf("%w. already closed.", ErrInvalidRoot)
+		return fmt.Errorf("%w. already closed", ErrInvalidRoot)
 	}
 	r.BasePathFs = nil
 	return nil
@@ -98,7 +98,7 @@ func (r *rootFs) Lstat(name string) (fs.FileInfo, error) {
 	if r.isClosed() {
 		return nil, ErrInvalidRoot
 	}
-	info, _, err := r.BasePathFs.LstatIfPossible(name)
+	info, _, err := r.LstatIfPossible(name)
 	return info, err
 }
 

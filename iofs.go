@@ -1,17 +1,13 @@
-//go:build go1.16
-// +build go1.16
-
 package afero
 
 import (
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"path"
 	"sort"
 	"time"
-
-	"fmt"
 
 	"github.com/spf13/afero/internal/common"
 )

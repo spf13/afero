@@ -1,7 +1,7 @@
 package afero
 
 import (
-	"errors"
+	"fmt"
 	"io"
 	"os"
 	"testing"
@@ -20,6 +20,9 @@ func newFs(t testing.TB) Fs {
 			return err
 		}
 		f1, err := fs.Create(path)
+		if err != nil {
+			return err
+		}
 		_, err = io.Copy(f1, f2)
 		return err
 	}
@@ -73,12 +76,12 @@ func TestRoot(t *testing.T) {
 
 	//	try to escape. see that it fails
 	noBurt, err := ernie.Open("../burt")
-	if !errors.Is(err, ErrInvalidRoot) {
-		t.Errorf("expected ErrInvalidRoot but got: %s", err)
-	}
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrInvalidRoot, fmt.Sprintf("expected ErrInvalidRoot but got: %s", err))
 	assert.Nil(t, noBurt)
 
 	noFortune, err := ernie.FS().Stat("Documents/fortune.txt")
+	assert.Error(t, err)
 	assert.Nil(t, noFortune, "this file should not exist")
 
 	//	write a file from parent
@@ -86,6 +89,7 @@ func TestRoot(t *testing.T) {
 
 	//	read it from a child
 	yesFortune, err := ernie.FS().Stat("Documents/fortune.txt")
+	assert.NoError(t, err)
 	assert.NotNil(t, yesFortune, "this file should exist")
 	assert.Equal(t, "fortune.txt", yesFortune.Name())
 
@@ -102,6 +106,7 @@ func TestRoot(t *testing.T) {
 	dogs, err := ernie.OpenRoot("Pictures/dogs")
 	assert.NoError(t, err)
 	dirEntries, err := ReadDir(dogs.FS(), ".")
+	assert.NoError(t, err)
 	assert.Len(t, dirEntries, 1)
 	assert.Equal(t, "fido.jpg", dirEntries[0].Name())
 
@@ -118,5 +123,4 @@ func TestRoot(t *testing.T) {
 	f, err = dogs.Open("fido.jpg")
 	assert.Nil(t, f)
 	assert.Error(t, err)
-
 }

@@ -24,10 +24,10 @@
 //
 // You must embed these interfaces to implement them:
 //
-//    type ClientMock struct {
-//        stiface.Client
-//        ...
-//    }
+//	type ClientMock struct {
+//	    stiface.Client
+//	    ...
+//	}
 //
 // This ensures that your implementations will not break when methods are added
 // to the interfaces.
