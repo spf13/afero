@@ -111,3 +111,7 @@ func (fs *Fs) Chmod(name string, mode os.FileMode) error { return syscall.EPERM 
 func (fs *Fs) Chown(name string, uid, gid int) error { return syscall.EPERM }
 
 func (fs *Fs) Chtimes(name string, atime time.Time, mtime time.Time) error { return syscall.EPERM }
+
+func (fs *Fs) OpenRoot(name string) (afero.Root, error) {
+	return afero.NewRootFs(fs, name)
+}
