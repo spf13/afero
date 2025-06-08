@@ -296,7 +296,7 @@ _, err := fs.Create("/file.txt")
 // err = syscall.EPERM
 ```
 
-# RegexpFs
+### RegexpFs
 
 A filtered view on file names, any file NOT matching
 the passed regexp will be treated as non-existing.
@@ -309,7 +309,24 @@ _, err := fs.Create("/file.html")
 // err = syscall.ENOENT
 ```
 
-### HttpFs
+### FilePredicateFs
+
+A filtered view on predicates which takes file path as an argument,
+any file will be treated as non-existing when the predicate returns false.
+Unlike `RegexpFs`, the fs targets not file name but file path.
+Like, `RegexpFs`, files will not be created when the predicate returns false 
+and directories are always not filtered.
+
+```go
+pred := func(isDir bool, path string) bool {
+	return isDir || strings.HasSuffix(path, ".txt")
+}
+fs := afero.NewFilePredicateFs(afero.NewMemMapFs(), pred)
+_, err := fs.Create("/file.html")
+// err = syscall.ENOENT
+```
+
+## HttpFs
 
 Afero provides an http compatible backend which can wrap any of the existing
 backends.
