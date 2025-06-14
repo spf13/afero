@@ -34,6 +34,10 @@ func New(client *sftp.Client) afero.Fs {
 	return &Fs{client: client}
 }
 
+func (s Fs) OpenRoot(name string) (afero.Root, error) {
+	return afero.NewRootFs(s, name)
+}
+
 func (s Fs) Name() string { return "sftpfs" }
 
 func (s Fs) Create(name string) (afero.File, error) {
