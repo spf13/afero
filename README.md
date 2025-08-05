@@ -1,8 +1,9 @@
 # Afero: The Universal Filesystem Abstraction for Go
 
 [![GoDoc](https://godoc.org/github.com/spf13/afero?status.svg)](https://godoc.org/github.com/spf13/afero)
-[![Build Status](https://github.com/spf13/afero/actions/workflows/test.yml/badge.svg)](https://github.com/spf13/afero/actions/workflows/test.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/spf13/afero)](https://goreportcard.com/report/github.com/spf13/afero)
+[📖 Full API Documentation](https://pkg.go.dev/github.com/spf13/afero)
+
 
 Afero is a powerful and extensible filesystem abstraction system for Go. It provides a single, unified API for interacting with diverse filesystems—including the local disk, memory, archives, and network storage.
 
