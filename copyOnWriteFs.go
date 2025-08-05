@@ -26,6 +26,10 @@ func NewCopyOnWriteFs(base Fs, layer Fs) Fs {
 	return &CopyOnWriteFs{base: base, layer: layer}
 }
 
+func (u *CopyOnWriteFs) OpenRoot(name string) (Root, error) {
+	return NewRootFs(u, name)
+}
+
 // Returns true if the file is not in the overlay
 func (u *CopyOnWriteFs) isBaseFile(name string) (bool, error) {
 	if _, err := u.layer.Stat(name); err == nil {
