@@ -13,6 +13,7 @@ import (
 type File struct {
 	fs            *Fs
 	zipfile       *zip.File
+	pseudodir     *pseudoDir
 	reader        io.ReadCloser
 	offset        int64
 	isdir, closed bool
@@ -106,6 +107,9 @@ func (f *File) WriteAt(p []byte, off int64) (n int, err error) { return 0, sysca
 
 func (f *File) Name() string {
 	if f.zipfile == nil {
+		if f.pseudodir != nil {
+			return f.pseudodir.path
+		}
 		return string(filepath.Separator)
 	}
 	return filepath.Join(splitpath(f.zipfile.Name))
@@ -128,8 +132,12 @@ func (f *File) Readdir(count int) (fi []os.FileInfo, err error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, zipfile := range zipfiles {
-		fi = append(fi, zipfile.FileInfo())
+	for d, zipfile := range zipfiles {
+		if zipfile == nil {
+			fi = append(fi, pseudoDir{d})
+		} else {
+			fi = append(fi, zipfile.FileInfo())
+		}
 		if count > 0 && len(fi) >= count {
 			break
 		}
@@ -153,6 +161,9 @@ func (f *File) Readdirnames(count int) (names []string, err error) {
 
 func (f *File) Stat() (os.FileInfo, error) {
 	if f.zipfile == nil {
+		if f.pseudodir != nil {
+			return f.pseudodir, nil
+		}
 		return &pseudoRoot{}, nil
 	}
 	return f.zipfile.FileInfo(), nil
