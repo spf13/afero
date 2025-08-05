@@ -14,7 +14,12 @@ import (
 )
 
 type Fs struct {
-	files map[string]map[string]*File
+	files map[string]map[string]*fsEntry
+}
+
+type fsEntry struct {
+	h    *tar.Header
+	data []byte
 }
 
 func splitpath(name string) (dir, file string) {
@@ -29,7 +34,7 @@ func splitpath(name string) (dir, file string) {
 }
 
 func New(t *tar.Reader) *Fs {
-	fs := &Fs{files: make(map[string]map[string]*File)}
+	fs := &Fs{files: make(map[string]map[string]*fsEntry)}
 	for {
 		hdr, err := t.Next()
 		if err == io.EOF {
@@ -41,7 +46,7 @@ func New(t *tar.Reader) *Fs {
 
 		d, f := splitpath(hdr.Name)
 		if _, ok := fs.files[d]; !ok {
-			fs.files[d] = make(map[string]*File)
+			fs.files[d] = make(map[string]*fsEntry)
 		}
 
 		var buf bytes.Buffer
@@ -54,27 +59,25 @@ func New(t *tar.Reader) *Fs {
 			panic("tarfs: size mismatch")
 		}
 
-		file := &File{
+		file := &fsEntry{
 			h:    hdr,
-			data: bytes.NewReader(buf.Bytes()),
-			fs:   fs,
+			data: buf.Bytes(),
 		}
 		fs.files[d][f] = file
 
 	}
 
 	if fs.files[afero.FilePathSeparator] == nil {
-		fs.files[afero.FilePathSeparator] = make(map[string]*File)
+		fs.files[afero.FilePathSeparator] = make(map[string]*fsEntry)
 	}
 	// Add a pseudoroot
-	fs.files[afero.FilePathSeparator][""] = &File{
+	fs.files[afero.FilePathSeparator][""] = &fsEntry{
 		h: &tar.Header{
 			Name:     afero.FilePathSeparator,
 			Typeflag: tar.TypeDir,
 			Size:     0,
 		},
-		data: bytes.NewReader(nil),
-		fs:   fs,
+		data: nil,
 	}
 
 	return fs
@@ -91,7 +94,11 @@ func (fs *Fs) Open(name string) (afero.File, error) {
 		return nil, &os.PathError{Op: "open", Path: name, Err: syscall.ENOENT}
 	}
 
-	nf := *file
+	nf := File{
+		h:    file.h,
+		data: bytes.NewReader(file.data),
+		fs:   fs,
+	}
 
 	return &nf, nil
 }
