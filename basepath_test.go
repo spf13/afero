@@ -80,10 +80,10 @@ func TestRealPath(t *testing.T) {
 			t.Errorf("Got error %s", err)
 		}
 
-		excpected := filepath.Join(baseDir, anotherDir)
+		expected := filepath.Join(baseDir, anotherDir)
 
-		if surrealPath != excpected {
-			t.Errorf("Expected \n%s got \n%s", excpected, surrealPath)
+		if surrealPath != expected {
+			t.Errorf("Expected \n%s got \n%s", expected, surrealPath)
 		}
 	}
 }
