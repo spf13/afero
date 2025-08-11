@@ -64,7 +64,7 @@ func newFileInfo(name string, fs *Fs, fileMode os.FileMode) (*FileInfo, error) {
 			// such a prefix
 			bucketName, bucketPath := fs.splitName(name)
 			it := fs.client.Bucket(bucketName).Objects(
-				fs.ctx, &storage.Query{Delimiter: fs.separator, Prefix: bucketPath, Versions: false})
+				fs.ctx, &storage.Query{Delimiter: fs.separator, Prefix: fs.ensureTrailingSeparator(bucketPath), Versions: false})
 			if _, err = it.Next(); err == nil {
 				res.name = fs.ensureTrailingSeparator(res.name)
 				res.isDir = true
