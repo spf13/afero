@@ -72,7 +72,7 @@ func Glob(fs Fs, pattern string) (matches []string, err error) {
 // and appends them to matches. If the directory cannot be
 // opened, it returns the existing matches. New matches are
 // added in lexicographical order.
-func glob(fs Fs, dir, pattern string, matches []string) (m []string, e error) {
+func glob(fs Fs, dir, pattern string, matches []string) (m []string, err error) {
 	m = matches
 	fi, err := fs.Stat(dir)
 	if err != nil {
