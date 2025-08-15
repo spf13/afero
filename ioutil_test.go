@@ -17,6 +17,7 @@ package afero
 
 import (
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -172,6 +173,80 @@ func TestTempFile(t *testing.T) {
 				return
 			}
 			tt.want(t, filepath.Base(file.Name()))
+		})
+	}
+}
+
+func TestTempDir(t *testing.T) {
+
+	type testData struct {
+		dir            string
+		prefix         string
+		expectedPrefix string
+		shouldError    bool
+	}
+
+	tests := map[string]testData{
+		"TempDirWithStar": {
+			dir:            "",
+			prefix:         "withStar*",
+			expectedPrefix: "/tmp/withStar",
+		},
+		"TempDirWithTwoStars": {
+			dir:            "",
+			prefix:         "withStar**",
+			expectedPrefix: "/tmp/withStar*",
+		},
+		"TempDirWithoutStar": {
+			dir:            "",
+			prefix:         "withoutStar",
+			expectedPrefix: "/tmp/withoutStar",
+		},
+		"UserDir": {
+			dir:            "dir1",
+			prefix:         "",
+			expectedPrefix: "dir1/",
+		},
+		"InvalidPrefix": {
+			dir:            "",
+			prefix:         "hello/world",
+			expectedPrefix: "hello",
+			shouldError:    true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			afs := NewMemMapFs()
+			result, err := TempDir(afs, test.dir, test.prefix)
+
+			if test.shouldError {
+				if err == nil {
+					t.Error("err should not be nil")
+					return
+				}
+				if result != "" {
+					t.Errorf("result was %s and should be the empty string", result)
+					return
+				}
+			} else {
+				match, _ := regexp.MatchString(test.expectedPrefix+".*", result)
+				if !match {
+					t.Errorf("directory should have prefix %s should exist, but doesn't", test.expectedPrefix)
+					return
+				}
+				exists, err := DirExists(afs, result)
+				if !exists {
+					t.Errorf("directory with prefix %s should exist, but doesn't", test.expectedPrefix)
+					return
+				}
+				if err != nil {
+					t.Errorf("err should be nil, but was %s", err.Error())
+					return
+				}
+			}
+
+			afs.RemoveAll(result)
 		})
 	}
 }
