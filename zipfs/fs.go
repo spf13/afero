@@ -42,6 +42,21 @@ func New(r *zip.Reader) afero.Fs {
 				fs.files[dirname] = make(map[string]*zip.File)
 			}
 		}
+
+		dv := d
+		for {
+			d, f = splitpath(dv)
+			if _, ok := fs.files[d]; !ok {
+				fs.files[d] = make(map[string]*zip.File)
+			}
+			if f == "" {
+				break
+			}
+			if _, ok := fs.files[d][f]; !ok {
+				fs.files[d][f] = nil
+			}
+			dv = d
+		}
 	}
 	return fs
 }
@@ -63,6 +78,13 @@ func (fs *Fs) Open(name string) (afero.File, error) {
 	file, ok := fs.files[d][f]
 	if !ok {
 		return nil, &os.PathError{Op: "stat", Path: name, Err: syscall.ENOENT}
+	}
+	if file == nil {
+		return &File{
+			fs:        fs,
+			pseudodir: &pseudoDir{path: filepath.Join(d, f)},
+			isdir:     true,
+		}, nil
 	}
 	return &File{fs: fs, zipfile: file, isdir: file.FileInfo().IsDir()}, nil
 }
@@ -89,6 +111,17 @@ func (p *pseudoRoot) ModTime() time.Time { return time.Now() }
 func (p *pseudoRoot) IsDir() bool        { return true }
 func (p *pseudoRoot) Sys() interface{}   { return nil }
 
+type pseudoDir struct {
+	path string
+}
+
+func (fi pseudoDir) Name() string       { return filepath.Base(fi.path) }
+func (fi pseudoDir) Size() int64        { return 0 }
+func (fi pseudoDir) IsDir() bool        { return true }
+func (fi pseudoDir) ModTime() time.Time { return time.Now() }
+func (fi pseudoDir) Mode() os.FileMode  { return os.ModeDir | os.ModePerm }
+func (fi pseudoDir) Sys() interface{}   { return nil }
+
 func (fs *Fs) Stat(name string) (os.FileInfo, error) {
 	d, f := splitpath(name)
 	if f == "" {
@@ -100,6 +133,9 @@ func (fs *Fs) Stat(name string) (os.FileInfo, error) {
 	file, ok := fs.files[d][f]
 	if !ok {
 		return nil, &os.PathError{Op: "stat", Path: name, Err: syscall.ENOENT}
+	}
+	if file == nil {
+		return pseudoDir{name}, nil
 	}
 	return file.FileInfo(), nil
 }
