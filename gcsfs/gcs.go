@@ -79,6 +79,10 @@ func NewGcsFSFromClientWithSeparator(
 	return &GcsFs{NewGcsFsWithSeparator(ctx, c, folderSeparator)}, nil
 }
 
+func (fs *GcsFs) OpenRoot(name string) (afero.Root, error) {
+	return afero.NewRootFs(fs, name)
+}
+
 // Wraps gcs.GcsFs and convert some return types to afero interfaces.
 
 func (fs *GcsFs) Name() string {

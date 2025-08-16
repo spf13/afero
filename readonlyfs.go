@@ -16,6 +16,10 @@ func NewReadOnlyFs(source Fs) Fs {
 	return &ReadOnlyFs{source: source}
 }
 
+func (r *ReadOnlyFs) OpenRoot(name string) (Root, error) {
+	return NewRootFs(r, name)
+}
+
 func (r *ReadOnlyFs) ReadDir(name string) ([]os.FileInfo, error) {
 	return ReadDir(r.source, name)
 }

@@ -1,6 +1,7 @@
 package afero
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -30,6 +31,14 @@ type BasePathFs struct {
 type BasePathFile struct {
 	File
 	path string
+}
+
+func (f *BasePathFs) OpenRoot(name string) (Root, error) {
+	fullPath := filepath.Join(f.path, name)
+	if !filepath.IsLocal(fullPath) {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidRoot, fullPath)
+	}
+	return f.source.OpenRoot(fullPath)
 }
 
 func (f *BasePathFile) Name() string {

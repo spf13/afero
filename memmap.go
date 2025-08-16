@@ -39,6 +39,10 @@ func NewMemMapFs() Fs {
 	return &MemMapFs{}
 }
 
+func (m *MemMapFs) OpenRoot(name string) (Root, error) {
+	return NewRootFs(m, name)
+}
+
 func (m *MemMapFs) getData() map[string]*mem.FileData {
 	m.init.Do(func() {
 		m.data = make(map[string]*mem.FileData)

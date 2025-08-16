@@ -45,6 +45,10 @@ const (
 	cacheLocal
 )
 
+func (u *CacheOnReadFs) OpenRoot(name string) (Root, error) {
+	return NewRootFs(u, name)
+}
+
 func (u *CacheOnReadFs) cacheStatus(name string) (state cacheState, fi os.FileInfo, err error) {
 	var lfi, bfi os.FileInfo
 	lfi, err = u.layer.Stat(name)

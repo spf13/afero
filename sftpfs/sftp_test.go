@@ -28,6 +28,8 @@ import (
 	"time"
 
 	"github.com/pkg/sftp"
+	"github.com/spf13/afero"
+	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -219,9 +221,6 @@ func MakeSSHKeyPair(bits int, pubKeyPath, privateKeyPath string) error {
 		return err
 	}
 	defer privateKeyFile.Close()
-	if err != nil {
-		return err
-	}
 
 	privateKeyPEM := &pem.Block{
 		Type:  "RSA PRIVATE KEY",
@@ -259,6 +258,26 @@ func TestSftpCreate(t *testing.T) {
 	fs.Mkdir("test/foo", os.FileMode(0o000))
 	fs.Chmod("test/foo", os.FileMode(0o700))
 	fs.Mkdir("test/bar", os.FileMode(0o777))
+
+	bar, err := fs.OpenRoot("test/bar")
+	assert.NoError(t, err)
+	assert.NotNil(t, bar)
+
+	noFile, err := bar.Open("../foo")
+	assert.Nil(t, noFile)
+	assert.ErrorIs(t, err, afero.ErrInvalidRoot)
+
+	barfly, err := bar.Create("barfly.txt")
+	assert.NoError(t, err)
+	barfly.Write([]byte(`
+	If you're losing your soul and you know it, then you've still got a soul left to lose.
+	`))
+
+	f, err := fs.Open("test/bar/barfly.txt")
+	assert.NoError(t, err)
+	fileContents, err := afero.ReadAll(f)
+	assert.NoError(t, err)
+	assert.Contains(t, string(fileContents), "you've still got a soul")
 
 	file, err := fs.Create("file1")
 	if err != nil {
