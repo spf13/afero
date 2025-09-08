@@ -8,8 +8,8 @@ replace github.com/spf13/afero => ../
 
 require (
 	github.com/pkg/sftp v1.13.8
-	github.com/spf13/afero v1.14.0
 	github.com/stretchr/testify v1.11.1
+	github.com/spf13/afero v1.15.0
 	golang.org/x/crypto v0.36.0
 )
 
