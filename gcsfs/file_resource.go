@@ -97,7 +97,7 @@ func (o *gcsFileResource) maybeCloseWriter() error {
 		if err != nil {
 			return fmt.Errorf(
 				"couldn't simulate a partial write; the closing (and thus"+
-					" the whole file write) is NOT commited to GCS. %v", err)
+					" the whole file write) is NOT committed to GCS. %v", err)
 		}
 		if currentFile != nil && currentFile.Remain() > 0 {
 			if _, err := io.Copy(o.writer, currentFile); err != nil {
