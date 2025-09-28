@@ -59,6 +59,10 @@ func walk(fs Fs, path string, info os.FileInfo, walkFn filepath.WalkFunc) error 
 	}
 
 	for _, name := range names {
+		if name == "" {
+			// skip empty names to avoid infinite recursion
+			continue
+		}
 		filename := filepath.Join(path, name)
 		fileInfo, err := lstatIfPossible(fs, filename)
 		if err != nil {
