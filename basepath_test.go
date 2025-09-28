@@ -187,3 +187,44 @@ func TestBasePathTempFile(t *testing.T) {
 		t.Fatalf("TempFile realpath leaked: expected %s, got %s", expected, actual)
 	}
 }
+
+func TestBasePathSymlink(t *testing.T) {
+	type SymlinkTest struct {
+		Testcase, Link, Target string
+	}
+	symlinkTests := []SymlinkTest{
+		{Testcase: "Absolute path", Link: "/foo/baz/abs_link", Target: "/foo/file"},
+		{Testcase: "Relative path", Link: "/foo/baz/ref_link", Target: "../file"},
+	}
+
+	fs := NewOsFs()
+	baseDir, err := TempDir(fs, "", "base")
+	if err != nil {
+		t.Fatal("error creating tempDir", err)
+	}
+	defer fs.RemoveAll(baseDir)
+
+	var bp Fs = NewBasePathFs(fs, baseDir).(*BasePathFs)
+	bp.MkdirAll("/foo/baz", 0777)
+	bp.Create("/foo/file")
+	linker, _ := bp.(Linker)
+	lreader, _ := bp.(LinkReader)
+
+	for _, test := range symlinkTests {
+		err = linker.SymlinkIfPossible(test.Target, test.Link)
+		if err != nil {
+			t.Errorf("%s: error creating symlink %s", test.Testcase, err.Error())
+		}
+		linkpath, err := lreader.ReadlinkIfPossible(test.Link)
+		if err != nil {
+			t.Errorf("%s: error read symlink %s", test.Testcase, err.Error())
+		}
+		if linkpath != test.Target {
+			t.Errorf("%s: link not match %s != %s", test.Testcase, linkpath, test.Target)
+		}
+		_, err = bp.Stat(test.Link)
+		if err != nil {
+			t.Errorf("%s: error stat symlink %s", test.Testcase, err.Error())
+		}
+	}
+}
