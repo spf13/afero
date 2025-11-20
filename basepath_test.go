@@ -187,3 +187,36 @@ func TestBasePathTempFile(t *testing.T) {
 		t.Fatalf("TempFile realpath leaked: expected %s, got %s", expected, actual)
 	}
 }
+
+func TestDotBasePath(t *testing.T) {
+	baseFs := &MemMapFs{}
+	baseFs.MkdirAll("/foo/baz", 0o777)
+	bp := NewBasePathFs(baseFs, ".")
+
+	path, err := bp.(*BasePathFs).RealPath("foo")
+	if err != nil {
+		t.Fatalf("failed to RealPath: %v", err)
+	}
+	if path != "foo" {
+		t.Fatalf("realpath is not cleaned: %s", path)
+	}
+
+	path, err = bp.(*BasePathFs).RealPath("../foo")
+	if err == nil {
+		t.Fatalf("expected error for path outside base path")
+	}
+}
+
+func TestCleansRealPath(t *testing.T) {
+	baseFs := &MemMapFs{}
+	baseFs.MkdirAll("/base/path/foo/baz", 0o777)
+	bp := NewBasePathFs(baseFs, "/base/../base/path")
+
+	path, err := bp.(*BasePathFs).RealPath("../path/foo/../foo")
+	if err != nil {
+		t.Fatalf("failed to RealPath: %v", err)
+	}
+	if path != "/base/path/foo" {
+		t.Fatalf("realpath is not cleaned: %s", path)
+	}
+}

@@ -55,13 +55,16 @@ func (b *BasePathFs) RealPath(name string) (path string, err error) {
 		return name, err
 	}
 
-	bpath := filepath.Clean(b.path)
-	path = filepath.Clean(filepath.Join(bpath, name))
-	if !strings.HasPrefix(path, bpath) {
+	path = filepath.Join(b.path, name)
+	rel, err := filepath.Rel(b.path, path)
+	if err != nil {
+		// Usually occurs when files are on different drives.
 		return name, os.ErrNotExist
 	}
-
-	return path, nil
+	if filepath.IsLocal(rel) {
+		return path, nil
+	}
+	return name, os.ErrNotExist
 }
 
 func validateBasePathName(name string) error {
