@@ -201,7 +201,7 @@ func TestDotBasePath(t *testing.T) {
 		t.Fatalf("realpath is not cleaned: %s", path)
 	}
 
-	path, err = bp.(*BasePathFs).RealPath("../foo")
+	_, err = bp.(*BasePathFs).RealPath("../foo")
 	if err == nil {
 		t.Fatalf("expected error for path outside base path")
 	}
