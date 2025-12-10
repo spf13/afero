@@ -61,10 +61,10 @@ func (b *BasePathFs) RealPath(name string) (path string, err error) {
 		// Usually occurs when files are on different drives.
 		return name, os.ErrNotExist
 	}
-	if filepath.IsLocal(rel) {
-		return path, nil
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return name, os.ErrNotExist
 	}
-	return name, os.ErrNotExist
+	return path, nil
 }
 
 func validateBasePathName(name string) error {

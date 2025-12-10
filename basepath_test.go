@@ -39,52 +39,172 @@ func TestBasePathRoot(t *testing.T) {
 }
 
 func TestRealPath(t *testing.T) {
-	fs := NewOsFs()
-	baseDir, err := TempDir(fs, "", "base")
-	if err != nil {
-		t.Fatal("error creating tempDir", err)
+	tests := []struct {
+		name      string
+		base      string
+		input     string
+		want      string
+		expectErr bool
+		os        string
+	}{
+		// 1. Happy Paths
+		{
+			name:  "Simple subpath",
+			base:  "/var/data",
+			input: "file.txt",
+			want:  "/var/data/file.txt",
+		},
+		{
+			name:  "Deeply nested subpath",
+			base:  "/var/data",
+			input: "subdir/images/logo.png",
+			want:  "/var/data/subdir/images/logo.png",
+		},
+
+		// 2. Cleaning Behavior
+		{
+			name:  "Cleans double slashes",
+			base:  "/var/data",
+			input: "subdir//file.txt",
+			want:  "/var/data/subdir/file.txt",
+		},
+		{
+			name:  "Cleans current directory dots",
+			base:  "/var/data",
+			input: "./subdir/./file.txt",
+			want:  "/var/data/subdir/file.txt",
+		},
+		{
+			name:  "Cleans subpath starts with /",
+			base:  "/var/data",
+			input: "/file.txt",
+			want:  "/var/data/file.txt",
+		},
+		{
+			name:  "Resolves internal dot-dot (safe)",
+			base:  "/var/data",
+			input: "subdir/../file.txt",
+			want:  "/var/data/file.txt",
+		},
+		{
+			name:  "Resolves base path dot-dot",
+			base:  "/var/data/../data",
+			input: "file.txt",
+			want:  "/var/data/file.txt",
+		},
+
+		// 3. Base Path is "."
+		{
+			name:  "Base is dot, simple file",
+			base:  ".",
+			input: "file.txt",
+			want:  "file.txt",
+		},
+		{
+			name:  "Base is dot, input has dot prefix",
+			base:  ".",
+			input: "./file.txt",
+			want:  "file.txt",
+		},
+		{
+			name:  "Base is dot, safe traversal",
+			base:  ".",
+			input: "foo/../bar",
+			want:  "bar",
+		},
+
+		// 4. paths starting with ..
+		{
+			name:  "Valid file starting with .. (..X)",
+			base:  "/var/data",
+			input: "..foo",
+			want:  "/var/data/..foo",
+		},
+		{
+			name:  "Valid file named ...",
+			base:  "/var/data",
+			input: "...",
+			want:  "/var/data/...",
+		},
+		{
+			name:  "Hidden file",
+			base:  "/var/data",
+			input: ".config",
+			want:  "/var/data/.config",
+		},
+		{
+			name:  "Base is dot, input is ..foo",
+			base:  ".",
+			input: "..foo",
+			want:  "..foo",
+		},
+
+		// 5. Failure Cases
+		{
+			name:      "Traversal out (parent)",
+			base:      "/var/data",
+			input:     "../etc/passwd",
+			expectErr: true,
+		},
+		{
+			name:      "Traversal out (root)",
+			base:      "/var/data",
+			input:     "../../../../etc/passwd",
+			expectErr: true,
+		},
+		{
+			name:      "Base is dot, traversal out",
+			base:      ".",
+			input:     "../file.txt",
+			expectErr: true,
+		},
+		{
+			name:      "Partial suffix match (e.g. /var/dataset vs /var/data)",
+			base:      "/var/data",
+			input:     "../dataset/file.txt",
+			expectErr: true,
+		},
+		{
+			name:      "Windows: Absolute path",
+			base:      `C:\base`,
+			input:     `C:\Windows\System32`,
+			expectErr: true,
+			os:        "windows",
+		},
 	}
-	defer fs.RemoveAll(baseDir)
-	anotherDir, err := TempDir(fs, "", "another")
-	if err != nil {
-		t.Fatal("error creating tempDir", err)
-	}
-	defer fs.RemoveAll(anotherDir)
 
-	bp := NewBasePathFs(fs, baseDir).(*BasePathFs)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.os != "" && tt.os != runtime.GOOS {
+				t.Skipf("Skipping test for OS %q", tt.os)
+			}
 
-	subDir := filepath.Join(baseDir, "s1")
+			baseFs := &MemMapFs{}
+			bpInterface := NewBasePathFs(baseFs, tt.base)
+			bp := bpInterface.(*BasePathFs)
 
-	realPath, err := bp.RealPath("/s1")
-	if err != nil {
-		t.Errorf("Got error %s", err)
-	}
+			got, err := bp.RealPath(tt.input)
 
-	if realPath != subDir {
-		t.Errorf("Expected \n%s got \n%s", subDir, realPath)
-	}
+			if tt.expectErr {
+				if err == nil {
+					t.Errorf("expected error for input %q, got nil. Result was: %q", tt.input, got)
+				}
+				return
+			}
 
-	if runtime.GOOS == "windows" {
-		_, err = bp.RealPath(anotherDir)
+			if err != nil {
+				t.Fatalf("unexpected error for input %q: %v", tt.input, err)
+			}
 
-		if err != os.ErrNotExist {
-			t.Errorf("Expected os.ErrNotExist")
-		}
+			if runtime.GOOS == "windows" {
+				tt.want = filepath.FromSlash(tt.want)
+			}
 
-	} else {
-		// on *nix we have no way of just looking at the path and tell that anotherDir
-		// is not inside the base file system.
-		// The user will receive an os.ErrNotExist later.
-		surrealPath, err := bp.RealPath(anotherDir)
-		if err != nil {
-			t.Errorf("Got error %s", err)
-		}
-
-		expected := filepath.Join(baseDir, anotherDir)
-
-		if surrealPath != expected {
-			t.Errorf("Expected \n%s got \n%s", expected, surrealPath)
-		}
+			if got != tt.want {
+				t.Errorf("RealPath() mismatch.\nBase: %q\nInput: %q\nGot:  %q\nWant: %q",
+					tt.base, tt.input, got, tt.want)
+			}
+		})
 	}
 }
 
@@ -185,38 +305,5 @@ func TestBasePathTempFile(t *testing.T) {
 	defer tempFile.Close()
 	if expected, actual := tDir, filepath.Dir(tempFile.Name()); expected != actual {
 		t.Fatalf("TempFile realpath leaked: expected %s, got %s", expected, actual)
-	}
-}
-
-func TestDotBasePath(t *testing.T) {
-	baseFs := &MemMapFs{}
-	baseFs.MkdirAll("/foo/baz", 0o777)
-	bp := NewBasePathFs(baseFs, ".")
-
-	path, err := bp.(*BasePathFs).RealPath("foo")
-	if err != nil {
-		t.Fatalf("failed to RealPath: %v", err)
-	}
-	if path != "foo" {
-		t.Fatalf("realpath is not cleaned: %s", path)
-	}
-
-	_, err = bp.(*BasePathFs).RealPath("../foo")
-	if err == nil {
-		t.Fatalf("expected error for path outside base path")
-	}
-}
-
-func TestCleansRealPath(t *testing.T) {
-	baseFs := &MemMapFs{}
-	baseFs.MkdirAll("/base/path/foo/baz", 0o777)
-	bp := NewBasePathFs(baseFs, "/base/../base/path")
-
-	path, err := bp.(*BasePathFs).RealPath("../path/foo/../foo")
-	if err != nil {
-		t.Fatalf("failed to RealPath: %v", err)
-	}
-	if path != "/base/path/foo" {
-		t.Fatalf("realpath is not cleaned: %s", path)
 	}
 }
