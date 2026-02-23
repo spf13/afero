@@ -57,6 +57,7 @@ func (m *MemMapFs) Create(name string) (File, error) {
 	name = normalizePath(name)
 	m.mu.Lock()
 	file := mem.CreateFile(name)
+	mem.SetMode(file, 0o666)
 	m.getData()[name] = file
 	m.registerWithParent(file, 0)
 	m.mu.Unlock()
@@ -114,7 +115,11 @@ func (m *MemMapFs) registerWithParent(f *mem.FileData, perm os.FileMode) {
 	parent := m.findParent(f)
 	if parent == nil {
 		pdir := filepath.Dir(filepath.Clean(f.Name()))
-		err := m.lockfreeMkdir(pdir, perm)
+		mkdirPerm := perm
+		if mkdirPerm == 0 {
+			mkdirPerm = 0o755
+		}
+		err := m.lockfreeMkdir(pdir, mkdirPerm)
 		if err != nil {
 			// log.Println("Mkdir error:", err)
 			return
@@ -204,6 +209,10 @@ func normalizePath(path string) string {
 func (m *MemMapFs) Open(name string) (File, error) {
 	f, err := m.open(name)
 	if f != nil {
+		// Check read permission (owner bits).
+		if mem.GetFileInfo(f).Mode().Perm()&0o444 == 0 {
+			return nil, &os.PathError{Op: "open", Path: name, Err: os.ErrPermission}
+		}
 		return mem.NewReadOnlyFileHandle(f), err
 	}
 	return nil, err
@@ -212,6 +221,10 @@ func (m *MemMapFs) Open(name string) (File, error) {
 func (m *MemMapFs) openWrite(name string) (File, error) {
 	f, err := m.open(name)
 	if f != nil {
+		// Check write permission (owner bits).
+		if mem.GetFileInfo(f).Mode().Perm()&0o222 == 0 {
+			return nil, &os.PathError{Op: "open", Path: name, Err: os.ErrPermission}
+		}
 		return mem.NewFileHandle(f), err
 	}
 	return nil, err
@@ -382,11 +395,11 @@ func (m *MemMapFs) LstatIfPossible(name string) (os.FileInfo, bool, error) {
 }
 
 func (m *MemMapFs) Stat(name string) (os.FileInfo, error) {
-	f, err := m.Open(name)
+	f, err := m.open(name)
 	if err != nil {
 		return nil, err
 	}
-	fi := mem.GetFileInfo(f.(*mem.File).Data())
+	fi := mem.GetFileInfo(f)
 	return fi, nil
 }
 

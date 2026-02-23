@@ -918,3 +918,94 @@ func TestMemMapFsRename(t *testing.T) {
 		}
 	}
 }
+
+func TestMemMapFsPermissionChecks(t *testing.T) {
+	// Verify that MemMapFs.Open checks file permissions, matching
+	// real filesystem behavior.
+	// See https://github.com/spf13/afero/issues/150
+	fs := &MemMapFs{}
+
+	// Create a file (should get default 0666 permission).
+	f, err := fs.Create("/test.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.WriteString("hello")
+	f.Close()
+
+	info, err := fs.Stat("/test.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o666 {
+		t.Fatalf("expected default permission 0666, got %o", info.Mode().Perm())
+	}
+
+	// File should be readable.
+	f, err = fs.Open("/test.txt")
+	if err != nil {
+		t.Fatalf("Open should succeed with 0666 permissions: %v", err)
+	}
+	f.Close()
+
+	// Chmod to 0 (no permissions).
+	err = fs.Chmod("/test.txt", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Open for reading should fail.
+	_, err = fs.Open("/test.txt")
+	if err == nil {
+		t.Fatal("Open should fail with 0 permissions")
+	}
+	if !os.IsPermission(err) {
+		t.Fatalf("expected permission error, got: %v", err)
+	}
+
+	// OpenFile for writing should also fail.
+	_, err = fs.OpenFile("/test.txt", os.O_WRONLY, 0)
+	if err == nil {
+		t.Fatal("OpenFile (write) should fail with 0 permissions")
+	}
+	if !os.IsPermission(err) {
+		t.Fatalf("expected permission error, got: %v", err)
+	}
+
+	// Chmod to 0444 (read-only).
+	err = fs.Chmod("/test.txt", 0o444)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Open for reading should succeed.
+	f, err = fs.Open("/test.txt")
+	if err != nil {
+		t.Fatalf("Open should succeed with 0444 permissions: %v", err)
+	}
+	f.Close()
+
+	// OpenFile for writing should fail.
+	_, err = fs.OpenFile("/test.txt", os.O_WRONLY, 0)
+	if err == nil {
+		t.Fatal("OpenFile (write) should fail with 0444 permissions")
+	}
+	if !os.IsPermission(err) {
+		t.Fatalf("expected permission error, got: %v", err)
+	}
+
+	// Chmod to 0222 (write-only).
+	err = fs.Chmod("/test.txt", 0o222)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Open for reading should fail.
+	_, err = fs.Open("/test.txt")
+	if err == nil {
+		t.Fatal("Open (read) should fail with 0222 permissions")
+	}
+	if !os.IsPermission(err) {
+		t.Fatalf("expected permission error, got: %v", err)
+	}
+}
