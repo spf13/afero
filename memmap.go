@@ -247,6 +247,15 @@ func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, erro
 		return nil, &os.PathError{Op: "open", Path: name, Err: ErrFileExists}
 	}
 	if os.IsNotExist(err) && (flag&os.O_CREATE > 0) {
+		// Check that the parent directory exists before creating the file,
+		// matching os.OpenFile semantics.
+		parentDir := normalizePath(filepath.Dir(normalizePath(name)))
+		m.mu.RLock()
+		_, parentExists := m.getData()[parentDir]
+		m.mu.RUnlock()
+		if !parentExists {
+			return nil, &os.PathError{Op: "open", Path: name, Err: os.ErrNotExist}
+		}
 		file, err = m.Create(name)
 		chmod = true
 	}

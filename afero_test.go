@@ -45,6 +45,8 @@ func testDir(fs Fs) string {
 }
 
 func tmpFile(fs Fs) File {
+	// Ensure the temp directory hierarchy exists in the filesystem.
+	fs.MkdirAll(os.TempDir(), 0o700)
 	x, err := TempFile(fs, "", "afero")
 	if err != nil {
 		panic(fmt.Sprint("unable to work with temp file", err))

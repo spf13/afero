@@ -67,6 +67,7 @@ func TestDirExists(t *testing.T) {
 
 func TestIsDir(t *testing.T) {
 	testFS = new(MemMapFs)
+	testFS.MkdirAll(os.TempDir(), 0o700)
 
 	type test struct {
 		input    string
@@ -90,6 +91,7 @@ func TestIsDir(t *testing.T) {
 
 func TestIsEmpty(t *testing.T) {
 	testFS = new(MemMapFs)
+	testFS.MkdirAll(os.TempDir(), 0o700)
 
 	zeroSizedFile, _ := createZeroSizedFileInTempDir()
 	defer deleteFileInTempDir(zeroSizedFile)
