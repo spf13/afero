@@ -26,7 +26,7 @@ Afero elevates filesystem interaction beyond simple file reading and writing, of
     *   **Caching:** Use `CacheOnReadFs` to automatically layer a fast cache (like memory) over a slow backend (like a network drive).
     *   **Security Jails:** Use `BasePathFs` to restrict application access to a specific subdirectory (chroot).
 *   **`os` Package Compatibility:** Afero mirrors the functions in the standard `os` package, making adoption and refactoring seamless.
-*   **`io/fs` Compatibility:** Fully compatible with the Go standard library's `io/fs` interfaces.
+*   **Bidirectional `io/fs` Bridge:** Fully compatible with the Go standard library's `io/fs` interfaces—in both directions. Export any Afero filesystem as an `fs.FS` with `NewIOFS`, or import any `fs.FS` (including `embed.FS`) into Afero with `NewBridgeIOFS`.
 
 ## Installation
 
@@ -241,6 +241,40 @@ func main() {
 }
 ```
 
+### Layering Embedded Assets with Copy-on-Write
+
+One of the most powerful patterns unlocked by `NewBridgeIOFS`: use Go's native `//go:embed` assets as the read-only base of a `CopyOnWriteFs`. Your application gets the embedded defaults at startup, while any runtime writes are safely isolated in memory.
+
+```go
+import (
+    "embed"
+    "github.com/spf13/afero"
+)
+
+//go:embed configs/*
+var embeddedConfigs embed.FS
+
+func NewAppFs() afero.Fs {
+    // Import the read-only embedded assets into Afero.
+    base := afero.NewBridgeIOFS(embeddedConfigs)
+
+    // Layer a writable in-memory filesystem on top.
+    // Reads fall through to the embedded assets; writes stay in memory.
+    overlay := afero.NewMemMapFs()
+    return afero.NewCopyOnWriteFs(base, overlay)
+}
+
+func main() {
+    fs := NewAppFs()
+
+    // Reads the embedded default — no disk access.
+    cfg, _ := afero.ReadFile(fs, "configs/default.yaml")
+
+    // Writes go to the in-memory overlay; embedded assets are untouched.
+    afero.WriteFile(fs, "configs/default.yaml", []byte("override: true"), 0644)
+}
+```
+
 ### Testing Made Simple
 
 One of Afero's greatest strengths is making filesystem-dependent code easily testable:
@@ -293,6 +327,8 @@ func TestSaveUserData(t *testing.T) {
 | | **ReadOnlyFs** | `afero.NewReadOnlyFs(source)` | Provides a read-only view, preventing any modifications. | ✅ Official |
 | | **RegexpFs** | `afero.NewRegexpFs(source, regexp)` | Filters a filesystem, only showing files that match a regex. | ✅ Official |
 | **Utility** | **HttpFs** | `afero.NewHttpFs(source)` | Wraps any Afero filesystem to be served via `http.FileServer`. | ✅ Official |
+| **`io/fs` Bridge** | **IOFS** | `afero.NewIOFS(fs)` | Exports any Afero `Fs` as a standard `io/fs.FS` (read-only view). | ✅ Official |
+| | **BridgeIOFS** | `afero.NewBridgeIOFS(fsys)` | Imports any `io/fs.FS` (e.g. `embed.FS`) as a read-only Afero `Fs`. | ✅ Official |
 | **Archives** | **ZipFs** | `zipfs.New(zipReader)` | Read-only access to files within a ZIP archive. | ✅ Official |
 | | **TarFs** | `tarfs.New(tarReader)` | Read-only access to files within a TAR archive. | ✅ Official |
 | **Network** | **GcsFs** | `gcsfs.NewGcsFs(...)` | Google Cloud Storage backend. | ⚡ Experimental |
@@ -308,28 +344,65 @@ func TestSaveUserData(t *testing.T) {
 | | **IgnoreFs** | [`unmango/aferox`](https://github.com/unmango/aferox) | .gitignore-aware filtering filesystem. | 🔹 3rd Party |
 | | **FUSEFs** | [`JakWai01/sile-fystem`](https://github.com/JakWai01/sile-fystem) | Generic FUSE implementation using any Afero backend. | 🔹 3rd Party |
 
-## Afero vs. `io/fs` (Go 1.16+)
+## Afero & the Go Standard Library (`io/fs`)
 
-Go 1.16 introduced the `io/fs` package, which provides a standard abstraction for **read-only** filesystems.
+Go 1.16 introduced `io/fs`, a standard abstraction for **read-only** filesystems. Afero bridges this gap in **both directions**, so you can freely move between the Afero and standard library worlds.
 
-Afero complements `io/fs` by focusing on different needs:
+### When to use which
 
-*   **Use `io/fs` when:** You only need to read files and want to conform strictly to the standard library interfaces.
-*   **Use Afero when:**
-    *   Your application needs to **create, write, modify, or delete** files.
-    *   You need to test complex read/write interactions (e.g., renaming, concurrent writes).
-    *   You need advanced compositional features (Copy-on-Write, Caching, etc.).
+| Situation | Recommendation |
+| :--- | :--- |
+| You only need to **read** files and want strict stdlib compatibility | Use `io/fs` directly |
+| You need to **create, write, modify, or delete** files | Use Afero |
+| You want to test complex read/write interactions | Use Afero (`MemMapFs`) |
+| You need Copy-on-Write, Caching, or other composition | Use Afero |
+| You have an `io/fs.FS` source and want Afero's full API | Use `NewBridgeIOFS` |
 
-Afero is fully compatible with `io/fs`. You can wrap any Afero filesystem to satisfy the `fs.FS` interface using `afero.NewIOFS`:
+### Exporting Afero → `io/fs.FS` with `NewIOFS`
+
+Wrap any Afero filesystem to satisfy the `fs.FS` interface. This lets you pass a writable Afero filesystem to any standard library function that accepts `fs.FS`.
 
 ```go
-import "io/fs"
+import (
+    "io/fs"
+    "github.com/spf13/afero"
+)
 
-// Create an Afero filesystem (writable)
-var myAferoFs afero.Fs = afero.NewMemMapFs()
+// A writable Afero filesystem
+myAferoFs := afero.NewMemMapFs()
+afero.WriteFile(myAferoFs, "hello.txt", []byte("hello"), 0644)
 
-// Convert it to a standard library fs.FS (read-only view)
+// Export as a read-only standard library fs.FS
 var myIoFs fs.FS = afero.NewIOFS(myAferoFs)
+
+// Now compatible with fs.WalkDir, http.FS, template.ParseFS, etc.
+fs.WalkDir(myIoFs, ".", func(path string, d fs.DirEntry, err error) error {
+    // ...
+    return nil
+})
+```
+
+### Importing `io/fs.FS` → Afero with `NewBridgeIOFS`
+
+Bring any `io/fs.FS` source—such as Go's built-in `embed.FS`—into Afero as a read-only `Fs`. This makes it composable with all of Afero's layer and filter types.
+
+```go
+import (
+    "embed"
+    "github.com/spf13/afero"
+)
+
+//go:embed assets/*
+var embeddedAssets embed.FS
+
+// Import the embedded assets into Afero (read-only).
+// Write operations return os.ErrPermission.
+embeddedFs := afero.NewBridgeIOFS(embeddedAssets)
+
+// Now use it anywhere an afero.Fs is expected—including composition.
+// For example, layer a writable overlay on top for testing:
+overlay := afero.NewMemMapFs()
+testFs := afero.NewCopyOnWriteFs(embeddedFs, overlay)
 ```
 
 ## Third-Party Backends & Ecosystem
@@ -421,7 +494,7 @@ Mount any Afero filesystem as a Windows drive letter. Brilliant demonstration of
 
 ### Modern Asset Embedding (Go 1.16+)
 
-Instead of third-party tools, use Go's native `//go:embed` with Afero:
+Instead of third-party tools, use Go's native `//go:embed` with Afero via `NewBridgeIOFS`:
 
 ```go
 import (
@@ -433,10 +506,10 @@ import (
 var assetsFS embed.FS
 
 func main() {
-    // Convert embedded files to Afero filesystem
-    fs := afero.FromIOFS(assetsFS)
-    
-    // Use like any other Afero filesystem
+    // Import the embedded assets into Afero as a read-only filesystem.
+    fs := afero.NewBridgeIOFS(assetsFS)
+
+    // Use the full Afero API against the embedded files.
     content, _ := afero.ReadFile(fs, "assets/config.json")
 }
 ```
