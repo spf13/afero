@@ -9,9 +9,9 @@
 
 # Afero: The Universal Filesystem Abstraction for Go
 
-Afero is a powerful and extensible filesystem abstraction system for Go. It provides a single, unified API for interacting with diverse filesystems—including the local disk, memory, archives, and network storage.
+Afero is a filesystem abstraction library for Go that works as a drop-in replacement for the standard `os` package. Adopt it with minimal code changes, then swap any backend—local disk, in-memory, cloud, or archive—without touching your application logic.
 
-Afero acts as a drop-in replacement for the standard `os` package, enabling you to write modular code that is agnostic to the underlying storage, dramatically simplifies testing, and allows for sophisticated architectural patterns through filesystem composition.
+Two headline benefits: **testing becomes trivial** (replace the OS with a fast in-memory filesystem in one line, no disk cleanup required), and **your code stays portable** across any storage backend through a single `afero.Fs` interface.
 
 ## Why Afero?
 
@@ -37,6 +37,33 @@ go get github.com/spf13/afero
 ```go
 import "github.com/spf13/afero"
 ```
+
+## Backend Reference
+
+| Type | Backend | Constructor | Description | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **Core** | **OsFs** | `afero.NewOsFs()` | Interacts with the real operating system filesystem. Use in production. | ✅ Official |
+| | **MemMapFs** | `afero.NewMemMapFs()` | A fast, atomic, concurrent-safe, in-memory filesystem. Ideal for testing. | ✅ Official |
+| **Composition** | **CopyOnWriteFs**| `afero.NewCopyOnWriteFs(base, overlay)` | A read-only base with a writable overlay. Ideal for sandboxing. | ✅ Official |
+| | **CacheOnReadFs**| `afero.NewCacheOnReadFs(base, cache, ttl)` | Lazily caches files from a slow base into a fast layer on first read. | ✅ Official |
+| | **BasePathFs** | `afero.NewBasePathFs(source, path)` | Restricts operations to a subdirectory (chroot/jail). | ✅ Official |
+| | **ReadOnlyFs** | `afero.NewReadOnlyFs(source)` | Provides a read-only view, preventing any modifications. | ✅ Official |
+| | **RegexpFs** | `afero.NewRegexpFs(source, regexp)` | Filters a filesystem, only showing files that match a regex. | ✅ Official |
+| **Utility** | **HttpFs** | `afero.NewHttpFs(source)` | Wraps any Afero filesystem to be served via `http.FileServer`. | ✅ Official |
+| **Archives** | **ZipFs** | `zipfs.New(zipReader)` | Read-only access to files within a ZIP archive. | ✅ Official |
+| | **TarFs** | `tarfs.New(tarReader)` | Read-only access to files within a TAR archive. | ✅ Official |
+| **Network** | **GcsFs** | `gcsfs.NewGcsFs(...)` | Google Cloud Storage backend. | ⚡ Experimental |
+| | **SftpFs** | `sftpfs.New(...)` | SFTP backend. | ⚡ Experimental |
+| **3rd Party Cloud** | **S3Fs** | [`fclairamb/afero-s3`](https://github.com/fclairamb/afero-s3) | Production-ready S3 backend built on official AWS SDK. | 🔹 3rd Party |
+| | **MinioFs** | [`cpyun/afero-minio`](https://github.com/cpyun/afero-minio) | MinIO object storage backend with S3 compatibility. | 🔹 3rd Party |
+| | **DriveFs** | [`fclairamb/afero-gdrive`](https://github.com/fclairamb/afero-gdrive) | Google Drive backend with streaming support. | 🔹 3rd Party |
+| | **DropboxFs** | [`fclairamb/afero-dropbox`](https://github.com/fclairamb/afero-dropbox) | Dropbox backend with streaming support. | 🔹 3rd Party |
+| **3rd Party Specialized** | **GitFs** | [`tobiash/go-gitfs`](https://github.com/tobiash/go-gitfs) | Git repository filesystem (read-only, Afero compatible). | 🔹 3rd Party |
+| | **DockerFs** | [`unmango/aferox`](https://github.com/unmango/aferox) | Docker container filesystem access. | 🔹 3rd Party |
+| | **GitHubFs** | [`unmango/aferox`](https://github.com/unmango/aferox) | GitHub repository and releases filesystem. | 🔹 3rd Party |
+| | **FilterFs** | [`unmango/aferox`](https://github.com/unmango/aferox) | Filesystem filtering with predicates. | 🔹 3rd Party |
+| | **IgnoreFs** | [`unmango/aferox`](https://github.com/unmango/aferox) | .gitignore-aware filtering filesystem. | 🔹 3rd Party |
+| | **FUSEFs** | [`JakWai01/sile-fystem`](https://github.com/JakWai01/sile-fystem) | Generic FUSE implementation using any Afero backend. | 🔹 3rd Party |
 
 ## Quick Start: The Power of Abstraction
 
@@ -78,7 +105,7 @@ func main() {
 
 ### 3. Usage in Testing
 
-In your tests, inject `MemMapFs`. This provides a blazing-fast, isolated, in-memory filesystem that requires no disk I/O and no cleanup.
+Steps 1 and 2 represent the entire production footprint: accept `afero.Fs` instead of calling `os` directly, then inject `OsFs` at the call site. That's it. Swap `OsFs` for `MemMapFs` and the whole thing runs in memory, with no disk access and nothing to clean up:
 
 ```go
 func TestProcessConfiguration(t *testing.T) {
@@ -103,7 +130,9 @@ Afero's most unique feature is its ability to combine filesystems. This allows y
 
 ### Example 1: Sandboxing with Copy-on-Write
 
-Create a temporary environment where an application can "modify" system files without affecting the actual disk.
+**Problem:** You want integration tests that exercise code against real configuration files without any risk of accidentally modifying them. Or you need to let untrusted code "modify" system files in a fully contained environment.
+
+All writes are captured in the in-memory overlay; the base is never touched:
 
 ```go
 // 1. The base layer is the real OS, made read-only for safety.
@@ -123,7 +152,9 @@ afero.WriteFile(sandboxFs, "/etc/hosts", []byte("127.0.0.1 sandboxed-app"), 0644
 
 ### Example 2: Caching a Slow Filesystem
 
-Improve performance by layering a fast cache (like memory) over a slow backend (like a network drive or cloud storage).
+**Problem:** Your application reads the same files repeatedly from a slow backend network storage, cloud, SFTP. You want instant repeated reads without rewriting a single line of file-access code.
+
+Layer a fast in-memory cache in front; the first read fetches and caches, every subsequent read is instant:
 
 ```go
 import "time"
@@ -146,7 +177,7 @@ data2, _ := afero.ReadFile(cachedFs, "data.json")
 
 ### Example 3: Security Jails (chroot)
 
-Restrict an application component's access to a specific subdirectory.
+**Problem:** You need to expose filesystem access to a plugin, template engine, or user-submitted process but directory traversal must be impossible. It should only ever see a single rooted directory.
 
 ```go
 osFs := afero.NewOsFs()
@@ -201,7 +232,13 @@ processor := NewDocumentProcessor(afero.NewMemMapFs())
 
 ### Treating Archives as Filesystems
 
-Read files directly from `.zip` or `.tar` archives without unpacking them to disk first.
+ZIP and TAR archives are directories in disguise. Afero exposes them as a standard `afero.Fs`—which means **any code that already accepts `afero.Fs` works unchanged against an archive**, with no extraction, no temp directory, and no cleanup required.
+
+This is particularly useful when:
+- Processing uploaded ZIP files in a web handler without writing decompressed content to disk
+- Reading fixture data bundled into a binary without `//go:embed`
+- Writing archive inspection or transformation tools that reuse the same traversal logic as your real filesystem code
+- Running tests against a canned, read-only snapshot of a directory tree shipped as a `.zip`
 
 ```go
 import (
@@ -209,14 +246,16 @@ import (
     "github.com/spf13/afero/zipfs"
 )
 
-// Assume 'zipReader' is a *zip.Reader initialized from a file or memory
-var zipReader *zip.Reader 
+// Open any .zip — from disk, an HTTP response body, or memory
+zipFile, _ := zip.OpenReader("bundle.zip")
+defer zipFile.Close()
 
-// Create a read-only ZipFs
-archiveFS := zipfs.New(zipReader)
+// Treat the archive as a filesystem — no extraction needed
+archiveFS := zipfs.New(&zipFile.Reader)
 
-// Read a file from within the archive using the standard Afero API
-content, err := afero.ReadFile(archiveFS, "/docs/readme.md")
+// The same code that works with OsFs or MemMapFs works here unchanged
+content, err := afero.ReadFile(archiveFS, "docs/readme.md")
+entries, err := afero.ReadDir(archiveFS, "configs/")
 ```
 
 ### Serving Any Filesystem over HTTP
@@ -280,33 +319,6 @@ func TestSaveUserData(t *testing.T) {
 - 🧹 **No cleanup** - Memory is automatically freed
 - 🔒 **Safe** - Can't accidentally modify real files
 - 🏃 **Parallel** - Tests can run concurrently without conflicts
-
-## Backend Reference
-
-| Type | Backend | Constructor | Description | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **Core** | **OsFs** | `afero.NewOsFs()` | Interacts with the real operating system filesystem. Use in production. | ✅ Official |
-| | **MemMapFs** | `afero.NewMemMapFs()` | A fast, atomic, concurrent-safe, in-memory filesystem. Ideal for testing. | ✅ Official |
-| **Composition** | **CopyOnWriteFs**| `afero.NewCopyOnWriteFs(base, overlay)` | A read-only base with a writable overlay. Ideal for sandboxing. | ✅ Official |
-| | **CacheOnReadFs**| `afero.NewCacheOnReadFs(base, cache, ttl)` | Lazily caches files from a slow base into a fast layer on first read. | ✅ Official |
-| | **BasePathFs** | `afero.NewBasePathFs(source, path)` | Restricts operations to a subdirectory (chroot/jail). | ✅ Official |
-| | **ReadOnlyFs** | `afero.NewReadOnlyFs(source)` | Provides a read-only view, preventing any modifications. | ✅ Official |
-| | **RegexpFs** | `afero.NewRegexpFs(source, regexp)` | Filters a filesystem, only showing files that match a regex. | ✅ Official |
-| **Utility** | **HttpFs** | `afero.NewHttpFs(source)` | Wraps any Afero filesystem to be served via `http.FileServer`. | ✅ Official |
-| **Archives** | **ZipFs** | `zipfs.New(zipReader)` | Read-only access to files within a ZIP archive. | ✅ Official |
-| | **TarFs** | `tarfs.New(tarReader)` | Read-only access to files within a TAR archive. | ✅ Official |
-| **Network** | **GcsFs** | `gcsfs.NewGcsFs(...)` | Google Cloud Storage backend. | ⚡ Experimental |
-| | **SftpFs** | `sftpfs.New(...)` | SFTP backend. | ⚡ Experimental |
-| **3rd Party Cloud** | **S3Fs** | [`fclairamb/afero-s3`](https://github.com/fclairamb/afero-s3) | Production-ready S3 backend built on official AWS SDK. | 🔹 3rd Party |
-| | **MinioFs** | [`cpyun/afero-minio`](https://github.com/cpyun/afero-minio) | MinIO object storage backend with S3 compatibility. | 🔹 3rd Party |
-| | **DriveFs** | [`fclairamb/afero-gdrive`](https://github.com/fclairamb/afero-gdrive) | Google Drive backend with streaming support. | 🔹 3rd Party |
-| | **DropboxFs** | [`fclairamb/afero-dropbox`](https://github.com/fclairamb/afero-dropbox) | Dropbox backend with streaming support. | 🔹 3rd Party |
-| **3rd Party Specialized** | **GitFs** | [`tobiash/go-gitfs`](https://github.com/tobiash/go-gitfs) | Git repository filesystem (read-only, Afero compatible). | 🔹 3rd Party |
-| | **DockerFs** | [`unmango/aferox`](https://github.com/unmango/aferox) | Docker container filesystem access. | 🔹 3rd Party |
-| | **GitHubFs** | [`unmango/aferox`](https://github.com/unmango/aferox) | GitHub repository and releases filesystem. | 🔹 3rd Party |
-| | **FilterFs** | [`unmango/aferox`](https://github.com/unmango/aferox) | Filesystem filtering with predicates. | 🔹 3rd Party |
-| | **IgnoreFs** | [`unmango/aferox`](https://github.com/unmango/aferox) | .gitignore-aware filtering filesystem. | 🔹 3rd Party |
-| | **FUSEFs** | [`JakWai01/sile-fystem`](https://github.com/JakWai01/sile-fystem) | Generic FUSE implementation using any Afero backend. | 🔹 3rd Party |
 
 ## Afero vs. `io/fs` (Go 1.16+)
 
