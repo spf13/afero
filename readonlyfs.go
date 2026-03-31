@@ -94,3 +94,7 @@ func (r *ReadOnlyFs) MkdirAll(n string, p os.FileMode) error {
 func (r *ReadOnlyFs) Create(n string) (File, error) {
 	return nil, syscall.EPERM
 }
+
+func (r *ReadOnlyFs) ParentFS() Fs {
+	return r.source
+}

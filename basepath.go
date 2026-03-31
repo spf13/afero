@@ -220,3 +220,7 @@ func (b *BasePathFs) ReadlinkIfPossible(name string) (string, error) {
 	}
 	return "", &os.PathError{Op: "readlink", Path: name, Err: ErrNoReadlink}
 }
+
+func (b *BasePathFs) ParentFS() Fs {
+	return b.source
+}
