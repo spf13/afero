@@ -85,6 +85,13 @@ func (fs *GcsFs) Name() string {
 	return fs.source.Name()
 }
 
+// SetUploadChunkSizeByte sets the chunk size for uploads.
+// To disable chunking, set this to 0.
+// For custom sizes, GCS requires multiples of 256KiB (262144 bytes).
+func (fs *GcsFs) SetUploadChunkSizeByte(size *int) {
+	fs.source.SetUploadChunkSizeByte(size)
+}
+
 func (fs *GcsFs) Create(name string) (afero.File, error) {
 	return fs.source.Create(name)
 }

@@ -861,3 +861,57 @@ func TestGcsRemoveAll(t *testing.T) {
 		}
 	})
 }
+
+func TestUploadChunkSize(t *testing.T) {
+	tests := []struct {
+		testName                string
+		chunkSizeAssignedVal    *int
+		expectedResultChunkSize int
+	}{
+		{
+			testName: "1MB setting",
+
+			chunkSizeAssignedVal: func() *int { val := 1 * 1024 * 1024; return &val }(),
+
+			expectedResultChunkSize: 1 * 1024 * 1024,
+		},
+		{
+			testName: "0 (disabled chunking)",
+
+			chunkSizeAssignedVal: func() *int { val := 0; return &val }(),
+
+			expectedResultChunkSize: 0,
+		},
+		{
+			testName: "nil (GCS default)",
+
+			chunkSizeAssignedVal:    nil,
+			expectedResultChunkSize: -1, // Sentinel value for "never called"
+		},
+	}
+
+	for i, tt := range tests {
+		t.Run(tt.testName, func(t *testing.T) {
+			// Create a fresh isolated mock for this sub-test
+			ctx := context.Background()
+			mockClient := newClientMock()
+			fs := &GcsFs{NewGcsFs(ctx, mockClient)}
+
+			fs.SetUploadChunkSizeByte(tt.chunkSizeAssignedVal)
+
+			fileName := fmt.Sprintf("test-chunk-%d.txt", i)
+			fullObjectName := filepath.Join(bucketName, fileName)
+
+			f, _ := fs.Create(fullObjectName)
+
+			// Trigger writer
+			f.Write([]byte("data"))
+
+			obj := mockClient.Bucket(bucketName).Object(fileName).(*objectMock)
+
+			if obj.lastChunkSize != tt.expectedResultChunkSize {
+				t.Errorf("Expected %d, got %d", tt.expectedResultChunkSize, obj.lastChunkSize)
+			}
+		})
+	}
+}

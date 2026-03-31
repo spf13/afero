@@ -46,6 +46,8 @@ type gcsFileResource struct {
 	name     string
 	fileMode os.FileMode
 
+	uploadChunkSizeByte *int
+
 	currentGcsSize int64
 	offset         int64
 	reader         io.ReadCloser
@@ -56,7 +58,6 @@ type gcsFileResource struct {
 
 func (o *gcsFileResource) Close() error {
 	o.closed = true
-	// TODO rawGcsObjectsMap ?
 	return o.maybeCloseIo()
 }
 
@@ -185,6 +186,11 @@ func (o *gcsFileResource) WriteAt(b []byte, off int64) (n int, err error) {
 	//
 	// It will however require a download and upload of the original file but it
 	// can't be avoided if we should support seek-write-operations on GCS.
+
+	if size, ok := o.getEffectiveChunkSize(); ok {
+		w.SetChunkSize(size)
+	}
+
 	objAttrs, err := o.obj.Attrs(o.ctx)
 	if err != nil {
 		if off > 0 {
@@ -221,6 +227,16 @@ func (o *gcsFileResource) WriteAt(b []byte, off int64) (n int, err error) {
 
 	o.offset += int64(written)
 	return written, err
+}
+
+func (o *gcsFileResource) getEffectiveChunkSize() (int, bool) {
+	if o.uploadChunkSizeByte != nil {
+		return *o.uploadChunkSizeByte, true
+	}
+	if o.fs.UploadChunkSizeByte != nil {
+		return *o.fs.UploadChunkSizeByte, true
+	}
+	return 0, false
 }
 
 func min(x, y int) int {
