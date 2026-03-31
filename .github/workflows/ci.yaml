@@ -36,6 +36,25 @@ jobs:
         run: go test -race -v ./...
         working-directory: ./sftpfs
 
+  build-wasip:
+    name: Build (wasip1/wasm)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        with:
+          go-version: stable
+
+      - name: Build
+        run: go build ./...
+        env:
+          GOOS: wasip1
+          GOARCH: wasm
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
