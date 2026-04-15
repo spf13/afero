@@ -461,3 +461,12 @@ func (m *MemMapFs) List() {
 		fmt.Println(x.Name(), y.Size())
 	}
 }
+func (m *MemMapFs) ListNames() []string {
+	files := make([]string, len(m.data))
+	var i int
+	for _, f := range m.data {
+		files[i] = f.Name()
+		i++
+	}
+	return files
+}
