@@ -1,6 +1,6 @@
 module github.com/spf13/afero/sftpfs
 
-go 1.23.0
+go 1.24.0
 
 replace github.com/spf13/afero => ../
 
@@ -13,5 +13,5 @@ require (
 require (
 	github.com/kr/fs v0.1.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
-	golang.org/x/text v0.28.0 // indirect
+	golang.org/x/text v0.34.0 // indirect
 )
