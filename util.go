@@ -18,6 +18,7 @@ package afero
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -38,15 +39,15 @@ func (a Afero) WriteReader(path string, r io.Reader) (err error) {
 	return WriteReader(a.Fs, path, r)
 }
 
-func WriteReader(fs Fs, path string, r io.Reader) (err error) {
+func WriteReader(fs Fs, path string, r io.Reader) (retErr error) {
 	dir, _ := filepath.Split(path)
 	ospath := filepath.FromSlash(dir)
 
 	if ospath != "" {
-		err = fs.MkdirAll(ospath, 0o777) // rwx, rw, r
-		if err != nil {
-			if err != os.ErrExist {
-				return err
+		retErr = fs.MkdirAll(ospath, 0o777) // rwx, rw, r
+		if retErr != nil {
+			if retErr != os.ErrExist {
+				return retErr
 			}
 		}
 	}
@@ -55,10 +56,14 @@ func WriteReader(fs Fs, path string, r io.Reader) (err error) {
 	if err != nil {
 		return
 	}
-	defer file.Close()
+	defer func() {
+		if cerr := file.Close(); cerr != nil {
+			retErr = errors.Join(retErr, cerr)
+		}
+	}()
 
-	_, err = io.Copy(file, r)
-	return
+	_, retErr = io.Copy(file, r)
+	return retErr
 }
 
 // Same as WriteReader but checks to see if file/directory already exists.
@@ -66,13 +71,13 @@ func (a Afero) SafeWriteReader(path string, r io.Reader) (err error) {
 	return SafeWriteReader(a.Fs, path, r)
 }
 
-func SafeWriteReader(fs Fs, path string, r io.Reader) (err error) {
+func SafeWriteReader(fs Fs, path string, r io.Reader) (retErr error) {
 	dir, _ := filepath.Split(path)
 	ospath := filepath.FromSlash(dir)
 
 	if ospath != "" {
-		err = fs.MkdirAll(ospath, 0o777) // rwx, rw, r
-		if err != nil {
+		retErr = fs.MkdirAll(ospath, 0o777) // rwx, rw, r
+		if retErr != nil {
 			return
 		}
 	}
@@ -89,10 +94,14 @@ func SafeWriteReader(fs Fs, path string, r io.Reader) (err error) {
 	if err != nil {
 		return
 	}
-	defer file.Close()
+	defer func() {
+		if cerr := file.Close(); cerr != nil {
+			retErr = errors.Join(retErr, cerr)
+		}
+	}()
 
-	_, err = io.Copy(file, r)
-	return
+	_, retErr = io.Copy(file, r)
+	return retErr
 }
 
 func (a Afero) GetTempDir(subPath string) string {

@@ -32,11 +32,17 @@ func (f *UnionFile) Close() error {
 	// first close base, so we have a newer timestamp in the overlay. If we'd close
 	// the overlay first, we'd get a cacheStale the next time we access this file
 	// -> cache would be useless ;-)
+	var err error
 	if f.Base != nil {
-		f.Base.Close()
+		err = f.Base.Close()
 	}
 	if f.Layer != nil {
-		return f.Layer.Close()
+		if err2 := f.Layer.Close(); err == nil {
+			err = err2
+		}
+	}
+	if err != nil {
+		return err
 	}
 	return BADFD
 }
