@@ -128,11 +128,14 @@ func (f *File) Open() error {
 
 func (f *File) Close() error {
 	f.fileData.Lock()
+	defer f.fileData.Unlock()
+	if f.closed {
+		return ErrFileClosed
+	}
 	f.closed = true
 	if !f.readOnly {
 		setModTime(f.fileData, time.Now())
 	}
-	f.fileData.Unlock()
 	return nil
 }
 

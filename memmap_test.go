@@ -918,3 +918,17 @@ func TestMemMapFsRename(t *testing.T) {
 		}
 	}
 }
+
+func TestMemMapFsDoubleClose(t *testing.T) {
+	fs := NewMemMapFs()
+	f, err := fs.Create("double-close-test.txt")
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatalf("first Close: %v", err)
+	}
+	if err := f.Close(); err == nil {
+		t.Fatal("second Close: expected error, got nil")
+	}
+}
