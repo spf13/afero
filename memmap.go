@@ -22,6 +22,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/spf13/afero/mem"
@@ -282,7 +283,17 @@ func (m *MemMapFs) Remove(name string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if _, ok := m.getData()[name]; ok {
+	if f, ok := m.getData()[name]; ok {
+		fi := mem.GetFileInfo(f)
+		if fi.IsDir() {
+			// Check if directory has children
+			prefix := name + FilePathSeparator
+			for p := range m.getData() {
+				if strings.HasPrefix(p, prefix) {
+					return &os.PathError{Op: "remove", Path: name, Err: syscall.ENOTEMPTY}
+				}
+			}
+		}
 		err := m.unRegisterWithParent(name)
 		if err != nil {
 			return &os.PathError{Op: "remove", Path: name, Err: err}
