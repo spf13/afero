@@ -17,6 +17,7 @@ package afero
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -218,6 +219,9 @@ func (a Afero) TempDir(dir, prefix string) (name string, err error) {
 }
 
 func TempDir(fs Fs, dir, prefix string) (name string, err error) {
+	if strings.Contains(prefix, string(os.PathSeparator)) {
+		return "", fmt.Errorf("%s: pattern contains path separator", prefix)
+	}
 	if dir == "" {
 		dir = os.TempDir()
 	}
