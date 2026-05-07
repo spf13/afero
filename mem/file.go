@@ -38,6 +38,7 @@ type File struct {
 	readDirCount int64
 	closed       bool
 	readOnly     bool
+	dirBuf       []*FileData
 	fileData     *FileData
 }
 
@@ -121,6 +122,7 @@ func (f *File) Open() error {
 	atomic.StoreInt64(&f.at, 0)
 	atomic.StoreInt64(&f.readDirCount, 0)
 	f.fileData.Lock()
+	f.dirBuf = nil
 	f.closed = false
 	f.fileData.Unlock()
 	return nil
@@ -162,7 +164,10 @@ func (f *File) Readdir(count int) (res []os.FileInfo, err error) {
 	var outLength int64
 
 	f.fileData.Lock()
-	files := f.fileData.memDir.Files()[f.readDirCount:]
+	if f.dirBuf == nil {
+		f.dirBuf = f.fileData.memDir.Files()
+	}
+	files := f.dirBuf[f.readDirCount:]
 	if count > 0 {
 		if len(files) < count {
 			outLength = int64(len(files))
