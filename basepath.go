@@ -1,6 +1,7 @@
 package afero
 
 import (
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -12,6 +13,8 @@ import (
 var (
 	_ Lstater        = (*BasePathFs)(nil)
 	_ fs.ReadDirFile = (*BasePathFile)(nil)
+	_ io.WriterTo    = (*BasePathFile)(nil)
+	_ io.ReaderFrom  = (*BasePathFile)(nil)
 )
 
 // The BasePathFs restricts all operations to a given path within an Fs.
@@ -42,6 +45,20 @@ func (f *BasePathFile) ReadDir(n int) ([]fs.DirEntry, error) {
 		return rdf.ReadDir(n)
 	}
 	return readDirFile{f.File}.ReadDir(n)
+}
+
+func (f *BasePathFile) WriteTo(w io.Writer) (int64, error) {
+	if wt, ok := f.File.(io.WriterTo); ok {
+		return wt.WriteTo(w)
+	}
+	return io.Copy(w, f.File)
+}
+
+func (f *BasePathFile) ReadFrom(r io.Reader) (int64, error) {
+	if rf, ok := f.File.(io.ReaderFrom); ok {
+		return rf.ReadFrom(r)
+	}
+	return io.Copy(f.File, r)
 }
 
 func NewBasePathFs(source Fs, path string) Fs {
