@@ -918,3 +918,34 @@ func TestMemMapFsRename(t *testing.T) {
 		}
 	}
 }
+
+func TestOpenFileNonExistentDirectory(t *testing.T) {
+	// Verify that OpenFile with O_CREATE returns an error when the parent
+	// directory does not exist, matching os.OpenFile behavior.
+	// See https://github.com/spf13/afero/issues/270
+	fs := NewMemMapFs()
+
+	err := WriteFile(fs, "/nonexistent/dir/file.txt", []byte("content"), 0o644)
+	if err == nil {
+		t.Fatal("expected error when writing to a non-existent directory, got nil")
+	}
+	if !os.IsNotExist(err) {
+		t.Fatalf("expected os.ErrNotExist, got: %v", err)
+	}
+
+	// Verify it works when the directory is created first.
+	fs.MkdirAll("/existing/dir", 0o755)
+	err = WriteFile(fs, "/existing/dir/file.txt", []byte("content"), 0o644)
+	if err != nil {
+		t.Fatalf("expected no error when writing to an existing directory, got: %v", err)
+	}
+
+	// Verify the written content.
+	data, err := ReadFile(fs, "/existing/dir/file.txt")
+	if err != nil {
+		t.Fatalf("failed to read back written file: %v", err)
+	}
+	if string(data) != "content" {
+		t.Fatalf("expected 'content', got %q", string(data))
+	}
+}

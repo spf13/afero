@@ -16,6 +16,7 @@
 package afero
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -33,6 +34,7 @@ func checkSizePath(t *testing.T, path string, size int64) {
 
 func TestReadFile(t *testing.T) {
 	testFS = &MemMapFs{}
+	testFS.MkdirAll(os.TempDir(), 0o700)
 	fsutil := &Afero{Fs: testFS}
 
 	testFS.Create("this_exists.go")
@@ -53,6 +55,7 @@ func TestReadFile(t *testing.T) {
 
 func TestWriteFile(t *testing.T) {
 	testFS = &MemMapFs{}
+	testFS.MkdirAll(os.TempDir(), 0o700)
 	fsutil := &Afero{Fs: testFS}
 	f, err := fsutil.TempFile("", "ioutil-test")
 	if err != nil {
@@ -83,6 +86,7 @@ func TestWriteFile(t *testing.T) {
 
 func TestReadDir(t *testing.T) {
 	testFS = &MemMapFs{}
+	testFS.MkdirAll(os.TempDir(), 0o700)
 	testFS.Mkdir("/i-am-a-dir", 0o777)
 	testFS.Create("/this_exists.go")
 	dirname := "rumpelstilzchen"
@@ -162,7 +166,9 @@ func TestTempFile(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			file, err := TempFile(NewMemMapFs(), tt.args.dir, tt.args.pattern)
+			fs := NewMemMapFs()
+			fs.MkdirAll(os.TempDir(), 0o700)
+			file, err := TempFile(fs, tt.args.dir, tt.args.pattern)
 			if err != nil {
 				t.Errorf("TempFile() error = %v, none expected", err)
 				return

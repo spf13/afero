@@ -51,6 +51,7 @@ func TestLstatIfPossible(t *testing.T) {
 	pathFileMem := filepath.Join(memWorkDir, "aferom.txt")
 
 	WriteFile(osFs, filepath.Join(workDir, "afero.txt"), []byte("Hi, Afero!"), 0o777)
+	memFs.MkdirAll(memWorkDir, 0o777)
 	WriteFile(memFs, filepath.Join(pathFileMem), []byte("Hi, Afero!"), 0o777)
 
 	os.Chdir(workDir)
