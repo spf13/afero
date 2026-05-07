@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/pkg/sftp"
+	"github.com/spf13/afero"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -243,6 +244,7 @@ func MakeSSHKeyPair(bits int, pubKeyPath, privateKeyPath string) error {
 func TestSftpCreate(t *testing.T) {
 	os.Mkdir("./test", 0o777)
 	MakeSSHKeyPair(1024, "./test/id_rsa.pub", "./test/id_rsa")
+	defer os.RemoveAll("./test")
 
 	go RunSftpServer("./test/")
 	time.Sleep(5 * time.Second)
@@ -260,16 +262,16 @@ func TestSftpCreate(t *testing.T) {
 	fs.Chmod("test/foo", os.FileMode(0o700))
 	fs.Mkdir("test/bar", os.FileMode(0o777))
 
-	file, err := fs.Create("file1")
+	file, err := fs.Create("./test/file1")
 	if err != nil {
 		t.Error(err)
 	}
-	defer file.Close()
 
 	file.Write([]byte("hello "))
 	file.WriteString("world!\n")
+	file.Close()
 
-	f1, err := fs.Open("file1")
+	f1, err := fs.Open("./test/file1")
 	if err != nil {
 		log.Fatalf("open: %v", err)
 	}
@@ -278,8 +280,50 @@ func TestSftpCreate(t *testing.T) {
 	b := make([]byte, 100)
 
 	_, _ = f1.Read(b)
-	fmt.Println(string(b))
 
-	fmt.Println("done")
-	// TODO check here if "hello\tworld\n" is in buffer b
+	fs.MkdirAll("test/testdir1/testdir2", os.FileMode(0o755))
+	linker, ok := fs.(afero.Symlinker)
+	if !ok {
+		t.Fatal("not implement symlinker")
+	}
+
+	err = linker.SymlinkIfPossible("./test/file1", "test/testdir1/testdir2/file1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, success, err := linker.LstatIfPossible("test/testdir1/testdir2/file1")
+	if !success {
+		t.Fatal("link stat failed")
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	linkPath, err := linker.ReadlinkIfPossible("test/testdir1/testdir2/file1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if linkPath != "./test/file1" {
+		t.Fatal("linkpath error")
+	}
+
+	err = fs.RemoveAll("test/testdir1/testdir2/file1")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = fs.Stat("test/testdir1/testdir2/file1")
+	if !os.IsNotExist(err) {
+		t.Fatal("remove all failed")
+	}
+
+	err = fs.RemoveAll("test/testdir1")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = fs.Stat("test/testdir1")
+	if !os.IsNotExist(err) {
+		t.Fatal("remove all failed")
+	}
 }
