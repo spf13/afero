@@ -18,9 +18,9 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
+	"github.com/spf13/afero"
 	"google.golang.org/api/iterator"
 
-	"github.com/spf13/afero"
 	"github.com/spf13/afero/gcsfs/internal/stiface"
 )
 
@@ -31,15 +31,28 @@ func normSeparators(s string) string {
 
 type clientMock struct {
 	stiface.Client
-	fs afero.Fs
+	fs      afero.Fs
+	buckets map[string]*bucketMock
 }
 
 func newClientMock() *clientMock {
-	return &clientMock{fs: afero.NewMemMapFs()}
+	return &clientMock{
+		fs:      afero.NewMemMapFs(),
+		buckets: make(map[string]*bucketMock),
+	}
 }
 
 func (m *clientMock) Bucket(name string) stiface.BucketHandle {
-	return &bucketMock{bucketName: name, fs: m.fs}
+	if b, ok := m.buckets[name]; ok {
+		return b
+	}
+	b := &bucketMock{
+		bucketName: name,
+		fs:         m.fs,
+		objects:    make(map[string]*objectMock),
+	}
+	m.buckets[name] = b
+	return b
 }
 
 type bucketMock struct {
@@ -48,6 +61,8 @@ type bucketMock struct {
 	bucketName string
 
 	fs afero.Fs
+
+	objects map[string]*objectMock
 }
 
 func (m *bucketMock) Attrs(context.Context) (*storage.BucketAttrs, error) {
@@ -55,7 +70,15 @@ func (m *bucketMock) Attrs(context.Context) (*storage.BucketAttrs, error) {
 }
 
 func (m *bucketMock) Object(name string) stiface.ObjectHandle {
-	return &objectMock{name: name, fs: m.fs}
+	if m.objects == nil {
+		m.objects = make(map[string]*objectMock)
+	}
+	if obj, ok := m.objects[name]; ok {
+		return obj
+	}
+	obj := &objectMock{name: name, fs: m.fs, lastChunkSize: -1}
+	m.objects[name] = obj
+	return obj
 }
 
 func (m *bucketMock) Objects(_ context.Context, q *storage.Query) (it stiface.ObjectIterator) {
@@ -67,10 +90,12 @@ type objectMock struct {
 
 	name string
 	fs   afero.Fs
+
+	lastChunkSize int // Track this for testing
 }
 
 func (o *objectMock) NewWriter(_ context.Context) stiface.Writer {
-	return &writerMock{name: o.name, fs: o.fs}
+	return &writerMock{name: o.name, fs: o.fs, parent: o}
 }
 
 func (o *objectMock) NewRangeReader(
@@ -146,10 +171,17 @@ func (o *objectMock) Attrs(_ context.Context) (*storage.ObjectAttrs, error) {
 type writerMock struct {
 	stiface.Writer
 
-	name string
-	fs   afero.Fs
+	name   string
+	fs     afero.Fs
+	parent *objectMock
 
 	file afero.File
+}
+
+func (w *writerMock) SetChunkSize(s int) {
+	if w.parent != nil {
+		w.parent.lastChunkSize = s
+	}
 }
 
 func (w *writerMock) Write(p []byte) (n int, err error) {

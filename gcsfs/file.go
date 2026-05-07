@@ -90,6 +90,13 @@ func NewGcsFileFromOldFH(
 	return res
 }
 
+// SetUploadChunkSizeByte sets the chunk size for uploads.
+// To disable chunking, set this to 0.
+// For custom sizes, GCS requires multiples of 256KiB (262144 bytes).
+func (o *GcsFile) SetUploadChunkSizeByte(size *int) {
+	o.resource.uploadChunkSizeByte = size
+}
+
 func (o *GcsFile) Close() error {
 	if o.closed {
 		// the afero spec expects the call to Close on a closed file to return an error

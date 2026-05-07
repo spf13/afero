@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -39,10 +40,12 @@ type Fs struct {
 	client    stiface.Client
 	separator string
 
+	mu            sync.RWMutex // Mutex to protect maps
 	buckets       map[string]stiface.BucketHandle
 	rawGcsObjects map[string]*GcsFile
 
 	autoRemoveEmptyFolders bool // trigger for creating "virtual folders" (not required by GCSs)
+	UploadChunkSizeByte    *int
 }
 
 func NewGcsFs(ctx context.Context, client stiface.Client) *Fs {
@@ -55,9 +58,16 @@ func NewGcsFsWithSeparator(ctx context.Context, client stiface.Client, folderSep
 		client:        client,
 		separator:     folderSep,
 		rawGcsObjects: make(map[string]*GcsFile),
+		buckets:       make(map[string]stiface.BucketHandle),
 
 		autoRemoveEmptyFolders: true,
 	}
+}
+
+// SetUploadChunkSizeByte The default chunk size for uploading files to GCS is 16MB.
+// This buffer size may use memory excessively. You can adjust it to a value that is a multiple of 256KiB.
+func (fs *Fs) SetUploadChunkSizeByte(uploadChunkSize *int) {
+	fs.UploadChunkSizeByte = uploadChunkSize
 }
 
 // normSeparators will normalize all "\\" and "/" to the provided separator
@@ -102,13 +112,19 @@ func (fs *Fs) splitName(name string) (bucketName string, path string) {
 }
 
 func (fs *Fs) getBucket(name string) (stiface.BucketHandle, error) {
+	fs.mu.RLock()
 	bucket := fs.buckets[name]
+	fs.mu.RUnlock()
+
 	if bucket == nil {
 		bucket = fs.client.Bucket(name)
 		_, err := bucket.Attrs(fs.ctx)
 		if err != nil {
 			return nil, err
 		}
+		fs.mu.Lock()
+		fs.buckets[name] = bucket
+		fs.mu.Unlock()
 	}
 	return bucket, nil
 }
@@ -147,13 +163,16 @@ func (fs *Fs) Create(name string) (*GcsFile, error) {
 		return nil, err
 	}
 	w := obj.NewWriter(fs.ctx)
+
 	err = w.Close()
 	if err != nil {
 		return nil, err
 	}
 	file := NewGcsFile(fs.ctx, fs, obj, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0, name)
 
+	fs.mu.Lock()
 	fs.rawGcsObjects[name] = file
+	fs.mu.Unlock()
 	return file, nil
 }
 
@@ -296,7 +315,9 @@ func (fs *Fs) Remove(name string) error {
 	if err != nil {
 		return err
 	}
+	fs.mu.Lock()
 	delete(fs.rawGcsObjects, name)
+	fs.mu.Unlock()
 
 	if info.IsDir() {
 		// it's a folder, we ha to check its contents - it cannot be removed, if not empty
@@ -390,7 +411,9 @@ func (fs *Fs) Rename(oldName, newName string) error {
 	if _, err = dst.CopierFrom(src).Run(fs.ctx); err != nil {
 		return err
 	}
+	fs.mu.Lock()
 	delete(fs.rawGcsObjects, oldName)
+	fs.mu.Unlock()
 	return src.Delete(fs.ctx)
 }
 
