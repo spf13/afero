@@ -232,6 +232,9 @@ func (f *File) ReadAt(b []byte, off int64) (n int, err error) {
 func (f *File) Read(b []byte) (n int, err error) {
 	n, err = f.ReadAt(b, atomic.LoadInt64(&f.at))
 	atomic.AddInt64(&f.at, int64(n))
+	if n > 0 && err == io.EOF {
+		err = nil
+	}
 	return
 }
 func (f *File) Truncate(size int64) error {
