@@ -109,7 +109,7 @@ func (o *GcsFile) Seek(newOffset int64, whence int) (int64, error) {
 		return o.fhOffset, nil
 	}
 	log.Printf(
-		"WARNING: Seek behavior triggered, highly inefficent. Offset before seek is at %d\n",
+		"WARNING: Seek behavior triggered, highly inefficient. Offset before seek is at %d\n",
 		o.fhOffset,
 	)
 
