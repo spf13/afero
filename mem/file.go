@@ -237,6 +237,7 @@ func (f *File) Read(b []byte) (n int, err error) {
 	}
 	return
 }
+
 func (f *File) Truncate(size int64) error {
 	if f.closed {
 		return ErrFileClosed
