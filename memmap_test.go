@@ -918,3 +918,25 @@ func TestMemMapFsRename(t *testing.T) {
 		}
 	}
 }
+
+func TestMemMapCreateThenOpen(t *testing.T) {
+	fs := NewMemMapFs()
+	filePath := "/test/data.txt"
+	err := fs.MkdirAll("/test", 0744)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f1, err := fs.OpenFile(filePath, os.O_CREATE|os.O_RDWR|os.O_EXCL, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = f1.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	f2, err := fs.OpenFile(filePath, os.O_RDWR|os.O_EXCL, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f2.Close()
+}
