@@ -482,7 +482,7 @@ func TestUnionFileReaddirAskForTooMany(t *testing.T) {
 
 	ufs := &CopyOnWriteFs{base: base, layer: overlay}
 
-	f, err := ufs.Open("")
+	f, err := ufs.Open(FilePathSeparator)
 	if err != nil {
 		t.Fatal(err)
 	}

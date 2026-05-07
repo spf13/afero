@@ -73,7 +73,7 @@ func TestLstatIfPossible(t *testing.T) {
 	}
 
 	testLstat := func(l Lstater, pathFile, pathSymlink string) {
-		shouldLstat := pathSymlink != ""
+		shouldLstat := pathSymlink != FilePathSeparator
 		statRegular := checkLstat(l, pathFile, shouldLstat)
 		statSymlink := checkLstat(l, pathSymlink, shouldLstat)
 		if statRegular == nil || statSymlink == nil {
@@ -81,7 +81,7 @@ func TestLstatIfPossible(t *testing.T) {
 		}
 
 		symSym := statSymlink.Mode()&os.ModeSymlink == os.ModeSymlink
-		if symSym == (pathSymlink == "") {
+		if symSym == (pathSymlink == FilePathSeparator) {
 			t.Fatal("expected the FileInfo to describe the symlink")
 		}
 
@@ -95,8 +95,8 @@ func TestLstatIfPossible(t *testing.T) {
 	testLstat(overlayFs1, pathFile, pathSymlink)
 	testLstat(overlayFs2, pathFile, pathSymlink)
 	testLstat(basePathFs, "afero.txt", "symafero.txt")
-	testLstat(overlayFsMemOnly, pathFileMem, "")
-	testLstat(basePathFsMem, "aferom.txt", "")
+	testLstat(overlayFsMemOnly, pathFileMem, FilePathSeparator)
+	testLstat(basePathFsMem, "aferom.txt", FilePathSeparator)
 	testLstat(roFs, pathFile, pathSymlink)
-	testLstat(roFsMem, pathFileMem, "")
+	testLstat(roFsMem, pathFileMem, FilePathSeparator)
 }
