@@ -16,9 +16,12 @@
 package afero
 
 import (
+	iofs "io/fs"
 	"os"
 	"path/filepath"
 	"sort"
+
+	"github.com/spf13/afero/internal/common"
 )
 
 // readDirNames reads the directory named by dirname and returns
@@ -103,4 +106,108 @@ func Walk(fs Fs, root string, walkFn filepath.WalkFunc) error {
 		return walkFn(root, nil, err)
 	}
 	return walk(fs, root, info, walkFn)
+}
+
+// readDirEntries reads the directory named by dirname and returns
+// a sorted list of directory entries.
+func readDirEntries(fs Fs, dirname string) ([]iofs.DirEntry, error) {
+	f, err := fs.Open(dirname)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var entries []iofs.DirEntry
+
+	if rdf, ok := f.(iofs.ReadDirFile); ok {
+		entries, err = rdf.ReadDir(-1)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		var infos []os.FileInfo
+
+		infos, err = f.Readdir(-1)
+		if err != nil {
+			return nil, err
+		}
+
+		entries = make([]iofs.DirEntry, len(infos))
+
+		for i, info := range infos {
+			entries[i] = common.FileInfoDirEntry{FileInfo: info}
+		}
+	}
+
+	sort.Slice(entries, func(i, j int) bool { return entries[i].Name() < entries[j].Name() })
+
+	return entries, nil
+}
+
+// walkDir recursively descends path, calling walkDirFn.
+// adapted from https://go.dev/src/path/filepath/path.go
+func walkDir(fs Fs, path string, d iofs.DirEntry, walkDirFn iofs.WalkDirFunc) error {
+	if err := walkDirFn(path, d, nil); err != nil || !d.IsDir() {
+		if err == filepath.SkipDir && d.IsDir() {
+			err = nil
+		}
+
+		return err
+	}
+
+	entries, err := readDirEntries(fs, path)
+	if err != nil {
+		err = walkDirFn(path, d, err)
+		if err != nil {
+			if err == filepath.SkipDir && d.IsDir() {
+				err = nil
+			}
+
+			return err
+		}
+	}
+
+	for _, entry := range entries {
+		name := filepath.Join(path, entry.Name())
+		if err := walkDir(fs, name, entry, walkDirFn); err != nil {
+			if err == filepath.SkipDir {
+				break
+			}
+
+			return err
+		}
+	}
+	return nil
+}
+
+// WalkDir walks the file tree rooted at root, calling fn for each file or
+// directory in the tree, including root. The fn callback receives an fs.DirEntry
+// instead of os.FileInfo, which can be more efficient since it does not require
+// a stat call for every visited file.
+//
+// All errors that arise visiting files and directories are filtered by fn:
+// see the fs.WalkDirFunc documentation for details.
+//
+// The files are walked in lexical order, which makes the output deterministic
+// but means that for very large directories WalkDir can be inefficient.
+// WalkDir does not follow symbolic links.
+func (a Afero) WalkDir(root string, fn iofs.WalkDirFunc) error {
+	return WalkDir(a.Fs, root, fn)
+}
+
+// WalkDir walks the file tree rooted at root, calling fn for each file or
+// directory in the tree, including root. See (Afero).WalkDir for details.
+func WalkDir(fs Fs, root string, fn iofs.WalkDirFunc) error {
+	info, err := lstatIfPossible(fs, root)
+	if err != nil {
+		err = fn(root, nil, err)
+	} else {
+		err = walkDir(fs, root, common.FileInfoDirEntry{FileInfo: info}, fn)
+	}
+
+	if err == filepath.SkipDir || err == filepath.SkipAll {
+		return nil
+	}
+
+	return err
 }
