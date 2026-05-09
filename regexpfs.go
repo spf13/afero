@@ -154,6 +154,10 @@ func (r *RegexpFs) Create(name string) (File, error) {
 	return r.source.Create(name)
 }
 
+func (r *RegexpFs) ParentFS() Fs {
+	return r.source
+}
+
 func (f *RegexpFile) Close() error {
 	return f.f.Close()
 }
