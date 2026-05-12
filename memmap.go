@@ -167,11 +167,22 @@ func (m *MemMapFs) Mkdir(name string, perm os.FileMode) error {
 	}
 
 	m.mu.Lock()
-	// Dobule check that it doesn't exist.
+	// Double check that it doesn't exist.
 	if _, ok := m.getData()[name]; ok {
 		m.mu.Unlock()
 		return &os.PathError{Op: "mkdir", Path: name, Err: ErrFileExists}
 	}
+
+	// The parent directory must already exist, matching os.Mkdir behavior.
+	// The root directory is implicitly always present, so only check non-root parents.
+	pdir := filepath.Dir(name)
+	if pdir != name && pdir != "/" && pdir != "." {
+		if _, ok := m.getData()[pdir]; !ok {
+			m.mu.Unlock()
+			return &os.PathError{Op: "mkdir", Path: name, Err: os.ErrNotExist}
+		}
+	}
+
 	item := mem.CreateDir(name)
 	mem.SetMode(item, os.ModeDir|perm)
 	m.getData()[name] = item
@@ -182,9 +193,31 @@ func (m *MemMapFs) Mkdir(name string, perm os.FileMode) error {
 }
 
 func (m *MemMapFs) MkdirAll(path string, perm os.FileMode) error {
+	path = normalizePath(path)
+
+	m.mu.RLock()
+	existing, exists := m.getData()[path]
+	m.mu.RUnlock()
+	if exists {
+		fi := mem.FileInfo{FileData: existing}
+		if fi.IsDir() {
+			return nil
+		}
+		return &os.PathError{Op: "mkdir", Path: path, Err: ErrFileExists}
+	}
+
+	// Recursively ensure parent exists before creating the leaf directory.
+	parent := filepath.Dir(path)
+	if parent != path && parent != "/" && parent != "." {
+		if err := m.MkdirAll(parent, perm); err != nil {
+			return err
+		}
+	}
+
 	err := m.Mkdir(path, perm)
 	if err != nil {
-		if err.(*os.PathError).Err == ErrFileExists {
+		// Another goroutine may have created it concurrently; that's fine.
+		if pathErr, ok := err.(*os.PathError); ok && pathErr.Err == ErrFileExists {
 			return nil
 		}
 		return err

@@ -67,6 +67,10 @@ func TestPathErrors(t *testing.T) {
 
 	// fs.Create doesn't return an error
 
+	// Create parent directories first so Mkdir of the leaf can succeed.
+	if err = fs.MkdirAll(filepath.Dir(path2), perm); err != nil {
+		t.Fatalf("MkdirAll for Mkdir parent: %v", err)
+	}
 	err = fs.Mkdir(path2, perm)
 	if err != nil {
 		t.Error(err)
@@ -632,6 +636,44 @@ func TestMemFsChmod(t *testing.T) {
 }
 
 // can't use Mkdir to get around which permissions we're allowed to set
+// Mkdir should return an error when the parent directory does not exist,
+// matching the behavior of os.Mkdir. See issue #149.
+func TestMemFsMkdirRequiresParent(t *testing.T) {
+	t.Parallel()
+
+	fs := NewMemMapFs()
+
+	// Creating a deep path without any parents should fail.
+	err := fs.Mkdir("/a/b/c", 0o755)
+	if err == nil {
+		t.Fatal("expected error when parent /a/b does not exist, got nil")
+	}
+
+	// Creating a top-level directory (parent is root) should succeed.
+	if err = fs.Mkdir("/a", 0o755); err != nil {
+		t.Fatalf("Mkdir /a: %v", err)
+	}
+
+	// Creating a child once its parent exists should succeed.
+	if err = fs.Mkdir("/a/b", 0o755); err != nil {
+		t.Fatalf("Mkdir /a/b: %v", err)
+	}
+
+	// MkdirAll must still create the full hierarchy.
+	if err = fs.MkdirAll("/x/y/z", 0o755); err != nil {
+		t.Fatalf("MkdirAll /x/y/z: %v", err)
+	}
+	for _, p := range []string{"/x", "/x/y", "/x/y/z"} {
+		info, err := fs.Stat(p)
+		if err != nil {
+			t.Fatalf("Stat %s: %v", p, err)
+		}
+		if !info.IsDir() {
+			t.Fatalf("%s should be a directory", p)
+		}
+	}
+}
+
 func TestMemFsMkdirModeIllegal(t *testing.T) {
 	t.Parallel()
 

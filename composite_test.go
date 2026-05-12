@@ -447,7 +447,7 @@ func TestUnionFileReaddirDuplicateEmpty(t *testing.T) {
 
 	// Overlay shares same empty directory as base
 	overlay := NewMemMapFs()
-	err = overlay.Mkdir(dir, 0o700)
+	err = overlay.MkdirAll(dir, 0o700)
 	if err != nil {
 		t.Fatal(err)
 	}

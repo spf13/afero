@@ -226,6 +226,12 @@ func TempDir(fs Fs, dir, prefix string) (name string, err error) {
 		dir = os.TempDir()
 	}
 
+	// Ensure the base directory exists (important for in-memory filesystems
+	// where the path may not have been created yet).
+	if err = fs.MkdirAll(dir, 0o700); err != nil {
+		return
+	}
+
 	nconflict := 0
 	for i := 0; i < 10000; i++ {
 		try := filepath.Join(dir, prefix+nextRandom())
