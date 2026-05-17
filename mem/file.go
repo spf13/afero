@@ -30,7 +30,10 @@ import (
 
 const FilePathSeparator = string(filepath.Separator)
 
-var _ fs.ReadDirFile = &File{}
+var (
+	_ fs.ReadDirFile = &File{}
+	_ io.ReaderFrom  = (*File)(nil)
+)
 
 type File struct {
 	// atomic requires 64-bit alignment for struct field access
@@ -327,6 +330,48 @@ func (f *File) Write(b []byte) (n int, err error) {
 
 func (f *File) WriteString(s string) (ret int, err error) {
 	return f.Write([]byte(s))
+}
+
+// ReadFrom implements io.ReaderFrom.
+func (f *File) ReadFrom(r io.Reader) (n int64, err error) {
+	if f.closed {
+		return 0, ErrFileClosed
+	}
+	if f.readOnly {
+		return 0, &os.PathError{
+			Op:   "write",
+			Path: f.fileData.name,
+			Err:  errors.New("file handle is read only"),
+		}
+	}
+	off := atomic.LoadInt64(&f.at)
+	n, err = readAtWriter(f, off, r)
+	atomic.StoreInt64(&f.at, off+n)
+	return n, err
+}
+
+func readAtWriter(w io.WriterAt, off int64, r io.Reader) (int64, error) {
+	buf := make([]byte, 32*1024)
+	var total int64
+	for {
+		nr, er := r.Read(buf)
+		if nr > 0 {
+			nw, ew := w.WriteAt(buf[:nr], off+total)
+			total += int64(nw)
+			if ew != nil {
+				return total, ew
+			}
+			if nw < nr {
+				return total, io.ErrShortWrite
+			}
+		}
+		if er != nil {
+			if er == io.EOF {
+				return total, nil
+			}
+			return total, er
+		}
+	}
 }
 
 func (f *File) Info() *FileInfo {
