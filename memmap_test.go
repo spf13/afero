@@ -13,6 +13,26 @@ import (
 	"time"
 )
 
+func TestMemMapFsStatEmpty(t *testing.T) {
+	fs := NewMemMapFs()
+
+	_, err := fs.Stat("")
+	if err == nil {
+		t.Fatal("expected error for empty path")
+	}
+
+	pathErr, ok := err.(*os.PathError)
+	if !ok {
+		t.Fatalf("expected *os.PathError, got %T", err)
+	}
+	if pathErr.Op != "stat" {
+		t.Fatalf("expected op stat, got %q", pathErr.Op)
+	}
+	if pathErr.Err != os.ErrNotExist {
+		t.Fatalf("expected ErrNotExist, got %v", pathErr.Err)
+	}
+}
+
 func TestNormalizePath(t *testing.T) {
 	type test struct {
 		input    string
