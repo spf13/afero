@@ -35,9 +35,49 @@ type BasePathFile struct {
 	path string
 }
 
+func basePathRelName(basePath, sourceName string) string {
+	basePath = filepath.Clean(basePath)
+	sourceName = filepath.Clean(sourceName)
+
+	if rel, err := filepath.Rel(basePath, sourceName); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		if strings.HasPrefix(basePath, string(filepath.Separator)) {
+			if rel == "." {
+				return string(filepath.Separator)
+			}
+			if strings.HasPrefix(rel, string(filepath.Separator)) {
+				return rel
+			}
+			return string(filepath.Separator) + rel
+		}
+		return rel
+	}
+
+	prefixes := []string{
+		basePath + string(filepath.Separator),
+		string(filepath.Separator) + basePath + string(filepath.Separator),
+	}
+	for _, prefix := range prefixes {
+		if after, ok := strings.CutPrefix(sourceName, prefix); ok {
+			if strings.HasPrefix(basePath, string(filepath.Separator)) && !strings.HasPrefix(after, string(filepath.Separator)) {
+				return string(filepath.Separator) + after
+			}
+			return after
+		}
+	}
+
+	trimmed := strings.TrimPrefix(sourceName, basePath)
+	if trimmed != sourceName {
+		if len(trimmed) > 0 && trimmed[0] == filepath.Separator && !strings.HasPrefix(basePath, string(filepath.Separator)) {
+			return trimmed[1:]
+		}
+		return trimmed
+	}
+
+	return sourceName
+}
+
 func (f *BasePathFile) Name() string {
-	sourcename := f.File.Name()
-	return strings.TrimPrefix(sourcename, filepath.Clean(f.path))
+	return basePathRelName(f.path, f.File.Name())
 }
 
 func (f *BasePathFile) ReadDir(n int) ([]fs.DirEntry, error) {
