@@ -402,8 +402,14 @@ func (m *MemMapFs) LstatIfPossible(name string) (os.FileInfo, bool, error) {
 }
 
 func (m *MemMapFs) Stat(name string) (os.FileInfo, error) {
+	if name == "" {
+		return nil, &os.PathError{Op: "stat", Path: name, Err: ErrFileNotFound}
+	}
 	f, err := m.open(name)
 	if err != nil {
+		if pe, ok := err.(*os.PathError); ok {
+			return nil, &os.PathError{Op: "stat", Path: pe.Path, Err: pe.Err}
+		}
 		return nil, err
 	}
 	fi := mem.GetFileInfo(f)

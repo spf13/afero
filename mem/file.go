@@ -340,9 +340,9 @@ type FileInfo struct {
 // Implements os.FileInfo
 func (s *FileInfo) Name() string {
 	s.Lock()
-	_, name := filepath.Split(s.name)
+	name := s.name
 	s.Unlock()
-	return name
+	return filepath.Base(name)
 }
 
 func (s *FileInfo) Mode() os.FileMode {
