@@ -140,7 +140,7 @@ func (m *MemMapFs) registerWithParent(f *mem.FileData, perm os.FileMode) {
 func (m *MemMapFs) lockfreeMkdir(name string, perm os.FileMode) error {
 	name = normalizePath(name)
 	x, ok := m.getData()[name]
-	if ok {
+	if ok && x != nil {
 		// Only return ErrFileExists if it's a file, not a directory.
 		i := mem.FileInfo{FileData: x}
 		if !i.IsDir() {
@@ -243,7 +243,7 @@ func (m *MemMapFs) open(name string) (*mem.FileData, error) {
 	m.mu.RLock()
 	f, ok := m.getData()[name]
 	m.mu.RUnlock()
-	if !ok {
+	if !ok || f == nil {
 		return nil, &os.PathError{Op: "open", Path: name, Err: ErrFileNotFound}
 	}
 	return f, nil
@@ -252,11 +252,10 @@ func (m *MemMapFs) open(name string) (*mem.FileData, error) {
 func (m *MemMapFs) lockfreeOpen(name string) (*mem.FileData, error) {
 	name = normalizePath(name)
 	f, ok := m.getData()[name]
-	if ok {
+	if ok && f != nil {
 		return f, nil
-	} else {
-		return nil, ErrFileNotFound
 	}
+	return nil, ErrFileNotFound
 }
 
 func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
@@ -417,7 +416,7 @@ func (m *MemMapFs) Chmod(name string, mode os.FileMode) error {
 	m.mu.RLock()
 	f, ok := m.getData()[name]
 	m.mu.RUnlock()
-	if !ok {
+	if !ok || f == nil {
 		return &os.PathError{Op: "chmod", Path: name, Err: ErrFileNotFound}
 	}
 	prevOtherBits := mem.GetFileInfo(f).Mode() & ^chmodBits
@@ -432,7 +431,7 @@ func (m *MemMapFs) setFileMode(name string, mode os.FileMode) error {
 	m.mu.RLock()
 	f, ok := m.getData()[name]
 	m.mu.RUnlock()
-	if !ok {
+	if !ok || f == nil {
 		return &os.PathError{Op: "chmod", Path: name, Err: ErrFileNotFound}
 	}
 
@@ -449,7 +448,7 @@ func (m *MemMapFs) Chown(name string, uid, gid int) error {
 	m.mu.RLock()
 	f, ok := m.getData()[name]
 	m.mu.RUnlock()
-	if !ok {
+	if !ok || f == nil {
 		return &os.PathError{Op: "chown", Path: name, Err: ErrFileNotFound}
 	}
 
@@ -465,7 +464,7 @@ func (m *MemMapFs) Chtimes(name string, atime time.Time, mtime time.Time) error 
 	m.mu.RLock()
 	f, ok := m.getData()[name]
 	m.mu.RUnlock()
-	if !ok {
+	if !ok || f == nil {
 		return &os.PathError{Op: "chtimes", Path: name, Err: ErrFileNotFound}
 	}
 

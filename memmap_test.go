@@ -1125,3 +1125,24 @@ func TestMemMapFsPermissionChecks(t *testing.T) {
 		t.Fatalf("expected permission error, got: %v", err)
 	}
 }
+
+func TestMemMapFsNilFileDataEntry(t *testing.T) {
+	fs := NewMemMapFs().(*MemMapFs)
+	fs.getData()["/nil-entry"] = nil
+
+	_, err := fs.Open("/nil-entry")
+	if err == nil {
+		t.Fatal("expected error opening nil FileData map entry")
+	}
+	if !os.IsNotExist(err) {
+		t.Fatalf("expected not exist error, got: %v", err)
+	}
+
+	_, err = fs.Stat("/nil-entry")
+	if err == nil {
+		t.Fatal("expected error stating nil FileData map entry")
+	}
+	if !os.IsNotExist(err) {
+		t.Fatalf("expected not exist error, got: %v", err)
+	}
+}
