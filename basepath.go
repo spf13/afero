@@ -62,6 +62,10 @@ func (f *BasePathFile) ReadFrom(r io.Reader) (int64, error) {
 }
 
 func NewBasePathFs(source Fs, path string) Fs {
+// Check if BasePathFs implements Fs
+var _ Fs = &BasePathFs{}
+
+func NewBasePathFs(source Fs, path string) *BasePathFs {
 	return &BasePathFs{source: source, path: path}
 }
 

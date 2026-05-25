@@ -16,7 +16,10 @@ type RegexpFs struct {
 	source Fs
 }
 
-func NewRegexpFs(source Fs, re *regexp.Regexp) Fs {
+// Check if RegexpFs implements Fs
+var _ Fs = &RegexpFs{}
+
+func NewRegexpFs(source Fs, re *regexp.Regexp) *RegexpFs {
 	return &RegexpFs{source: source, re: re}
 }
 

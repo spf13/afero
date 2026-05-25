@@ -49,6 +49,9 @@ type HttpFs struct {
 	source Fs
 }
 
+// Check if HttpFs implements http.FileSystem
+var _ http.FileSystem = &HttpFs{}
+
 func NewHttpFs(source Fs) *HttpFs {
 	return &HttpFs{source: source}
 }

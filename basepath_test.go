@@ -92,6 +92,7 @@ func TestRealPath(t *testing.T) {
 			input: "file.txt",
 			want:  "/var/data/file.txt",
 		},
+	bp := NewBasePathFs(fs, baseDir)
 
 		// 3. Base Path is "."
 		{

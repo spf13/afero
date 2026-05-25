@@ -27,8 +27,11 @@ var _ Lstater = (*OsFs)(nil)
 // (http://golang.org/pkg/os/).
 type OsFs struct{}
 
-func NewOsFs() Fs {
-	return &OsFs{}
+// Check if OsFs implements Fs
+var _ Fs = OsFs{}
+
+func NewOsFs() OsFs {
+	return OsFs{}
 }
 
 func (OsFs) Name() string { return "OsFs" }
