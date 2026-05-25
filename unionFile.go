@@ -274,7 +274,7 @@ func (f *UnionFile) WriteString(s string) (n int, err error) {
 	return 0, BADFD
 }
 
-func copyFile(base Fs, layer Fs, name string, bfh File) error {
+func copyFile(layer Fs, name string, bfh File) error {
 	// First make sure the directory exists
 	exists, err := Exists(layer, filepath.Dir(name))
 	if err != nil {
@@ -323,7 +323,7 @@ func copyToLayer(base Fs, layer Fs, name string) error {
 	}
 	defer bfh.Close()
 
-	return copyFile(base, layer, name, bfh)
+	return copyFile(layer, name, bfh)
 }
 
 func copyFileToLayer(base Fs, layer Fs, name string, flag int, perm os.FileMode) error {
@@ -333,5 +333,5 @@ func copyFileToLayer(base Fs, layer Fs, name string, flag int, perm os.FileMode)
 	}
 	defer bfh.Close()
 
-	return copyFile(base, layer, name, bfh)
+	return copyFile(layer, name, bfh)
 }
