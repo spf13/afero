@@ -16,8 +16,11 @@
 package afero
 
 import (
+	"errors"
+	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 )
 
@@ -49,6 +52,23 @@ func TestReadFile(t *testing.T) {
 	}
 
 	checkSizePath(t, filename, int64(len(contents)))
+}
+
+func TestReadFileDirectoryMemMapFs(t *testing.T) {
+	fs := NewMemMapFs()
+	if err := fs.Mkdir("/dir", 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := ReadFile(fs, "/dir")
+	if err == nil {
+		t.Fatal("expected error reading directory")
+	}
+
+	var pe *os.PathError
+	if !errors.As(err, &pe) || !errors.Is(pe.Err, syscall.EISDIR) {
+		t.Fatalf("expected EISDIR PathError, got %v", err)
+	}
 }
 
 func TestWriteFile(t *testing.T) {
