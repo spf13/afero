@@ -269,6 +269,31 @@ func TestFileReadAtSeekOffset(t *testing.T) {
 	}
 }
 
+func TestFileReadFrom(t *testing.T) {
+	fd := CreateFile("readfrom.txt")
+	f := NewFileHandle(fd)
+
+	rf, ok := any(f).(io.ReaderFrom)
+	if !ok {
+		t.Fatal("mem.File should implement io.ReaderFrom")
+	}
+
+	payload := []byte("payload")
+	n, err := rf.ReadFrom(bytes.NewReader(payload))
+	if err != nil {
+		t.Fatalf("ReadFrom: %v", err)
+	}
+	if n != int64(len(payload)) {
+		t.Fatalf("ReadFrom bytes: got %d want %d", n, len(payload))
+	}
+	if got := string(fd.data); got != "payload" {
+		t.Fatalf("file data: got %q want %q", got, "payload")
+	}
+	if at, _ := f.Seek(0, io.SeekCurrent); at != int64(len(payload)) {
+		t.Fatalf("offset after ReadFrom: got %d want %d", at, len(payload))
+	}
+}
+
 func TestFileWriteAndSeek(t *testing.T) {
 	fd := CreateFile("foo")
 	f := NewFileHandle(fd)
