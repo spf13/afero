@@ -26,6 +26,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"syscall"
 	"time"
 )
 
@@ -108,4 +109,7 @@ var (
 	ErrFileNotFound      = os.ErrNotExist
 	ErrFileExists        = os.ErrExist
 	ErrDestinationExists = os.ErrExist
+	ErrPermission        = os.ErrPermission
+	ErrDeadlineExceeded  = os.ErrDeadlineExceeded
+	ErrNotDir            = syscall.ENOTDIR
 )
