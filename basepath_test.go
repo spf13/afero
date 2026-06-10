@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -305,5 +306,28 @@ func TestBasePathTempFile(t *testing.T) {
 	defer tempFile.Close()
 	if expected, actual := tDir, filepath.Dir(tempFile.Name()); expected != actual {
 		t.Fatalf("TempFile realpath leaked: expected %s, got %s", expected, actual)
+	}
+}
+
+func TestNestedBasePathTempFileName(t *testing.T) {
+	base := NewMemMapFs()
+	if err := base.MkdirAll("/files/123", 0o755); err != nil {
+		t.Fatal(err)
+	}
+	fs1 := NewBasePathFs(base, "files")
+	fs2 := NewBasePathFs(fs1, "123")
+
+	tmp, err := TempFile(fs2, ".", "afero-test-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tmp.Close()
+
+	name := tmp.Name()
+	if strings.HasPrefix(name, "/") {
+		t.Fatalf("Name() leaked base path prefix, got %q", name)
+	}
+	if err := fs2.Chmod(name, 0o644); err != nil {
+		t.Fatalf("Chmod(%q) failed: %v", name, err)
 	}
 }
