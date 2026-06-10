@@ -1125,3 +1125,21 @@ func TestMemMapFsPermissionChecks(t *testing.T) {
 		t.Fatalf("expected permission error, got: %v", err)
 	}
 }
+
+func TestMemMapFsCaseInsensitiveLookup(t *testing.T) {
+	fs := NewMemMapFs()
+	if _, err := fs.Create("/CaseTest.txt"); err != nil {
+		t.Fatal(err)
+	}
+
+	if runtime.GOOS == "windows" {
+		if _, err := fs.Stat("/casetest.txt"); err != nil {
+			t.Fatalf("expected case-insensitive Stat on Windows, got: %v", err)
+		}
+		return
+	}
+
+	if _, err := fs.Stat("/casetest.txt"); err == nil {
+		t.Fatal("expected case-sensitive Stat on non-Windows")
+	}
+}

@@ -19,6 +19,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -49,6 +50,26 @@ func (m *MemMapFs) getData() map[string]*mem.FileData {
 		m.data[FilePathSeparator] = root
 	})
 	return m.data
+}
+
+func memMapCaseInsensitive() bool {
+	return runtime.GOOS == "windows"
+}
+
+func (m *MemMapFs) lookup(name string) (*mem.FileData, bool) {
+	name = normalizePath(name)
+	if f, ok := m.getData()[name]; ok {
+		return f, true
+	}
+	if !memMapCaseInsensitive() {
+		return nil, false
+	}
+	for k, f := range m.getData() {
+		if strings.EqualFold(k, name) {
+			return f, true
+		}
+	}
+	return nil, false
 }
 
 func (*MemMapFs) Name() string { return "MemMapFS" }
@@ -238,10 +259,8 @@ func (m *MemMapFs) openWrite(name string) (File, error) {
 }
 
 func (m *MemMapFs) open(name string) (*mem.FileData, error) {
-	name = normalizePath(name)
-
 	m.mu.RLock()
-	f, ok := m.getData()[name]
+	f, ok := m.lookup(name)
 	m.mu.RUnlock()
 	if !ok {
 		return nil, &os.PathError{Op: "open", Path: name, Err: ErrFileNotFound}
@@ -250,13 +269,11 @@ func (m *MemMapFs) open(name string) (*mem.FileData, error) {
 }
 
 func (m *MemMapFs) lockfreeOpen(name string) (*mem.FileData, error) {
-	name = normalizePath(name)
-	f, ok := m.getData()[name]
+	f, ok := m.lookup(name)
 	if ok {
 		return f, nil
-	} else {
-		return nil, ErrFileNotFound
 	}
+	return nil, ErrFileNotFound
 }
 
 func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
