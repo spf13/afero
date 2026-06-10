@@ -479,7 +479,7 @@ Afero is released under the Apache 2.0 license. See [LICENSE.txt](https://github
 - [📖 Full API Documentation](https://pkg.go.dev/github.com/spf13/afero)
 - [🎯 Examples Repository](https://github.com/spf13/afero/tree/master/examples)
 - [📋 Release Notes](https://github.com/spf13/afero/releases)
-- [❓ GitHub Discussions](https://github.com/spf13/afero/discussions)
+- [❓ GitHub Issues](https://github.com/spf13/afero/issues)
 
 ---
 
