@@ -135,6 +135,25 @@ func TestOpenFileExcl(t *testing.T) {
 	checkPathError(t, err, "Open")
 }
 
+func TestOpenFileExclWithoutCreate(t *testing.T) {
+	const fileName = "/myFileTestExclReopen"
+	const fileMode = os.FileMode(0o644)
+
+	fs := NewMemMapFs()
+
+	f, err := fs.OpenFile(fileName, os.O_CREATE|os.O_RDWR|os.O_EXCL, fileMode)
+	if err != nil {
+		t.Fatalf("OpenFile create with O_EXCL failed: %s", err)
+	}
+	f.Close()
+
+	f, err = fs.OpenFile(fileName, os.O_RDWR|os.O_EXCL, fileMode)
+	if err != nil {
+		t.Fatalf("OpenFile reopen with O_EXCL (no O_CREATE) failed: %s", err)
+	}
+	f.Close()
+}
+
 // Ensure Permissions are set on OpenFile/Mkdir/MkdirAll
 func TestPermSet(t *testing.T) {
 	const fileName = "/myFileTest"
