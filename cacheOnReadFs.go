@@ -313,3 +313,7 @@ func (u *CacheOnReadFs) Create(name string) (File, error) {
 	}
 	return &UnionFile{Base: bfh, Layer: lfh}, nil
 }
+
+func (u *CacheOnReadFs) ParentFS() Fs {
+	return u.base
+}
