@@ -489,3 +489,14 @@ func TestFullBaseFsPath(t *testing.T) {
 		}
 	}
 }
+
+func TestReadFileOnDirectory(t *testing.T) {
+	fs := NewMemMapFs()
+	if err := fs.Mkdir("/testdir", 0o755); err != nil {
+		t.Fatal(err)
+	}
+	_, err := ReadFile(fs, "/testdir")
+	if err == nil {
+		t.Fatal("ReadFile on a directory should return an error, got nil")
+	}
+}
