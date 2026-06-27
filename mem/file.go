@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/spf13/afero/internal/common"
@@ -218,6 +219,13 @@ func (f *File) ReadAt(b []byte, off int64) (n int, err error) {
 	defer f.fileData.Unlock()
 	if f.closed {
 		return 0, ErrFileClosed
+	}
+	if f.fileData.dir {
+		// Match the real os.File behavior of returning an error when
+		// reading a directory as a file, instead of silently behaving
+		// like an empty file (which an in-memory directory's empty
+		// data buffer would otherwise look like).
+		return 0, &os.PathError{Op: "read", Path: f.fileData.name, Err: syscall.EISDIR}
 	}
 	if len(b) > 0 && int(off) == len(f.fileData.data) {
 		return 0, io.EOF
