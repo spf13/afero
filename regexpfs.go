@@ -1,11 +1,17 @@
 package afero
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 	"syscall"
 	"time"
+)
+
+var (
+	_ io.WriterTo   = (*RegexpFile)(nil)
+	_ io.ReaderFrom = (*RegexpFile)(nil)
 )
 
 // The RegexpFs filters files (not directories) by regular expression. Only
@@ -160,6 +166,20 @@ func (f *RegexpFile) Close() error {
 
 func (f *RegexpFile) Read(s []byte) (int, error) {
 	return f.f.Read(s)
+}
+
+func (f *RegexpFile) WriteTo(w io.Writer) (int64, error) {
+	if wt, ok := f.f.(io.WriterTo); ok {
+		return wt.WriteTo(w)
+	}
+	return io.Copy(w, f.f)
+}
+
+func (f *RegexpFile) ReadFrom(r io.Reader) (int64, error) {
+	if rf, ok := f.f.(io.ReaderFrom); ok {
+		return rf.ReadFrom(r)
+	}
+	return io.Copy(f.f, r)
 }
 
 func (f *RegexpFile) ReadAt(s []byte, o int64) (int, error) {
