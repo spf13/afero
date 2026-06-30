@@ -26,6 +26,8 @@ import (
 	"syscall"
 	"time"
 
+	"google.golang.org/api/googleapi"
+
 	"github.com/spf13/afero/gcsfs/internal/stiface"
 )
 
@@ -275,6 +277,10 @@ func (fs *Fs) OpenFile(name string, flag int, fileMode os.FileMode) (*GcsFile, e
 	if flag&os.O_TRUNC != 0 {
 		err = file.resource.obj.Delete(fs.ctx)
 		if err != nil {
+			var apiErr *googleapi.Error
+			if errors.As(err, &apiErr) && apiErr.Code == 404 {
+				return fs.Create(name)
+			}
 			return nil, err
 		}
 		return fs.Create(name)
