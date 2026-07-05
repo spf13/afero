@@ -1,12 +1,15 @@
 package afero
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"regexp"
 	"syscall"
 	"time"
 )
+
+var _ syscall.Conn = (*RegexpFile)(nil)
 
 // The RegexpFs filters files (not directories) by regular expression. Only
 // files matching the given regexp will be allowed, all others get a ENOENT error (
@@ -221,4 +224,11 @@ func (f *RegexpFile) Truncate(s int64) error {
 
 func (f *RegexpFile) WriteString(s string) (int, error) {
 	return f.f.WriteString(s)
+}
+
+func (f *RegexpFile) SyscallConn() (syscall.RawConn, error) {
+	if sc, ok := f.f.(syscall.Conn); ok {
+		return sc.SyscallConn()
+	}
+	return nil, errors.New("afero: underlying file does not implement syscall.Conn")
 }

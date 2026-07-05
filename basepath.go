@@ -1,12 +1,14 @@
 package afero
 
 import (
+	"errors"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -15,6 +17,7 @@ var (
 	_ fs.ReadDirFile = (*BasePathFile)(nil)
 	_ io.WriterTo    = (*BasePathFile)(nil)
 	_ io.ReaderFrom  = (*BasePathFile)(nil)
+	_ syscall.Conn   = (*BasePathFile)(nil)
 )
 
 // The BasePathFs restricts all operations to a given path within an Fs.
@@ -59,6 +62,13 @@ func (f *BasePathFile) ReadFrom(r io.Reader) (int64, error) {
 		return rf.ReadFrom(r)
 	}
 	return io.Copy(f.File, r)
+}
+
+func (f *BasePathFile) SyscallConn() (syscall.RawConn, error) {
+	if sc, ok := f.File.(syscall.Conn); ok {
+		return sc.SyscallConn()
+	}
+	return nil, errors.New("afero: underlying file does not implement syscall.Conn")
 }
 
 func NewBasePathFs(source Fs, path string) Fs {
