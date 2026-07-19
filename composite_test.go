@@ -515,3 +515,92 @@ func TestUnionFileReaddirAskForTooMany(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// faultyOpenBaseFs is a base Fs whose Open returns a non-nil but unusable File
+// together with an error, simulating a filesystem that hands back a bad handle.
+// It embeds MemMapFs so cacheStatus/Stat behave normally.
+type faultyOpenBaseFs struct {
+	MemMapFs
+}
+
+// invalidReaddirFile is a File whose Readdir panics, standing in for the
+// unusable handle a faulty Open may return.
+type invalidReaddirFile struct {
+	File
+}
+
+func (invalidReaddirFile) Readdir(int) ([]os.FileInfo, error) {
+	panic("Readdir called on an invalid base file handle")
+}
+
+func (f *faultyOpenBaseFs) Open(name string) (File, error) {
+	return invalidReaddirFile{}, os.ErrPermission
+}
+
+// #116: CacheOnReadFs.Open discarded the error from base.Open and wrapped the
+// (possibly non-nil but invalid) base handle in a UnionFile, which panics or
+// silently corrupts on use. Opening a directory that exists in the layer while
+// the base Open fails must not wrap the bad handle.
+func TestCacheOnReadFsOpenFaultyBaseDir(t *testing.T) {
+	layer := NewMemMapFs()
+	if err := layer.MkdirAll("/dir", 0o777); err != nil {
+		t.Fatal(err)
+	}
+	fh, err := layer.Create("/dir/a.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fh.Close()
+
+	ufs := NewCacheOnReadFs(&faultyOpenBaseFs{}, layer, 0)
+
+	f, err := ufs.Open("/dir")
+	if err != nil {
+		t.Fatalf("Open of a layer-readable dir should succeed, got error: %v", err)
+	}
+	uf, ok := f.(*UnionFile)
+	if !ok {
+		t.Fatalf("expected *UnionFile, got %T", f)
+	}
+	if uf.Base != nil {
+		t.Fatal("failed base handle wrapped in UnionFile.Base; would panic on use (#116)")
+	}
+
+	// Must not panic and must return the layer's entries.
+	names, err := f.Readdirnames(-1)
+	if err != nil {
+		t.Fatalf("Readdirnames failed: %v", err)
+	}
+	if len(names) != 1 || names[0] != "a.txt" {
+		t.Fatalf("expected [a.txt] from the layer, got %v", names)
+	}
+}
+
+// #116 (non-regression): a directory that exists only in the layer must still
+// open as a UnionFile backed solely by the layer — the fix must not turn a
+// missing base into a hard error.
+func TestCacheOnReadFsOpenLayerOnlyDir(t *testing.T) {
+	base := NewMemMapFs()
+	layer := NewMemMapFs()
+	if err := layer.MkdirAll("/onlylayer", 0o777); err != nil {
+		t.Fatal(err)
+	}
+	fh, err := layer.Create("/onlylayer/a.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fh.Close()
+
+	ufs := NewCacheOnReadFs(base, layer, 0)
+	f, err := ufs.Open("/onlylayer")
+	if err != nil {
+		t.Fatalf("Open of layer-only dir should succeed, got: %v", err)
+	}
+	names, err := f.Readdirnames(-1)
+	if err != nil {
+		t.Fatalf("Readdirnames failed: %v", err)
+	}
+	if len(names) != 1 || names[0] != "a.txt" {
+		t.Fatalf("expected [a.txt], got %v", names)
+	}
+}

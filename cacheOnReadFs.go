@@ -271,10 +271,22 @@ func (u *CacheOnReadFs) Open(name string) (File, error) {
 		}
 	}
 	// the dirs from cacheHit, cacheStale fall down here:
-	bfile, _ := u.base.Open(name)
-	lfile, err := u.layer.Open(name)
-	if err != nil && bfile == nil {
-		return nil, err
+	bfile, bErr := u.base.Open(name)
+	lfile, lErr := u.layer.Open(name)
+
+	// A failed Open may still hand back a non-nil but unusable File; never
+	// wrap such a handle in the UnionFile, as it panics on use (see #116).
+	if bErr != nil {
+		bfile = nil
+	}
+	if lErr != nil {
+		lfile = nil
+	}
+
+	// If neither the base nor the layer yielded a usable file, surface the
+	// error instead of returning a broken UnionFile.
+	if bfile == nil && lfile == nil {
+		return nil, lErr
 	}
 	return &UnionFile{Base: bfile, Layer: lfile}, nil
 }
