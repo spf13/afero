@@ -37,7 +37,34 @@ type BasePathFile struct {
 
 func (f *BasePathFile) Name() string {
 	sourcename := f.File.Name()
-	return strings.TrimPrefix(sourcename, filepath.Clean(f.path))
+	base := filepath.Clean(f.path)
+	if base == "." {
+		return sourcename
+	}
+	// Historical path: strip Clean(base) when it is an exact prefix.
+	if strings.HasPrefix(sourcename, base) {
+		if len(sourcename) == len(base) {
+			return string(filepath.Separator)
+		}
+		if sourcename[len(base)] == filepath.Separator || strings.HasSuffix(base, string(filepath.Separator)) {
+			return sourcename[len(base):]
+		}
+	}
+	// Nested BasePathFs often yields a leading separator in front of a
+	// relative base, e.g. base "123" and name "/123/file". filepath.Clean
+	// drops a trailing slash on the base, so TrimPrefix alone misses it.
+	if !filepath.IsAbs(base) {
+		sepBase := string(filepath.Separator) + base
+		if strings.HasPrefix(sourcename, sepBase) {
+			if len(sourcename) == len(sepBase) {
+				return string(filepath.Separator)
+			}
+			if sourcename[len(sepBase)] == filepath.Separator {
+				return sourcename[len(sepBase):]
+			}
+		}
+	}
+	return sourcename
 }
 
 func (f *BasePathFile) ReadDir(n int) ([]fs.DirEntry, error) {
