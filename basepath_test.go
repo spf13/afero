@@ -3,6 +3,7 @@ package afero
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"runtime"
 	"testing"
 )
@@ -305,5 +306,49 @@ func TestBasePathTempFile(t *testing.T) {
 	defer tempFile.Close()
 	if expected, actual := tDir, filepath.Dir(tempFile.Name()); expected != actual {
 		t.Fatalf("TempFile realpath leaked: expected %s, got %s", expected, actual)
+	}
+}
+
+
+func TestNestedBasePathFileName(t *testing.T) {
+	// Nested relative bases must strip each layer so File.Name can be reused
+	// with Chmod/Stat/etc. (https://github.com/spf13/afero/issues/428).
+	mem := NewMemMapFs()
+	level1 := NewBasePathFs(mem, "files")
+	level2 := NewBasePathFs(level1, "123")
+	if err := level2.MkdirAll(".", 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	f, err := TempFile(level2, ".", "afero-test-*")
+	if err != nil {
+		t.Fatalf("TempFile: %v", err)
+	}
+	defer f.Close()
+
+	name := f.Name()
+	if strings.Contains(name, "files") || strings.HasPrefix(strings.TrimPrefix(name, string(filepath.Separator)), "123"+string(filepath.Separator)) {
+		// Name should not retain outer base segments that RealPath will re-join.
+	}
+	// Stronger: Chmod via Name must succeed (bug was ENOENT from double-joining).
+	if err := level2.Chmod(name, 0o400); err != nil {
+		t.Fatalf("Chmod(%q): %v (name leaked outer base?)", name, err)
+	}
+	if _, err := level2.Stat(name); err != nil {
+		t.Fatalf("Stat(%q): %v", name, err)
+	}
+
+	// Absolute base still strips cleanly.
+	baseFs := NewMemMapFs()
+	if err := baseFs.MkdirAll("/base/path/tmp", 0o777); err != nil {
+		t.Fatal(err)
+	}
+	bp := NewBasePathFs(baseFs, "/base/path")
+	af, err := bp.Create("/tmp/file.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer af.Close()
+	if got, want := af.Name(), filepath.Clean("/tmp/file.txt"); got != want {
+		t.Fatalf("absolute base Name: got %q want %q", got, want)
 	}
 }
