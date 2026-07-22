@@ -25,7 +25,7 @@ import (
 
 var _ afero.Symlinker = (*Fs)(nil)
 
-// Fs is a afero.Fs implementation that uses functions provided by the sftp package.
+// Fs is an afero.Fs implementation that uses functions provided by the sftp package.
 //
 // For details in any method, check the documentation of the sftp package
 // (github.com/pkg/sftp).

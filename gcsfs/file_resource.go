@@ -33,8 +33,8 @@ const (
 
 // gcsFileResource represents a singleton version of each GCS object;
 // Google cloud storage allows users to open multiple writers(!) to the same
-// underlying resource, once the write is closed the written stream is commented. We are doing
-// some magic where we read and and write to the same file which requires synchronization
+// underlying resource, once the write is closed the written stream is committed. We are doing
+// some magic where we read and write to the same file which requires synchronization
 // of the underlying resource.
 
 type gcsFileResource struct {
