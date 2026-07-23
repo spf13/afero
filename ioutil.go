@@ -64,6 +64,9 @@ func (a Afero) ReadFile(filename string) ([]byte, error) {
 }
 
 func ReadFile(fs Fs, filename string) ([]byte, error) {
+	if filename == "" {
+		return nil, &os.PathError{Op: "read", Path: filename, Err: os.ErrInvalid}
+	}
 	f, err := fs.Open(filename)
 	if err != nil {
 		return nil, err
@@ -124,6 +127,9 @@ func (a Afero) WriteFile(filename string, data []byte, perm os.FileMode) error {
 }
 
 func WriteFile(fs Fs, filename string, data []byte, perm os.FileMode) error {
+	if filename == "" {
+		return &os.PathError{Op: "write", Path: filename, Err: os.ErrInvalid}
+	}
 	f, err := fs.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm)
 	if err != nil {
 		return err
