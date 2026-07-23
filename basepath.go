@@ -68,6 +68,9 @@ func NewBasePathFs(source Fs, path string) Fs {
 // on a file outside the base path it returns the given file name and an error,
 // else the given file with the base path prepended
 func (b *BasePathFs) RealPath(name string) (path string, err error) {
+	if b == nil {
+		return name, &os.PathError{Op: "realpath", Path: name, Err: os.ErrInvalid}
+	}
 	if err := validateBasePathName(name); err != nil {
 		return name, err
 	}
