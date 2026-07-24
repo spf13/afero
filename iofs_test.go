@@ -5,6 +5,7 @@ package afero
 
 import (
 	"bytes"
+	"embed"
 	"errors"
 	"fmt"
 	"io"
@@ -19,6 +20,9 @@ import (
 
 	"github.com/spf13/afero/internal/common"
 )
+
+//go:embed testdata/fromiofs
+var fromIOFSEmbedFS embed.FS
 
 func TestIOFS(t *testing.T) {
 	if runtime.GOOS == "windows" {
@@ -187,7 +191,7 @@ func TestFromIOFS(t *testing.T) {
 		},
 	}
 
-	fromIOFS := FromIOFS{fsys}
+	fromIOFS := NewFromIOFS(fsys)
 
 	t.Run("Create", func(t *testing.T) {
 		_, err := fromIOFS.Create("test")
@@ -200,7 +204,35 @@ func TestFromIOFS(t *testing.T) {
 	})
 
 	t.Run("MkdirAll", func(t *testing.T) {
-		err := fromIOFS.Mkdir("test", 0)
+		err := fromIOFS.MkdirAll("test", 0)
+		assertPermissionError(t, err)
+	})
+
+	t.Run("OpenFile write flags", func(t *testing.T) {
+		for _, flag := range []int{os.O_WRONLY, os.O_RDWR, os.O_APPEND, os.O_CREATE, os.O_TRUNC} {
+			_, err := fromIOFS.OpenFile("test.txt", flag, 0)
+			assertPermissionError(t, err)
+		}
+	})
+
+	t.Run("OpenFile read-only", func(t *testing.T) {
+		file, err := fromIOFS.OpenFile("test.txt", os.O_RDONLY, 0)
+		if err != nil {
+			t.Fatalf("OpenFile O_RDONLY failed: %v", err)
+		}
+		defer file.Close()
+
+		data, err := io.ReadAll(file)
+		if err != nil {
+			t.Fatalf("ReadAll failed: %v", err)
+		}
+		if expected := fsys["test.txt"].Data; !bytes.Equal(data, expected) {
+			t.Errorf("unexpected content: got %q, want %q", data, expected)
+		}
+	})
+
+	t.Run("RemoveAll", func(t *testing.T) {
+		err := fromIOFS.RemoveAll("test")
 		assertPermissionError(t, err)
 	})
 
@@ -344,7 +376,7 @@ func TestFromIOFS_File(t *testing.T) {
 		},
 	}
 
-	fromIOFS := FromIOFS{fsys}
+	fromIOFS := NewFromIOFS(fsys)
 
 	file, err := fromIOFS.Open("test.txt")
 	if err != nil {
@@ -529,6 +561,109 @@ func TestFromIOFS_File(t *testing.T) {
 	})
 }
 
+func TestFromIOFS_EmbedFS(t *testing.T) {
+	t.Parallel()
+
+	fsys := NewFromIOFS(fromIOFSEmbedFS)
+
+	t.Run("ReadFile hello", func(t *testing.T) {
+		data, err := ReadFile(fsys, "testdata/fromiofs/hello.txt")
+		if err != nil {
+			t.Fatalf("ReadFile failed: %v", err)
+		}
+		if expected := []byte("hello from embed\n"); !bytes.Equal(data, expected) {
+			t.Errorf("unexpected content: got %q, want %q", data, expected)
+		}
+	})
+
+	t.Run("ReadFile nested", func(t *testing.T) {
+		data, err := ReadFile(fsys, "testdata/fromiofs/subdir/nested.txt")
+		if err != nil {
+			t.Fatalf("ReadFile failed: %v", err)
+		}
+		if expected := []byte("nested content\n"); !bytes.Equal(data, expected) {
+			t.Errorf("unexpected content: got %q, want %q", data, expected)
+		}
+	})
+
+	t.Run("Stat", func(t *testing.T) {
+		info, err := fsys.Stat("testdata/fromiofs/hello.txt")
+		if err != nil {
+			t.Fatalf("Stat failed: %v", err)
+		}
+		if info.IsDir() {
+			t.Error("expected file, got directory")
+		}
+		if info.Size() != int64(len("hello from embed\n")) {
+			t.Errorf("unexpected size: got %d", info.Size())
+		}
+	})
+
+	t.Run("ReadDir", func(t *testing.T) {
+		dir, err := fsys.Open("testdata/fromiofs")
+		if err != nil {
+			t.Fatalf("Open dir failed: %v", err)
+		}
+		defer dir.Close()
+
+		names, err := dir.Readdirnames(-1)
+		if err != nil {
+			t.Fatalf("Readdirnames failed: %v", err)
+		}
+
+		want := map[string]bool{"hello.txt": true, "subdir": true}
+		if len(names) != len(want) {
+			t.Fatalf("unexpected entries %v", names)
+		}
+		for _, name := range names {
+			if !want[name] {
+				t.Errorf("unexpected entry %q", name)
+			}
+		}
+	})
+
+	t.Run("mutators rejected", func(t *testing.T) {
+		assertPermissionError(t, fsys.Mkdir("x", 0o755))
+		assertPermissionError(t, fsys.Remove("testdata/fromiofs/hello.txt"))
+		_, err := fsys.Create("testdata/fromiofs/new.txt")
+		assertPermissionError(t, err)
+	})
+
+	t.Run("CopyOnWrite overlay", func(t *testing.T) {
+		cow := NewCopyOnWriteFs(fsys, NewMemMapFs())
+
+		// Base content still readable.
+		data, err := ReadFile(cow, "testdata/fromiofs/hello.txt")
+		if err != nil {
+			t.Fatalf("ReadFile base failed: %v", err)
+		}
+		if expected := []byte("hello from embed\n"); !bytes.Equal(data, expected) {
+			t.Errorf("unexpected base content: got %q, want %q", data, expected)
+		}
+
+		// Writes go to the overlay; embed remains read-only.
+		if err := WriteFile(cow, "testdata/fromiofs/hello.txt", []byte("override\n"), 0o644); err != nil {
+			t.Fatalf("WriteFile overlay failed: %v", err)
+		}
+		data, err = ReadFile(cow, "testdata/fromiofs/hello.txt")
+		if err != nil {
+			t.Fatalf("ReadFile overlay failed: %v", err)
+		}
+		if expected := []byte("override\n"); !bytes.Equal(data, expected) {
+			t.Errorf("unexpected overlay content: got %q, want %q", data, expected)
+		}
+
+		// Underlying embed FS is unchanged.
+		baseData, err := ReadFile(fsys, "testdata/fromiofs/hello.txt")
+		if err != nil {
+			t.Fatalf("ReadFile base after write failed: %v", err)
+		}
+		if expected := []byte("hello from embed\n"); !bytes.Equal(baseData, expected) {
+			t.Errorf("embed content mutated: got %q, want %q", baseData, expected)
+		}
+	})
+}
+
 func assertPermissionError(t *testing.T, err error) {
 	t.Helper()
 
@@ -538,8 +673,8 @@ func assertPermissionError(t *testing.T, err error) {
 		return
 	}
 
-	if perr.Err != fs.ErrPermission {
-		t.Errorf("Expected (*fs.PathError).Err == fs.ErrPermisson, got %[1]T (%[1]v)", err)
+	if !errors.Is(perr.Err, fs.ErrPermission) {
+		t.Errorf("Expected (*fs.PathError).Err == fs.ErrPermission, got %[1]T (%[1]v)", err)
 	}
 }
 

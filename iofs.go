@@ -150,11 +150,27 @@ func (r readDirFile) ReadDir(n int) ([]fs.DirEntry, error) {
 	return ret, nil
 }
 
-// FromIOFS adopts io/fs.FS to use it as afero.Fs
-// Note that io/fs.FS is read-only so all mutating methods will return fs.PathError with fs.ErrPermission
-// To store modifications you may use afero.CopyOnWriteFs
+// FromIOFS adopts io/fs.FS to use it as afero.Fs.
+//
+// Note that io/fs.FS is read-only so all mutating methods will return
+// *fs.PathError with fs.ErrPermission. To store modifications you may use
+// afero.CopyOnWriteFs with FromIOFS as the base.
+//
+// FromIOFS is the standard way to use embed.FS (or any other fs.FS) with
+// libraries that expect an afero.Fs, for example:
+//
+//	//go:embed assets/*
+//	var assetsFS embed.FS
+//	fs := afero.NewFromIOFS(assetsFS)
+//	data, err := afero.ReadFile(fs, "assets/config.json")
 type FromIOFS struct {
 	fs.FS
+}
+
+// NewFromIOFS creates a read-only afero.Fs from any io/fs.FS implementation,
+// including embed.FS and testing/fstest.MapFS.
+func NewFromIOFS(fsys fs.FS) Fs {
+	return FromIOFS{FS: fsys}
 }
 
 var _ Fs = FromIOFS{}
@@ -182,6 +198,10 @@ func (f FromIOFS) Open(name string) (File, error) {
 }
 
 func (f FromIOFS) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
+	// io/fs.FS is read-only; reject any write-oriented flags.
+	if flag&(os.O_WRONLY|os.O_RDWR|os.O_APPEND|os.O_CREATE|os.O_TRUNC) != 0 {
+		return nil, notImplemented("open", name)
+	}
 	return f.Open(name)
 }
 
