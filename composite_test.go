@@ -515,3 +515,28 @@ func TestUnionFileReaddirAskForTooMany(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestUnionFileReadAtReportsEOF(t *testing.T) {
+	base := NewMemMapFs()
+	layer := NewMemMapFs()
+	for _, fs := range []Fs{base, layer} {
+		if err := WriteFile(fs, "data", []byte("0123456789"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	f, err := NewCacheOnReadFs(base, layer, 0).OpenFile("data", os.O_RDWR, 0o644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	// io.ReaderAt: a short read must report why fewer bytes came back.
+	buf := make([]byte, 8)
+	if n, err := f.ReadAt(buf, 6); n != 4 || err != io.EOF {
+		t.Errorf("ReadAt short read = (%d, %v), want (4, EOF)", n, err)
+	}
+	if n, err := f.ReadAt(buf, 10); n != 0 || err != io.EOF {
+		t.Errorf("ReadAt at EOF = (%d, %v), want (0, EOF)", n, err)
+	}
+}
