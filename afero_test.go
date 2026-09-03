@@ -757,3 +757,29 @@ func checkSize(t *testing.T, f File, size int64) {
 		t.Errorf("Stat %q: size %d want %d", f.Name(), dir.Size(), size)
 	}
 }
+
+func TestNegativeOffsetIsAnError(t *testing.T) {
+	defer removeAllTestFiles(t)
+	for _, fs := range Fss {
+		f := tmpFile(fs)
+		f.WriteString("hello")
+		f.Close()
+
+		g, err := fs.Open(f.Name())
+		if err != nil {
+			t.Fatalf("%T: %v", fs, err)
+		}
+
+		// Seeking before the start of the file is an error, as it is for os.File.
+		if _, err := g.Seek(-1, io.SeekStart); err == nil {
+			t.Errorf("%T: Seek(-1, SeekStart) returned no error", fs)
+		}
+		if _, err := g.Seek(-8, io.SeekEnd); err == nil {
+			t.Errorf("%T: Seek(-8, SeekEnd) on a 5-byte file returned no error", fs)
+		}
+		if _, err := g.ReadAt(make([]byte, 4), -1); err == nil {
+			t.Errorf("%T: ReadAt(-1) returned no error", fs)
+		}
+		g.Close()
+	}
+}
