@@ -219,6 +219,9 @@ func (f *File) ReadAt(b []byte, off int64) (n int, err error) {
 	if f.closed {
 		return 0, ErrFileClosed
 	}
+	if off < 0 {
+		return 0, ErrOutOfRange
+	}
 	if len(b) > 0 && int(off) == len(f.fileData.data) {
 		return 0, io.EOF
 	}
@@ -276,15 +279,23 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 	if f.closed {
 		return 0, ErrFileClosed
 	}
+	var at int64
 	switch whence {
 	case io.SeekStart:
-		atomic.StoreInt64(&f.at, offset)
+		at = offset
 	case io.SeekCurrent:
-		atomic.AddInt64(&f.at, offset)
+		at = atomic.LoadInt64(&f.at) + offset
 	case io.SeekEnd:
-		atomic.StoreInt64(&f.at, int64(len(f.fileData.data))+offset)
+		at = int64(len(f.fileData.data)) + offset
+	default:
+		return 0, ErrOutOfRange
 	}
-	return f.at, nil
+	if at < 0 {
+		// a negative offset is an error, as it is for os.File
+		return 0, ErrOutOfRange
+	}
+	atomic.StoreInt64(&f.at, at)
+	return at, nil
 }
 
 func (f *File) WriteAt(b []byte, off int64) (n int, err error) {
@@ -297,6 +308,9 @@ func (f *File) WriteAt(b []byte, off int64) (n int, err error) {
 			Path: f.fileData.name,
 			Err:  errors.New("file handle is read only"),
 		}
+	}
+	if off < 0 {
+		return 0, ErrOutOfRange
 	}
 	n = len(b)
 	f.fileData.Lock()
