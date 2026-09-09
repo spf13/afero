@@ -225,11 +225,14 @@ func (m *MemMapFs) Open(name string) (File, error) {
 	return nil, err
 }
 
-func (m *MemMapFs) openWrite(name string) (File, error) {
+func (m *MemMapFs) openFile(name string, flag int) (File, error) {
 	f, err := m.open(name)
 	if f != nil {
-		// Check write permission (owner bits).
-		if mem.GetFileInfo(f).Mode().Perm()&0o222 == 0 {
+		mode := mem.GetFileInfo(f).Mode().Perm()
+		if flag&os.O_WRONLY == 0 && mode&0o444 == 0 {
+			return nil, &os.PathError{Op: "open", Path: name, Err: os.ErrPermission}
+		}
+		if flag&(os.O_WRONLY|os.O_RDWR) != 0 && mode&0o222 == 0 {
 			return nil, &os.PathError{Op: "open", Path: name, Err: os.ErrPermission}
 		}
 		return mem.NewFileHandle(f), err
@@ -262,7 +265,7 @@ func (m *MemMapFs) lockfreeOpen(name string) (*mem.FileData, error) {
 func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
 	perm &= chmodBits
 	chmod := false
-	file, err := m.openWrite(name)
+	file, err := m.openFile(name, flag)
 	if err == nil && (flag&os.O_EXCL > 0) {
 		return nil, &os.PathError{Op: "open", Path: name, Err: ErrFileExists}
 	}
@@ -273,7 +276,7 @@ func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, erro
 	if err != nil {
 		return nil, err
 	}
-	if flag == os.O_RDONLY {
+	if flag&(os.O_WRONLY|os.O_RDWR) == 0 {
 		file = mem.NewReadOnlyFileHandle(file.(*mem.File).Data())
 	}
 	if flag&os.O_APPEND > 0 {

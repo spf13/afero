@@ -1125,3 +1125,57 @@ func TestMemMapFsPermissionChecks(t *testing.T) {
 		t.Fatalf("expected permission error, got: %v", err)
 	}
 }
+
+func TestMemMapFsOpenFileAccessMode(t *testing.T) {
+	for _, tt := range []struct {
+		mode                   os.FileMode
+		read, write, readWrite bool
+	}{
+		{0o000, false, false, false},
+		{0o444, true, false, false},
+		{0o222, false, true, false},
+		{0o666, true, true, true},
+	} {
+		for _, access := range []struct {
+			name    string
+			flag    int
+			allowed bool
+		}{
+			{"read", os.O_RDONLY, tt.read},
+			{"write", os.O_WRONLY, tt.write},
+			{"read-write", os.O_RDWR, tt.readWrite},
+		} {
+			t.Run(fmt.Sprintf("%03o/%s", tt.mode, access.name), func(t *testing.T) {
+				fs := NewMemMapFs()
+				if err := WriteFile(fs, "file", []byte("content"), tt.mode); err != nil {
+					t.Fatal(err)
+				}
+				f, err := fs.OpenFile("file", access.flag, 0)
+				if f != nil {
+					defer f.Close()
+				}
+				if access.allowed {
+					if err != nil {
+						t.Fatalf("OpenFile: %v", err)
+					}
+				} else if !os.IsPermission(err) {
+					t.Fatalf("expected permission error, got %v", err)
+				}
+			})
+		}
+	}
+}
+
+func TestMemMapFsOpenFileReadOnlyWithCreate(t *testing.T) {
+	fs := NewMemMapFs()
+	for i := 0; i < 2; i++ {
+		f, err := fs.OpenFile("file", os.O_RDONLY|os.O_CREATE, 0o444)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := f.Write([]byte("unexpected")); err == nil {
+			t.Error("read-only handle allowed a write")
+		}
+		f.Close()
+	}
+}
