@@ -1125,3 +1125,30 @@ func TestMemMapFsPermissionChecks(t *testing.T) {
 		t.Fatalf("expected permission error, got: %v", err)
 	}
 }
+
+func TestMemMapFsRenameMissingSourceToItself(t *testing.T) {
+	for _, newname := range []string{"missing", "./missing"} {
+		t.Run(newname, func(t *testing.T) {
+			fs := NewMemMapFs()
+			err := fs.Rename("missing", newname)
+			if !os.IsNotExist(err) {
+				t.Fatalf("expected a missing source error, got %v", err)
+			}
+			checkPathError(t, err, "Rename")
+		})
+	}
+}
+
+func TestMemMapFsRenameExistingSourceToItself(t *testing.T) {
+	fs := NewMemMapFs()
+	if err := WriteFile(fs, "file", []byte("content"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := fs.Rename("file", "./file"); err != nil {
+		t.Fatal(err)
+	}
+	content, err := ReadFile(fs, "file")
+	if err != nil || string(content) != "content" {
+		t.Fatalf("file changed after rename: %q, %v", content, err)
+	}
+}
