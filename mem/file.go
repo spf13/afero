@@ -146,14 +146,29 @@ func (f *File) Name() string {
 }
 
 func (f *File) Stat() (os.FileInfo, error) {
+	f.fileData.Lock()
+	defer f.fileData.Unlock()
+	if f.closed {
+		return nil, ErrFileClosed
+	}
 	return &FileInfo{f.fileData}, nil
 }
 
 func (f *File) Sync() error {
+	f.fileData.Lock()
+	defer f.fileData.Unlock()
+	if f.closed {
+		return ErrFileClosed
+	}
 	return nil
 }
 
 func (f *File) Readdir(count int) (res []os.FileInfo, err error) {
+	f.fileData.Lock()
+	defer f.fileData.Unlock()
+	if f.closed {
+		return nil, ErrFileClosed
+	}
 	if !f.fileData.dir {
 		return nil, &os.PathError{
 			Op:   "readdir",
@@ -163,7 +178,6 @@ func (f *File) Readdir(count int) (res []os.FileInfo, err error) {
 	}
 	var outLength int64
 
-	f.fileData.Lock()
 	if f.dirBuf == nil {
 		f.dirBuf = f.fileData.memDir.Files()
 	}
@@ -181,7 +195,6 @@ func (f *File) Readdir(count int) (res []os.FileInfo, err error) {
 		outLength = int64(len(files))
 	}
 	f.readDirCount += outLength
-	f.fileData.Unlock()
 
 	res = make([]os.FileInfo, outLength)
 	for i := range res {

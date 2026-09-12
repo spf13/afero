@@ -2,6 +2,7 @@ package mem
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"testing"
 	"time"
@@ -305,5 +306,29 @@ func TestFileWriteAndSeek(t *testing.T) {
 		cur, err = f.Seek(off-int64(n), io.SeekCurrent)
 		assert(err == nil, err)
 		assert(cur == off, cur, off)
+	}
+}
+
+func TestClosedFileMetadataAndDirectoryOperations(t *testing.T) {
+	operations := map[string]func(*File) error{
+		"Stat":         func(f *File) error { _, err := f.Stat(); return err },
+		"Sync":         func(f *File) error { return f.Sync() },
+		"Readdir":      func(f *File) error { _, err := f.Readdir(0); return err },
+		"Readdirnames": func(f *File) error { _, err := f.Readdirnames(0); return err },
+		"ReadDir":      func(f *File) error { _, err := f.ReadDir(0); return err },
+	}
+	for name, operation := range operations {
+		t.Run(name, func(t *testing.T) {
+			f := NewFileHandle(CreateDir("dir"))
+			if err := operation(f); err != nil {
+				t.Fatalf("open handle: %v", err)
+			}
+			if err := f.Close(); err != nil {
+				t.Fatal(err)
+			}
+			if err := operation(f); !errors.Is(err, ErrFileClosed) {
+				t.Fatalf("closed handle: got %v, want %v", err, ErrFileClosed)
+			}
+		})
 	}
 }
