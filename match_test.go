@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"testing"
 )
 
@@ -173,10 +174,55 @@ func TestGlobSymlink(t *testing.T) {
 }
 
 func TestGlobError(t *testing.T) {
-	for _, fs := range Fss {
-		_, err := Glob(fs, "[7]")
-		if err != nil {
-			t.Error("expected error for bad pattern; got none")
+	root := t.TempDir()
+	filesystems := []Fs{NewOsFs(), NewMemMapFs()}
+	for _, fs := range filesystems {
+		for _, dir := range []string{"empty", "populated"} {
+			if err := fs.MkdirAll(filepath.Join(root, dir), 0o700); err != nil {
+				t.Fatal(err)
+			}
 		}
+		if err := WriteFile(fs, filepath.Join(root, "populated", "7"), nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	type globTest struct {
+		pattern string
+		wantErr error
+	}
+	tests := []globTest{
+		{"missing/[", filepath.ErrBadPattern},
+		{"empty/[", filepath.ErrBadPattern},
+		{"populated/[", filepath.ErrBadPattern},
+		{"populated/7/[", filepath.ErrBadPattern},
+		{"*/[", filepath.ErrBadPattern},
+		{"missing/[/file", filepath.ErrBadPattern},
+		{"empty/[a-]", filepath.ErrBadPattern},
+		{"populated/[7]", nil},
+		{"empty/[7]", nil},
+		{"missing/*", nil},
+		{"populated/7", nil},
+	}
+	if runtime.GOOS != "windows" {
+		// Backslash escapes on Unix, but is a path separator on Windows.
+		tests = append(tests, globTest{"missing/\\", filepath.ErrBadPattern})
+	}
+	for _, tt := range tests {
+		t.Run(tt.pattern, func(t *testing.T) {
+			pattern := filepath.Join(root, filepath.FromSlash(tt.pattern))
+			want, err := filepath.Glob(pattern)
+			if err != tt.wantErr {
+				t.Fatalf("filepath.Glob(%q) error = %v, want %v", pattern, err, tt.wantErr)
+			}
+			for _, fs := range filesystems {
+				t.Run(fs.Name(), func(t *testing.T) {
+					got, err := Glob(fs, pattern)
+					if err != tt.wantErr || !slices.Equal(got, want) {
+						t.Errorf("Glob(%q) = %v, %v; want %v, %v", pattern, got, err, want, tt.wantErr)
+					}
+				})
+			}
+		})
 	}
 }
