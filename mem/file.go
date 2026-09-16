@@ -299,6 +299,9 @@ func (f *File) WriteAt(b []byte, off int64) (n int, err error) {
 		}
 	}
 	n = len(b)
+	if n == 0 {
+		return 0, nil
+	}
 	f.fileData.Lock()
 	defer f.fileData.Unlock()
 	diff := off - int64(len(f.fileData.data))
