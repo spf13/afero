@@ -2,14 +2,80 @@ package afero
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 )
 
 var tempDirs []string
+
+type closeResultFile struct {
+	File
+	err   error
+	name  string
+	order *[]string
+}
+
+func (f *closeResultFile) Close() error {
+	*f.order = append(*f.order, f.name)
+	return f.err
+}
+
+func TestUnionFileClose(t *testing.T) {
+	baseErr := errors.New("base close failed")
+	layerErr := errors.New("layer close failed")
+	for _, tt := range []struct {
+		name              string
+		base, layer       bool
+		baseErr, layerErr error
+		wantErr           error
+		wantOrder         []string
+	}{
+		{name: "empty", wantErr: BADFD},
+		{name: "base only", base: true, wantOrder: []string{"base"}},
+		{name: "layer only", layer: true, wantOrder: []string{"layer"}},
+		{name: "both", base: true, layer: true, wantOrder: []string{"base", "layer"}},
+		{name: "base error", base: true, layer: true, baseErr: baseErr, wantErr: baseErr, wantOrder: []string{"base", "layer"}},
+		{name: "layer error", base: true, layer: true, layerErr: layerErr, wantErr: layerErr, wantOrder: []string{"base", "layer"}},
+		{name: "both errors", base: true, layer: true, baseErr: baseErr, layerErr: layerErr, wantErr: baseErr, wantOrder: []string{"base", "layer"}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var order []string
+			f := &UnionFile{}
+			if tt.base {
+				f.Base = &closeResultFile{err: tt.baseErr, name: "base", order: &order}
+			}
+			if tt.layer {
+				f.Layer = &closeResultFile{err: tt.layerErr, name: "layer", order: &order}
+			}
+			if err := f.Close(); err != tt.wantErr {
+				t.Errorf("Close() = %v, want %v", err, tt.wantErr)
+			}
+			if !reflect.DeepEqual(order, tt.wantOrder) {
+				t.Errorf("close order = %v, want %v", order, tt.wantOrder)
+			}
+		})
+	}
+}
+
+func TestCacheOnReadFsWriteReader(t *testing.T) {
+	base, layer := NewMemMapFs(), NewMemMapFs()
+	fs := NewCacheOnReadFs(base, layer, 0)
+	content := []byte("cached content")
+	if err := WriteReader(fs, "file", bytes.NewReader(content)); err != nil {
+		t.Fatalf("WriteReader() = %v", err)
+	}
+	for _, fs := range []Fs{base, layer} {
+		got, err := ReadFile(fs, "file")
+		if err != nil || !bytes.Equal(got, content) {
+			t.Errorf("ReadFile() = %q, %v; want %q, nil", got, err, content)
+		}
+	}
+}
 
 func NewTempOsBaseFs(t *testing.T) Fs {
 	name, err := TempDir(NewOsFs(), "", "")
