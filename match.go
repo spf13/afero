@@ -32,6 +32,9 @@ import (
 // This was adapted from (http://golang.org/pkg/path/filepath) and uses several
 // built-ins from that package.
 func Glob(fs Fs, pattern string) (matches []string, err error) {
+	if _, err := filepath.Match(pattern, ""); err != nil {
+		return nil, err
+	}
 	if !hasMeta(pattern) {
 		// Lstat not supported by a ll filesystems.
 		if _, err = lstatIfPossible(fs, pattern); err != nil {
