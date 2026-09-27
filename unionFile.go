@@ -41,10 +41,10 @@ func (f *UnionFile) Close() error {
 			err = err2
 		}
 	}
-	if err != nil {
-		return err
+	if f.Base == nil && f.Layer == nil {
+		return BADFD
 	}
-	return BADFD
+	return err
 }
 
 func (f *UnionFile) Read(s []byte) (int, error) {
