@@ -145,7 +145,12 @@ func TestWalkDirSkipDir(t *testing.T) {
 	for _, fs := range Fss {
 		root := testDir(fs)
 		fs.MkdirAll(filepath.Join(root, "more", "subdirectories"), 0o700)
-		WriteFile(fs, filepath.Join(root, "more", "subdirectories", "file.txt"), []byte("hello"), 0o644)
+		WriteFile(
+			fs,
+			filepath.Join(root, "more", "subdirectories", "file.txt"),
+			[]byte("hello"),
+			0o644,
+		)
 		WriteFile(fs, filepath.Join(root, "other.txt"), []byte("world"), 0o644)
 
 		var visited []string

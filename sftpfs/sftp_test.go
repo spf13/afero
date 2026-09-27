@@ -28,8 +28,9 @@ import (
 	"time"
 
 	"github.com/pkg/sftp"
-	"github.com/spf13/afero"
 	"golang.org/x/crypto/ssh"
+
+	"github.com/spf13/afero"
 )
 
 type SftpFsContext struct {

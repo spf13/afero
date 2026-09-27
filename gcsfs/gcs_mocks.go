@@ -18,9 +18,9 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
-	"github.com/spf13/afero"
 	"google.golang.org/api/iterator"
 
+	"github.com/spf13/afero"
 	"github.com/spf13/afero/gcsfs/internal/stiface"
 )
 
@@ -300,7 +300,14 @@ func (it *objectItMock) Next() (*storage.ObjectAttrs, error) {
 			}
 
 			for _, info := range fInfos {
-				it.infos = append(it.infos, &storage.ObjectAttrs{Name: normSeparators(info.Name()), Size: info.Size(), Updated: info.ModTime()})
+				it.infos = append(
+					it.infos,
+					&storage.ObjectAttrs{
+						Name:    normSeparators(info.Name()),
+						Size:    info.Size(),
+						Updated: info.ModTime(),
+					},
+				)
 			}
 		}
 	}
