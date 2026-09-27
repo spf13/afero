@@ -24,6 +24,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -304,8 +305,10 @@ func TestSftpCreate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if linkPath != "./test/file1" {
-		t.Fatal("linkpath error")
+	// The in-process test server stores the target via os.Symlink, which converts
+	// forward slashes to backslashes on Windows, and pkg/sftp returns os.Readlink output verbatim.
+	if filepath.ToSlash(linkPath) != "./test/file1" {
+		t.Fatalf("linkpath error: got %q", linkPath)
 	}
 
 	err = fs.RemoveAll("test/testdir1/testdir2/file1")
