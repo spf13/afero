@@ -5,8 +5,34 @@ updates:
     directory: /
     schedule:
       interval: daily
+    groups:
+      go:
+        patterns:
+          - "*"
+
+  - package-ecosystem: gomod
+    directory: /gcsfs
+    schedule:
+      interval: daily
+    groups:
+      go:
+        patterns:
+          - "*"
+
+  - package-ecosystem: gomod
+    directory: /sftpfs
+    schedule:
+      interval: daily
+    groups:
+      go:
+        patterns:
+          - "*"
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: daily
+    groups:
+      github-actions:
+        patterns:
+          - "*"

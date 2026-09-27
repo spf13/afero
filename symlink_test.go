@@ -55,7 +55,11 @@ func TestSymlinkIfPossible(t *testing.T) {
 		} else if (err != nil) && (output == nil) {
 			t.Fatalf("Error creating symlink, expected success, got %v", err)
 		} else if err != nil && err.Error() != *output && !strings.HasSuffix(err.Error(), *output) {
-			t.Fatalf("Error creating symlink, expected error '%v', instead got output '%v'", *output, err)
+			t.Fatalf(
+				"Error creating symlink, expected error '%v', instead got output '%v'",
+				*output,
+				err,
+			)
 		} else {
 			// test passed, if expecting a successful link, check the link with lstat if able
 			if output == nil {
@@ -63,9 +67,14 @@ func TestSymlinkIfPossible(t *testing.T) {
 					_, ok, err := lst.LstatIfPossible(destination)
 					if !ok {
 						if err != nil {
-							t.Fatalf("Error calling lstat on file after successful link, got: %v", err)
+							t.Fatalf(
+								"Error calling lstat on file after successful link, got: %v",
+								err,
+							)
 						} else {
-							t.Fatalf("Error calling lstat on file after successful link, result didn't use lstat (not link)")
+							t.Fatalf(
+								"Error calling lstat on file after successful link, result didn't use lstat (not link)",
+							)
 						}
 						return
 					}

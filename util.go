@@ -124,7 +124,7 @@ func GetTempDir(fs Fs, subPath string) string {
 		if FilePathSeparator == "\\" {
 			subPath = strings.ReplaceAll(subPath, "\\", "____")
 		}
-		dir = dir + UnicodeSanitize((subPath))
+		dir = dir + UnicodeSanitize(subPath)
 		if FilePathSeparator == "\\" {
 			dir = strings.ReplaceAll(dir, "____", "\\")
 		}

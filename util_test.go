@@ -146,7 +146,14 @@ func TestIsEmpty(t *testing.T) {
 			}
 		} else {
 			if d.expectedErr != err {
-				t.Errorf("Test %d failed. Expected error %q(%#v) got %q(%#v)", i, d.expectedErr, d.expectedErr, err, err)
+				t.Errorf(
+					"Test %d failed. Expected error %q(%#v) got %q(%#v)",
+					i,
+					d.expectedErr,
+					d.expectedErr,
+					err,
+					err,
+				)
 			}
 		}
 	}
@@ -346,7 +353,12 @@ func TestSafeWriteToDisk(t *testing.T) {
 			}
 			contents, _ := ReadFile(testFS, d.filename)
 			if randomString != string(contents) {
-				t.Errorf("Test %d failed. Expected contents %q but got %q", i, randomString, string(contents))
+				t.Errorf(
+					"Test %d failed. Expected contents %q but got %q",
+					i,
+					randomString,
+					string(contents),
+				)
 			}
 		}
 		reader.Seek(0, 0)
@@ -483,7 +495,10 @@ func TestFullBaseFsPath(t *testing.T) {
 		}
 
 		for _, s := range specs {
-			if actualPath := FullBaseFsPath(s.BaseFs.(*BasePathFs), s.FileName); actualPath != s.ExpectedPath {
+			if actualPath := FullBaseFsPath(
+				s.BaseFs.(*BasePathFs),
+				s.FileName,
+			); actualPath != s.ExpectedPath {
 				t.Errorf("Expected \n%s got \n%s", s.ExpectedPath, actualPath)
 			}
 		}

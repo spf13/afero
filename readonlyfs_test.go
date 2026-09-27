@@ -19,6 +19,8 @@ func TestMkdirAllReadonly(t *testing.T) {
 
 	base.Create("/home/test/file")
 	if err := ro.MkdirAll("/home/test/file", 0o777); err == nil {
-		t.Error("Creating new dir with MkdirAll on ReadOnlyFs where a file already exists should fail but returned nil")
+		t.Error(
+			"Creating new dir with MkdirAll on ReadOnlyFs where a file already exists should fail but returned nil",
+		)
 	}
 }
