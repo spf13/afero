@@ -117,7 +117,13 @@ func (r *RegexpFs) Remove(name string) error {
 
 func (r *RegexpFs) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
 	if err := r.dirOrMatches(name); err != nil {
-		return nil, err
+		if flag&os.O_CREATE == 0 || !os.IsNotExist(err) {
+			return nil, err
+		}
+		// A missing file may be created, but its name must still match the filter.
+		if err := r.matchesName(name); err != nil {
+			return nil, err
+		}
 	}
 	return r.source.OpenFile(name, flag, perm)
 }
