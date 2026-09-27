@@ -38,7 +38,12 @@ func TestRegexpFsOpenFile(t *testing.T) {
 						source = NewBasePathFs(NewOsFs(), t.TempDir())
 					}
 					if tt.existing {
-						if err := WriteFile(source, tt.path, []byte("original"), 0o600); err != nil {
+						if err := WriteFile(
+							source,
+							tt.path,
+							[]byte("original"),
+							0o600,
+						); err != nil {
 							t.Fatal(err)
 						}
 					}
