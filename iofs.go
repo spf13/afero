@@ -80,15 +80,21 @@ func (iofs IOFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	if rdf, ok := f.(fs.ReadDirFile); ok {
 		items, err := rdf.ReadDir(-1)
 		if err != nil {
-			return nil, iofs.wrapError("readdir", name, err)
+			err = iofs.wrapError("readdir", name, err)
+			if len(items) == 0 {
+				return nil, err
+			}
 		}
 		sort.Slice(items, func(i, j int) bool { return items[i].Name() < items[j].Name() })
-		return items, nil
+		return items, err
 	}
 
 	items, err := f.Readdir(-1)
 	if err != nil {
-		return nil, iofs.wrapError("readdir", name, err)
+		err = iofs.wrapError("readdir", name, err)
+		if len(items) == 0 {
+			return nil, err
+		}
 	}
 	sort.Sort(byName(items))
 
@@ -97,7 +103,7 @@ func (iofs IOFS) ReadDir(name string) ([]fs.DirEntry, error) {
 		ret[i] = common.FileInfoDirEntry{FileInfo: items[i]}
 	}
 
-	return ret, nil
+	return ret, err
 }
 
 func (iofs IOFS) ReadFile(name string) ([]byte, error) {
@@ -138,7 +144,7 @@ var _ fs.ReadDirFile = readDirFile{}
 
 func (r readDirFile) ReadDir(n int) ([]fs.DirEntry, error) {
 	items, err := r.Readdir(n)
-	if err != nil {
+	if err != nil && len(items) == 0 {
 		return nil, err
 	}
 
@@ -147,7 +153,7 @@ func (r readDirFile) ReadDir(n int) ([]fs.DirEntry, error) {
 		ret[i] = common.FileInfoDirEntry{FileInfo: items[i]}
 	}
 
-	return ret, nil
+	return ret, err
 }
 
 // FromIOFS adopts io/fs.FS to use it as afero.Fs
