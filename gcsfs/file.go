@@ -165,7 +165,7 @@ func (o *GcsFile) WriteAt(b []byte, off int64) (n int, err error) {
 	}
 
 	if o.openFlags&os.O_RDONLY != 0 {
-		return 0, fmt.Errorf("file is opend as read only")
+		return 0, fmt.Errorf("file is opened as read only")
 	}
 
 	_, err = o.resource.obj.Attrs(o.resource.ctx)
