@@ -1125,3 +1125,50 @@ func TestMemMapFsPermissionChecks(t *testing.T) {
 		t.Fatalf("expected permission error, got: %v", err)
 	}
 }
+
+func TestEmptyWritePastEnd(t *testing.T) {
+	for _, fs := range []Fs{NewMemMapFs(), NewOsFs()} {
+		t.Run(fs.Name(), func(t *testing.T) {
+			for _, at := range []bool{false, true} {
+				t.Run(fmt.Sprintf("WriteAt=%t", at), func(t *testing.T) {
+					name := filepath.Join(t.TempDir(), "file")
+					if err := WriteFile(fs, name, []byte("original"), 0o600); err != nil {
+						t.Fatal(err)
+					}
+					f, err := fs.OpenFile(name, os.O_RDWR, 0o600)
+					if err != nil {
+						t.Fatal(err)
+					}
+					defer f.Close()
+					if _, err := f.Seek(100, io.SeekStart); err != nil {
+						t.Fatal(err)
+					}
+					var n int
+					if at {
+						n, err = f.WriteAt(nil, 100)
+					} else {
+						n, err = f.Write([]byte{})
+					}
+					if n != 0 || err != nil {
+						t.Fatalf("empty write = %d, %v", n, err)
+					}
+					info, err := f.Stat()
+					if err != nil {
+						t.Fatal(err)
+					}
+					if info.Size() != 8 {
+						t.Errorf("size = %d; want 8", info.Size())
+					}
+					pos, err := f.Seek(0, io.SeekCurrent)
+					if err != nil || pos != 100 {
+						t.Errorf("position = %d, %v; want 100", pos, err)
+					}
+					content, err := ReadFile(fs, name)
+					if err != nil || string(content) != "original" {
+						t.Errorf("content = %q, %v; want original", content, err)
+					}
+				})
+			}
+		})
+	}
+}
