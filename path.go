@@ -98,7 +98,6 @@ func lstatIfPossible(fs Fs, path string) (os.FileInfo, error) {
 // order, which makes the output deterministic but means that for very
 // large directories Walk can be inefficient.
 // Walk does not follow symbolic links.
-
 func (a Afero) Walk(root string, walkFn filepath.WalkFunc) error {
 	return Walk(a.Fs, root, walkFn)
 }
