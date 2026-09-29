@@ -13,6 +13,17 @@ import (
 	"time"
 )
 
+func TestMemMapFsStatEmptyPath(t *testing.T) {
+	fs := NewMemMapFs()
+	_, err := fs.Stat("")
+	if err == nil {
+		t.Fatal("Stat(\"\") should fail, matching os.Stat")
+	}
+	if !os.IsNotExist(err) {
+		t.Fatalf("Stat(\"\"): got %v, want not-exist", err)
+	}
+}
+
 func TestNormalizePath(t *testing.T) {
 	type test struct {
 		input    string
