@@ -219,6 +219,9 @@ func (f *File) ReadAt(b []byte, off int64) (n int, err error) {
 	if f.closed {
 		return 0, ErrFileClosed
 	}
+	if f.fileData.dir {
+		return 0, &os.PathError{Op: "read", Path: f.fileData.name, Err: errors.New("is a directory")}
+	}
 	if len(b) > 0 && int(off) == len(f.fileData.data) {
 		return 0, io.EOF
 	}
