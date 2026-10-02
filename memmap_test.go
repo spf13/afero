@@ -654,7 +654,7 @@ func TestMemFsOpenFileModeIllegal(t *testing.T) {
 	t.Parallel()
 
 	fs := NewMemMapFs()
-	file, err := fs.OpenFile("/a", os.O_CREATE, os.ModeSymlink|0o644)
+	file, err := fs.OpenFile("/a", os.O_CREATE, os.ModeDir|0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -665,6 +665,51 @@ func TestMemFsOpenFileModeIllegal(t *testing.T) {
 	}
 	if info.Mode() != os.FileMode(0o644) {
 		t.Fatalf("should not be able to use OpenFile to set illegal mode: %s", info.Mode().String())
+	}
+}
+
+func TestMemFsOpenFilePreservesNonChmodBits(t *testing.T) {
+	t.Parallel()
+
+	fs := NewMemMapFs()
+	file, err := fs.OpenFile("/sock", os.O_CREATE, os.ModeSocket|0o666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	info, err := fs.Stat("/sock")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode() != os.ModeSocket|0o666 {
+		t.Fatalf("expected mode %v, got %v", os.ModeSocket|0o666, info.Mode())
+	}
+
+	// Verify Chmod preserves non-chmod mode bits
+	err = fs.Chmod("/sock", 0o600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	info, err = fs.Stat("/sock")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode() != os.ModeSocket|0o600 {
+		t.Fatalf("expected mode %v after chmod, got %v", os.ModeSocket|0o600, info.Mode())
+	}
+
+	// Verify named pipes
+	pipe, err := fs.OpenFile("/pipe", os.O_CREATE, os.ModeNamedPipe|0o644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pipe.Close()
+	pipeInfo, err := fs.Stat("/pipe")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pipeInfo.Mode() != os.ModeNamedPipe|0o644 {
+		t.Fatalf("expected mode %v, got %v", os.ModeNamedPipe|0o644, pipeInfo.Mode())
 	}
 }
 
