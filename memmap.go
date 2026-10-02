@@ -260,7 +260,7 @@ func (m *MemMapFs) lockfreeOpen(name string) (*mem.FileData, error) {
 }
 
 func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
-	perm &= chmodBits
+	fileMode := perm & ^os.ModeDir
 	chmod := false
 	file, err := m.openWrite(name)
 	if err == nil && (flag&os.O_EXCL > 0) {
@@ -291,7 +291,7 @@ func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, erro
 		}
 	}
 	if chmod {
-		return file, m.setFileMode(name, perm)
+		return file, m.setFileMode(name, fileMode)
 	}
 	return file, nil
 }
