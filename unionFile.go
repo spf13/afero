@@ -327,8 +327,11 @@ func copyToLayer(base Fs, layer Fs, name string) error {
 }
 
 func copyFileToLayer(base Fs, layer Fs, name string, flag int, perm os.FileMode) error {
-	bfh, err := base.OpenFile(name, flag, perm)
+	bfh, err := base.Open(name)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
 		return err
 	}
 	defer bfh.Close()
