@@ -1172,3 +1172,78 @@ func TestEmptyWritePastEnd(t *testing.T) {
 		})
 	}
 }
+
+func TestMemMapFsRenamePreservesHandleNames(t *testing.T) {
+	for _, renameDir := range []bool{false, true} {
+		t.Run(fmt.Sprintf("directory=%v", renameDir), func(t *testing.T) {
+			fs := NewMemMapFs()
+			oldDir, newDir := "/before", "/after"
+			oldName := filepath.Join(oldDir, "file")
+			newName := filepath.Join(oldDir, "renamed")
+			if err := fs.MkdirAll(oldDir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			writer, err := fs.Create(oldName)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer writer.Close()
+			reader, err := fs.Open(oldName)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer reader.Close()
+			closed, err := fs.OpenFile(oldName, os.O_RDWR, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := closed.Close(); err != nil {
+				t.Fatal(err)
+			}
+			originalName := writer.Name()
+			if renameDir {
+				newName = filepath.Join(newDir, "file")
+				err = fs.Rename(oldDir, newDir)
+			} else {
+				err = fs.Rename(oldName, newName)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			for name, handle := range map[string]File{"writer": writer, "reader": reader, "closed": closed} {
+				if got := handle.Name(); got != originalName {
+					t.Errorf("%s.Name() = %q, want %q", name, got, originalName)
+				}
+			}
+			reopened, err := fs.OpenFile(newName, os.O_RDWR, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer reopened.Close()
+			if got := reopened.Name(); got != normalizePath(newName) {
+				t.Errorf("reopened.Name() = %q, want %q", got, normalizePath(newName))
+			}
+			// Handles still share the same FileData after rename.
+			if _, err := writer.Write([]byte("old")); err != nil {
+				t.Fatal(err)
+			}
+			for name, handle := range map[string]File{"reader": reader, "reopened": reopened} {
+				buf := make([]byte, 3)
+				if _, err := handle.ReadAt(buf, 0); err != nil || string(buf) != "old" {
+					t.Errorf("%s.ReadAt = %q, %v", name, buf, err)
+				}
+			}
+			if _, err := reopened.WriteAt([]byte("new"), 0); err != nil {
+				t.Fatal(err)
+			}
+			buf := make([]byte, 3)
+			if _, err := writer.ReadAt(buf, 0); err != nil || string(buf) != "new" {
+				t.Errorf("writer.ReadAt = %q, %v", buf, err)
+			}
+			entries, err := ReadDir(fs, filepath.Dir(newName))
+			if err != nil || len(entries) != 1 || entries[0].Name() != filepath.Base(newName) {
+				t.Errorf("renamed directory entries = %v, %v", entries, err)
+			}
+		})
+	}
+}

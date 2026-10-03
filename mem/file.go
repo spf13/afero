@@ -38,16 +38,17 @@ type File struct {
 	readDirCount int64
 	closed       bool
 	readOnly     bool
+	name         string
 	dirBuf       []*FileData
 	fileData     *FileData
 }
 
 func NewFileHandle(data *FileData) *File {
-	return &File{fileData: data}
+	return &File{fileData: data, name: data.Name()}
 }
 
 func NewReadOnlyFileHandle(data *FileData) *File {
-	return &File{fileData: data, readOnly: true}
+	return &File{fileData: data, name: data.Name(), readOnly: true}
 }
 
 func (f File) Data() *FileData {
@@ -142,7 +143,7 @@ func (f *File) Close() error {
 }
 
 func (f *File) Name() string {
-	return f.fileData.Name()
+	return f.name
 }
 
 func (f *File) Stat() (os.FileInfo, error) {
@@ -157,7 +158,7 @@ func (f *File) Readdir(count int) (res []os.FileInfo, err error) {
 	if !f.fileData.dir {
 		return nil, &os.PathError{
 			Op:   "readdir",
-			Path: f.fileData.name,
+			Path: f.name,
 			Err:  errors.New("not a dir"),
 		}
 	}
@@ -253,7 +254,7 @@ func (f *File) Truncate(size int64) error {
 	if f.readOnly {
 		return &os.PathError{
 			Op:   "truncate",
-			Path: f.fileData.name,
+			Path: f.name,
 			Err:  errors.New("file handle is read only"),
 		}
 	}
@@ -294,7 +295,7 @@ func (f *File) WriteAt(b []byte, off int64) (n int, err error) {
 	if f.readOnly {
 		return 0, &os.PathError{
 			Op:   "write",
-			Path: f.fileData.name,
+			Path: f.name,
 			Err:  errors.New("file handle is read only"),
 		}
 	}
