@@ -133,3 +133,42 @@ func TestRegexpFsOpenFileStatError(t *testing.T) {
 		})
 	}
 }
+
+func TestRegexpFsRenameDir(t *testing.T) {
+	for _, backend := range []string{"MemMapFs", "OsFs"} {
+		t.Run(backend, func(t *testing.T) {
+			fs := NewMemMapFs()
+			if backend == "OsFs" {
+				fs = NewBasePathFs(NewOsFs(), t.TempDir())
+			}
+			// The filter only applies to files, not directories, so renaming a
+			// directory must be delegated to the source filesystem.
+			if err := fs.MkdirAll("/regexpdir/sub", 0o755); err != nil {
+				t.Fatalf("MkdirAll failed: %v", err)
+			}
+			if err := WriteFile(fs, "/regexpdir/sub/keep.go", []byte("keep"), 0o644); err != nil {
+				t.Fatalf("WriteFile failed: %v", err)
+			}
+			// A non-matching name must not block a directory rename either.
+			rfs := NewRegexpFs(fs, regexp.MustCompile(`\.go$`))
+
+			if err := rfs.Rename("/regexpdir", "/renameddir"); err != nil {
+				t.Fatalf("Rename failed: %v", err)
+			}
+
+			if ok, _ := Exists(fs, "/regexpdir"); ok {
+				t.Error("source directory /regexpdir still exists after Rename")
+			}
+			if ok, _ := Exists(fs, "/renameddir"); !ok {
+				t.Error("destination directory /renameddir does not exist after Rename")
+			}
+			got, err := ReadFile(fs, "/renameddir/sub/keep.go")
+			if err != nil {
+				t.Fatalf("ReadFile after Rename failed: %v", err)
+			}
+			if string(got) != "keep" {
+				t.Errorf("content after Rename = %q, want %q", got, "keep")
+			}
+		})
+	}
+}

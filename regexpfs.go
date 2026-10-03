@@ -84,7 +84,7 @@ func (r *RegexpFs) Rename(oldname, newname string) error {
 		return err
 	}
 	if dir {
-		return nil
+		return r.source.Rename(oldname, newname)
 	}
 	if err := r.matchesName(oldname); err != nil {
 		return err
