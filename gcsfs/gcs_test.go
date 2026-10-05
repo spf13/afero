@@ -72,7 +72,9 @@ func TestMain(m *testing.M) {
 
 	// in order to respect deferring
 	var exitCode int
-	defer os.Exit(exitCode)
+	// Closure so deferred Exit sees the final exitCode from m.Run()/recover,
+	// not the zero value captured at defer registration time.
+	defer func() { os.Exit(exitCode) }()
 
 	defer func() {
 		err := recover()
