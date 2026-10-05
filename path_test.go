@@ -268,3 +268,30 @@ func TestWalkRootDot(t *testing.T) {
 		t.Fatal("Walk visited no paths")
 	}
 }
+
+// The empty path names the root, the same as "." does. Walking from "" used to
+// report the root as missing, because normalizePath returned "" unchanged while
+// it already mapped "." and ".." to the root.
+func TestWalkRootEmpty(t *testing.T) {
+	defer removeAllTestFiles(t)
+
+	fs := NewMemMapFs()
+	if err := WriteFile(fs, "/file.txt", []byte("hello"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var visited []string
+	err := Walk(fs, "", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		visited = append(visited, path)
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("Walk returned error: %v", err)
+	}
+	if len(visited) == 0 {
+		t.Fatal("Walk visited no paths")
+	}
+}

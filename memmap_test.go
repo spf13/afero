@@ -20,6 +20,8 @@ func TestNormalizePath(t *testing.T) {
 	}
 
 	data := []test{
+		// The empty path names the root, the same as "." and "..".
+		{"", FilePathSeparator},
 		{".", FilePathSeparator},
 		{"./", FilePathSeparator},
 		{"..", FilePathSeparator},
