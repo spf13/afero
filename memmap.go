@@ -343,11 +343,9 @@ func (m *MemMapFs) Rename(oldname, newname string) error {
 		return nil
 	}
 
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if _, ok := m.getData()[oldname]; ok {
-		m.mu.RUnlock()
-		m.mu.Lock()
 		err := m.unRegisterWithParent(oldname)
 		if err != nil {
 			return err
@@ -365,8 +363,6 @@ func (m *MemMapFs) Rename(oldname, newname string) error {
 		delete(m.getData(), oldname)
 
 		m.registerWithParent(fileData, 0)
-		m.mu.Unlock()
-		m.mu.RLock()
 	} else {
 		return &os.PathError{Op: "rename", Path: oldname, Err: ErrFileNotFound}
 	}
