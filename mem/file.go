@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/spf13/afero/internal/common"
@@ -219,6 +220,9 @@ func (f *File) ReadAt(b []byte, off int64) (n int, err error) {
 	if f.closed {
 		return 0, ErrFileClosed
 	}
+	if f.fileData.dir {
+		return 0, &os.PathError{Op: "read", Path: f.fileData.name, Err: syscall.EISDIR}
+	}
 	if len(b) > 0 && int(off) == len(f.fileData.data) {
 		return 0, io.EOF
 	}
@@ -256,6 +260,9 @@ func (f *File) Truncate(size int64) error {
 			Path: f.fileData.name,
 			Err:  errors.New("file handle is read only"),
 		}
+	}
+	if f.fileData.dir {
+		return &os.PathError{Op: "truncate", Path: f.fileData.name, Err: syscall.EISDIR}
 	}
 	if size < 0 {
 		return ErrOutOfRange
@@ -297,6 +304,9 @@ func (f *File) WriteAt(b []byte, off int64) (n int, err error) {
 			Path: f.fileData.name,
 			Err:  errors.New("file handle is read only"),
 		}
+	}
+	if f.fileData.dir {
+		return 0, &os.PathError{Op: "write", Path: f.fileData.name, Err: syscall.EISDIR}
 	}
 	n = len(b)
 	if n == 0 {

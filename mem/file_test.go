@@ -2,7 +2,9 @@ package mem
 
 import (
 	"bytes"
+	"errors"
 	"io"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -305,5 +307,21 @@ func TestFileWriteAndSeek(t *testing.T) {
 		cur, err = f.Seek(off-int64(n), io.SeekCurrent)
 		assert(err == nil, err)
 		assert(cur == off, cur, off)
+	}
+}
+
+func TestDirectoryRejectsReadWrite(t *testing.T) {
+	d := CreateDir("/dir")
+	f := NewFileHandle(d)
+
+	if _, err := f.Write([]byte("x")); !errors.Is(err, syscall.EISDIR) {
+		t.Fatalf("Write(dir) = %v; want EISDIR", err)
+	}
+	if err := f.Truncate(0); !errors.Is(err, syscall.EISDIR) {
+		t.Fatalf("Truncate(dir) = %v; want EISDIR", err)
+	}
+	buf := make([]byte, 4)
+	if _, err := f.Read(buf); !errors.Is(err, syscall.EISDIR) {
+		t.Fatalf("Read(dir) = %v; want EISDIR", err)
 	}
 }

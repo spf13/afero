@@ -1,6 +1,7 @@
 package afero
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -9,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -1170,5 +1172,55 @@ func TestEmptyWritePastEnd(t *testing.T) {
 				})
 			}
 		})
+	}
+}
+
+// Issue #101: MemMapFs should reject treating directories as regular files,
+// matching os.OpenFile / os.File behavior.
+func TestMemMapFsDirectoryNotRegularFile(t *testing.T) {
+	fs := NewMemMapFs()
+	const dir = "/dir101"
+	if err := fs.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, flag := range []int{os.O_RDWR, os.O_WRONLY} {
+		_, err := fs.OpenFile(dir, flag, 0o644)
+		if err == nil {
+			t.Fatalf("OpenFile(dir, %#x) succeeded; want EISDIR", flag)
+		}
+		perr, ok := err.(*os.PathError)
+		if !ok {
+			t.Fatalf("OpenFile(dir, %#x) error type %T; want *os.PathError", flag, err)
+		}
+		if !errors.Is(perr.Err, syscall.EISDIR) {
+			t.Fatalf("OpenFile(dir, %#x) = %v; want EISDIR", flag, err)
+		}
+	}
+
+	// Read-only open remains valid so Readdir can work.
+	rf, err := fs.OpenFile(dir, os.O_RDONLY, 0)
+	if err != nil {
+		t.Fatalf("OpenFile(dir, O_RDONLY) = %v", err)
+	}
+	defer rf.Close()
+
+	buf := make([]byte, 8)
+	if _, err := rf.Read(buf); !errors.Is(err, syscall.EISDIR) {
+		t.Fatalf("Read(dir) = %v; want EISDIR", err)
+	}
+
+	if _, err := ReadFile(fs, dir); !errors.Is(err, syscall.EISDIR) {
+		t.Fatalf("ReadFile(dir) = %v; want EISDIR", err)
+	}
+
+	// Open() returns a read-only handle; writing must still fail.
+	f, err := fs.Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	if _, err := f.Write([]byte("x")); err == nil {
+		t.Fatal("Write(dir) succeeded; want error")
 	}
 }
