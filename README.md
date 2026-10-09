@@ -239,6 +239,8 @@ This is particularly useful when:
 - Reading fixture data bundled into a binary without `//go:embed`
 - Writing archive inspection or transformation tools that reuse the same traversal logic as your real filesystem code
 - Running tests against a canned, read-only snapshot of a directory tree shipped as a `.zip`
+- ZIP entries are streamed without retaining their decompressed prefix. Backward seeks and positional reads
+  may decompress the preceding bytes again, trading random-access speed for bounded memory use.
 
 ```go
 import (
