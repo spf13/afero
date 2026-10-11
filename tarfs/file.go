@@ -3,6 +3,7 @@ package tarfs
 import (
 	"archive/tar"
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -16,6 +17,7 @@ type File struct {
 	data   *bytes.Reader
 	closed bool
 	fs     *Fs
+	dirPos int
 }
 
 func (f *File) Close() error {
@@ -83,6 +85,9 @@ func (f *File) getDirectoryNames() ([]string, error) {
 
 	var names []string
 	for n := range d {
+		if n == "" {
+			continue
+		}
 		names = append(names, n)
 	}
 	sort.Strings(names)
@@ -104,19 +109,23 @@ func (f *File) Readdir(count int) ([]os.FileInfo, error) {
 		return nil, err
 	}
 
+	names = names[f.dirPos:]
+	if count > 0 {
+		if len(names) == 0 {
+			return nil, io.EOF
+		}
+		if len(names) > count {
+			names = names[:count]
+		}
+	}
+
 	d := f.fs.files[f.Name()]
 	var fi []os.FileInfo
 	for _, n := range names {
-		if n == "" {
-			continue
-		}
-
 		f := d[n]
 		fi = append(fi, f.h.FileInfo())
-		if count > 0 && len(fi) >= count {
-			break
-		}
 	}
+	f.dirPos += len(fi)
 
 	return fi, nil
 }

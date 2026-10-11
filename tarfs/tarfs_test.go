@@ -374,6 +374,13 @@ func TestReaddir(t *testing.T) {
 			t.Errorf("%v: children, got '%v', expected '%v'", d.name, names, d.children)
 		}
 
+		if err := dir.Close(); err != nil {
+			t.Fatal(err)
+		}
+		dir, err = afs.Open(d.name)
+		if err != nil {
+			t.Fatal(err)
+		}
 		fi, err = dir.Readdir(1)
 		if err != nil {
 			t.Fatal(err)
@@ -416,6 +423,13 @@ func TestReaddirnames(t *testing.T) {
 			t.Errorf("%v: children, got '%v', expected '%v'", d.name, names, d.children)
 		}
 
+		if err := dir.Close(); err != nil {
+			t.Fatal(err)
+		}
+		dir, err = afs.Open(d.name)
+		if err != nil {
+			t.Fatal(err)
+		}
 		names, err = dir.Readdirnames(1)
 		if err != nil {
 			t.Fatal(err)
@@ -434,6 +448,90 @@ func TestReaddirnames(t *testing.T) {
 	_, err = dir.Readdir(-1)
 	if err != syscall.ENOTDIR {
 		t.Fatal("Expected error")
+	}
+}
+
+func TestReaddirCursor(t *testing.T) {
+	for _, count := range []int{1, 2, 0, -1, 10} {
+		t.Run(fmt.Sprint(count), func(t *testing.T) {
+			dir, err := afs.Open("/")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer dir.Close()
+
+			first, err := dir.Readdirnames(1)
+			if err != nil || !reflect.DeepEqual(first, dirs[0].children[:1]) {
+				t.Fatalf("first entry = %v, %v", first, err)
+			}
+			entries, err := dir.Readdir(count)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var got []string
+			for _, entry := range entries {
+				got = append(got, entry.Name())
+			}
+			want := dirs[0].children[1:]
+			if count == 1 {
+				want = want[:1]
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Fatalf("remaining entries = %v, want %v", got, want)
+			}
+			if count == 1 {
+				last, err := dir.Readdirnames(1)
+				if err != nil || !reflect.DeepEqual(last, dirs[0].children[2:]) {
+					t.Fatalf("last entry = %v, %v", last, err)
+				}
+			}
+			for i := 0; i < 2; i++ {
+				entries, err := dir.Readdir(1)
+				if len(entries) != 0 || err != io.EOF {
+					t.Fatalf("exhausted Readdir = %v, %v; want no entries, EOF", entries, err)
+				}
+				names, err := dir.Readdirnames(1)
+				if len(names) != 0 || err != io.EOF {
+					t.Fatalf("exhausted Readdirnames = %v, %v; want no entries, EOF", names, err)
+				}
+				names, err = dir.Readdirnames(0)
+				if len(names) != 0 || err != nil {
+					t.Fatalf("exhausted Readdirnames(0) = %v, %v", names, err)
+				}
+			}
+
+			other, err := afs.Open("/")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer other.Close()
+			names, err := other.Readdirnames(0)
+			if err != nil || !reflect.DeepEqual(names, dirs[0].children) {
+				t.Fatalf("independent handle = %v, %v", names, err)
+			}
+		})
+	}
+}
+
+func TestReaddirEmptyDirectory(t *testing.T) {
+	fs := New(tar.NewReader(strings.NewReader("")))
+	for _, count := range []int{1, 0, -1} {
+		dir, err := fs.Open("/")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i := 0; i < 2; i++ {
+			names, err := dir.Readdirnames(count)
+			if len(names) != 0 {
+				t.Fatalf("Readdirnames(%d) = %v, want no entries", count, names)
+			}
+			if count > 0 && err != io.EOF || count <= 0 && err != nil {
+				t.Fatalf("Readdirnames(%d) error = %v", count, err)
+			}
+		}
+		if err := dir.Close(); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
