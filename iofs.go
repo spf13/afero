@@ -70,6 +70,10 @@ func (iofs IOFS) Glob(pattern string) ([]string, error) {
 }
 
 func (iofs IOFS) ReadDir(name string) ([]fs.DirEntry, error) {
+	if !fs.ValidPath(name) {
+		return nil, iofs.wrapError("readdir", name, fs.ErrInvalid)
+	}
+
 	f, err := iofs.Fs.Open(name)
 	if err != nil {
 		return nil, iofs.wrapError("readdir", name, err)
