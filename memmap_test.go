@@ -65,7 +65,8 @@ func TestPathErrors(t *testing.T) {
 	err = fs.Chtimes(path, time.Now(), time.Now())
 	checkPathError(t, err, "Chtimes")
 
-	// fs.Create doesn't return an error
+	_, err = fs.Create(FilePathSeparator)
+	checkPathError(t, err, "Create")
 
 	err = fs.Mkdir(path2, perm)
 	if err != nil {
