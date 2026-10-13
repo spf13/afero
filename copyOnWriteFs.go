@@ -301,12 +301,12 @@ func (u *CopyOnWriteFs) Open(name string) (File, error) {
 }
 
 func (u *CopyOnWriteFs) Mkdir(name string, perm os.FileMode) error {
-	dir, err := IsDir(u.base, name)
-	if err != nil {
-		return u.layer.MkdirAll(name, perm)
-	}
-	if dir {
+	_, err := u.Stat(name)
+	if err == nil {
 		return ErrFileExists
+	}
+	if !u.isNotExist(err) {
+		return err
 	}
 	return u.layer.MkdirAll(name, perm)
 }
@@ -316,15 +316,18 @@ func (u *CopyOnWriteFs) Name() string {
 }
 
 func (u *CopyOnWriteFs) MkdirAll(name string, perm os.FileMode) error {
-	dir, err := IsDir(u.base, name)
+	dir, err := IsDir(u, name)
 	if err != nil {
+		if !u.isNotExist(err) {
+			return err
+		}
 		return u.layer.MkdirAll(name, perm)
 	}
 	if dir {
 		// This is in line with how os.MkdirAll behaves.
 		return nil
 	}
-	return u.layer.MkdirAll(name, perm)
+	return &os.PathError{Op: "mkdir", Path: name, Err: syscall.ENOTDIR}
 }
 
 func (u *CopyOnWriteFs) Create(name string) (File, error) {
