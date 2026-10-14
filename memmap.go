@@ -237,6 +237,29 @@ func (m *MemMapFs) openWrite(name string) (File, error) {
 	return nil, err
 }
 
+func (m *MemMapFs) openOrCreate(name string, flag int, perm os.FileMode) (File, error) {
+	name = normalizePath(name)
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Another opener may have created the file since openWrite checked it.
+	if f, ok := m.getData()[name]; ok {
+		if mem.GetFileInfo(f).Mode().Perm()&0o222 == 0 {
+			return nil, &os.PathError{Op: "open", Path: name, Err: os.ErrPermission}
+		}
+		if flag&os.O_EXCL > 0 {
+			return nil, &os.PathError{Op: "open", Path: name, Err: ErrFileExists}
+		}
+		return mem.NewFileHandle(f), nil
+	}
+
+	f := mem.CreateFile(name)
+	mem.SetMode(f, perm)
+	m.getData()[name] = f
+	m.registerWithParent(f, 0)
+	return mem.NewFileHandle(f), nil
+}
+
 func (m *MemMapFs) open(name string) (*mem.FileData, error) {
 	name = normalizePath(name)
 
@@ -261,14 +284,12 @@ func (m *MemMapFs) lockfreeOpen(name string) (*mem.FileData, error) {
 
 func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
 	perm &= chmodBits
-	chmod := false
 	file, err := m.openWrite(name)
 	if err == nil && (flag&os.O_EXCL > 0) {
 		return nil, &os.PathError{Op: "open", Path: name, Err: ErrFileExists}
 	}
 	if os.IsNotExist(err) && (flag&os.O_CREATE > 0) {
-		file, err = m.Create(name)
-		chmod = true
+		file, err = m.openOrCreate(name, flag, perm)
 	}
 	if err != nil {
 		return nil, err
@@ -289,9 +310,6 @@ func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, erro
 			file.Close()
 			return nil, err
 		}
-	}
-	if chmod {
-		return file, m.setFileMode(name, perm)
 	}
 	return file, nil
 }
