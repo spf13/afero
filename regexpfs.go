@@ -189,28 +189,27 @@ func (f *RegexpFile) Name() string {
 }
 
 func (f *RegexpFile) Readdir(c int) (fi []os.FileInfo, err error) {
-	var rfi []os.FileInfo
-	rfi, err = f.f.Readdir(c)
-	if err != nil {
-		return nil, err
-	}
-	for _, i := range rfi {
-		if i.IsDir() || f.re.MatchString(i.Name()) {
-			fi = append(fi, i)
+	remaining := c
+	for {
+		rfi, err := f.f.Readdir(remaining)
+		for _, i := range rfi {
+			if i.IsDir() || f.re == nil || f.re.MatchString(i.Name()) {
+				fi = append(fi, i)
+			}
 		}
+		if c <= 0 || err != nil || len(fi) >= c {
+			return fi, err
+		}
+		remaining = c - len(fi)
 	}
-	return fi, nil
 }
 
 func (f *RegexpFile) Readdirnames(c int) (n []string, err error) {
 	fi, err := f.Readdir(c)
-	if err != nil {
-		return nil, err
-	}
 	for _, s := range fi {
 		n = append(n, s.Name())
 	}
-	return n, nil
+	return n, err
 }
 
 func (f *RegexpFile) Stat() (os.FileInfo, error) {
