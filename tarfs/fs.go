@@ -4,6 +4,7 @@ package tarfs
 import (
 	"archive/tar"
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -33,7 +34,7 @@ func splitpath(name string) (dir, file string) {
 	return
 }
 
-func New(t *tar.Reader) *Fs {
+func NewWithError(t *tar.Reader) (*Fs, error) {
 	fs := &Fs{files: make(map[string]map[string]*fsEntry)}
 	for {
 		hdr, err := t.Next()
@@ -41,7 +42,7 @@ func New(t *tar.Reader) *Fs {
 			break
 		}
 		if err != nil {
-			return nil
+			return nil, err
 		}
 
 		d, f := splitpath(hdr.Name)
@@ -52,11 +53,11 @@ func New(t *tar.Reader) *Fs {
 		var buf bytes.Buffer
 		size, err := buf.ReadFrom(t)
 		if err != nil {
-			panic("tarfs: reading from tar:" + err.Error())
+			return nil, fmt.Errorf("tarfs: reading from tar: %w", err)
 		}
 
 		if size != hdr.Size {
-			panic("tarfs: size mismatch")
+			return nil, fmt.Errorf("tarfs: size mismatch")
 		}
 
 		file := &fsEntry{
@@ -80,10 +81,18 @@ func New(t *tar.Reader) *Fs {
 		data: nil,
 	}
 
+	return fs, nil
+}
+
+func New(t *tar.Reader) *Fs {
+	fs, _ := NewWithError(t)
 	return fs
 }
 
 func (fs *Fs) Open(name string) (afero.File, error) {
+	if fs == nil || fs.files == nil {
+		return nil, &os.PathError{Op: "open", Path: name, Err: syscall.ENOENT}
+	}
 	d, f := splitpath(name)
 	if _, ok := fs.files[d]; !ok {
 		return nil, &os.PathError{Op: "open", Path: name, Err: syscall.ENOENT}
@@ -112,6 +121,9 @@ func (fs *Fs) Mkdir(name string, perm os.FileMode) error { return syscall.EROFS 
 func (fs *Fs) MkdirAll(path string, perm os.FileMode) error { return syscall.EROFS }
 
 func (fs *Fs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error) {
+	if fs == nil || fs.files == nil {
+		return nil, &os.PathError{Op: "open", Path: name, Err: syscall.ENOENT}
+	}
 	if flag != os.O_RDONLY {
 		return nil, &os.PathError{Op: "open", Path: name, Err: syscall.EPERM}
 	}
@@ -126,6 +138,9 @@ func (fs *Fs) RemoveAll(path string) error { return syscall.EROFS }
 func (fs *Fs) Rename(oldname string, newname string) error { return syscall.EROFS }
 
 func (fs *Fs) Stat(name string) (os.FileInfo, error) {
+	if fs == nil || fs.files == nil {
+		return nil, &os.PathError{Op: "stat", Path: name, Err: syscall.ENOENT}
+	}
 	d, f := splitpath(name)
 	if _, ok := fs.files[d]; !ok {
 		return nil, &os.PathError{Op: "stat", Path: name, Err: syscall.ENOENT}
