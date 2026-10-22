@@ -274,21 +274,48 @@ func (f *UnionFile) WriteString(s string) (n int, err error) {
 	return 0, BADFD
 }
 
-func copyFile(base Fs, layer Fs, name string, bfh File) error {
-	// First make sure the directory exists
-	exists, err := Exists(layer, filepath.Dir(name))
+func copyDirHierarchy(base, layer Fs, dir string) error {
+	dir = filepath.Clean(dir)
+	if dir == "." || dir == string(filepath.Separator) || dir == "" || filepath.Dir(dir) == dir {
+		return nil
+	}
+	exists, err := Exists(layer, dir)
 	if err != nil {
 		return err
 	}
-	if !exists {
-		err = layer.MkdirAll(filepath.Dir(name), 0o777) // FIXME?
-		if err != nil {
+	if exists {
+		return nil
+	}
+	parent := filepath.Dir(dir)
+	if parent != dir {
+		if err := copyDirHierarchy(base, layer, parent); err != nil {
 			return err
 		}
 	}
+	perm := os.FileMode(0o777)
+	if fi, err := base.Stat(dir); err == nil {
+		perm = fi.Mode().Perm()
+	}
+	if err := layer.Mkdir(dir, perm); err != nil && !os.IsExist(err) {
+		return err
+	}
+	_ = layer.Chmod(dir, perm)
+	return nil
+}
+
+func copyFile(base Fs, layer Fs, name string, bfh File) error {
+	bfi, err := bfh.Stat()
+	if err != nil {
+		return err
+	}
+
+	// First make sure the directory exists
+	if err := copyDirHierarchy(base, layer, filepath.Dir(name)); err != nil {
+		return err
+	}
 
 	// Create the file on the overlay
-	lfh, err := layer.Create(name)
+	lfh, err := layer.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, bfi.Mode().Perm())
 	if err != nil {
 		return err
 	}
@@ -300,8 +327,7 @@ func copyFile(base Fs, layer Fs, name string, bfh File) error {
 		return err
 	}
 
-	bfi, err := bfh.Stat()
-	if err != nil || bfi.Size() != n {
+	if bfi.Size() != n {
 		layer.Remove(name)
 		lfh.Close()
 		return syscall.EIO
@@ -310,9 +336,9 @@ func copyFile(base Fs, layer Fs, name string, bfh File) error {
 	err = lfh.Close()
 	if err != nil {
 		layer.Remove(name)
-		lfh.Close()
 		return err
 	}
+	_ = layer.Chmod(name, bfi.Mode().Perm())
 	return layer.Chtimes(name, bfi.ModTime(), bfi.ModTime())
 }
 
