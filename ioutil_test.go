@@ -175,3 +175,50 @@ func TestTempFile(t *testing.T) {
 		})
 	}
 }
+
+func TestTempFile_PathSeparator(t *testing.T) {
+	fs := NewMemMapFs()
+	dir := "/tmp"
+	patterns := []string{
+		"../../tmp/evil*.sh",
+		"sub/evil*.sh",
+	}
+	for _, pattern := range patterns {
+		f, err := TempFile(fs, dir, pattern)
+		if err == nil {
+			t.Errorf("TempFile with pattern %q should fail, but succeeded", pattern)
+			if f != nil {
+				f.Close()
+			}
+		}
+		expectedErr := pattern + ": pattern contains path separator"
+		if err != nil && err.Error() != expectedErr {
+			t.Errorf("TempFile with pattern %q error = %q, want %q", pattern, err.Error(), expectedErr)
+		}
+	}
+
+	// Verify no files were created in fs
+	entries, err := ReadDir(fs, "/")
+	if err == nil && len(entries) > 0 {
+		t.Errorf("expected no files to be created in fs, but found %d entries", len(entries))
+	}
+}
+
+func TestTempDir_PathSeparator(t *testing.T) {
+	fs := NewMemMapFs()
+	dir := "/tmp"
+	prefixes := []string{
+		"../../tmp/evil",
+		"sub/evil",
+	}
+	for _, prefix := range prefixes {
+		name, err := TempDir(fs, dir, prefix)
+		if err == nil {
+			t.Errorf("TempDir with prefix %q should fail, but returned %q", prefix, name)
+		}
+		expectedErr := prefix + ": pattern contains path separator"
+		if err != nil && err.Error() != expectedErr {
+			t.Errorf("TempDir with prefix %q error = %q, want %q", prefix, err.Error(), expectedErr)
+		}
+	}
+}

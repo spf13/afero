@@ -179,6 +179,9 @@ func (a Afero) TempFile(dir, pattern string) (f File, err error) {
 }
 
 func TempFile(fs Fs, dir, pattern string) (f File, err error) {
+	if strings.Contains(pattern, string(os.PathSeparator)) || strings.Contains(pattern, "/") {
+		return nil, fmt.Errorf("%s: pattern contains path separator", pattern)
+	}
 	if dir == "" {
 		dir = os.TempDir()
 	}
@@ -219,7 +222,7 @@ func (a Afero) TempDir(dir, prefix string) (name string, err error) {
 }
 
 func TempDir(fs Fs, dir, prefix string) (name string, err error) {
-	if strings.Contains(prefix, string(os.PathSeparator)) {
+	if strings.Contains(prefix, string(os.PathSeparator)) || strings.Contains(prefix, "/") {
 		return "", fmt.Errorf("%s: pattern contains path separator", prefix)
 	}
 	if dir == "" {
