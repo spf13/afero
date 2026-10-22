@@ -3,6 +3,7 @@ package tarfs
 
 import (
 	"archive/tar"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -457,5 +458,47 @@ func TestGlob(t *testing.T) {
 		} else {
 			t.Errorf("glob: %s: got %#v, expected %#v", s.glob, entries, s.entries)
 		}
+	}
+}
+
+func TestTruncatedTar(t *testing.T) {
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	hdr := &tar.Header{
+		Name: "truncated.txt",
+		Mode: 0o644,
+		Size: 1024,
+	}
+	if err := tw.WriteHeader(hdr); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tw.Write(bytes.Repeat([]byte("a"), 100)); err != nil {
+		t.Fatal(err)
+	}
+	// Intentionally do not write the remaining 924 bytes or close tw cleanly.
+
+	// Test New does not panic and returns nil
+	tr := tar.NewReader(bytes.NewReader(buf.Bytes()))
+	fs := New(tr)
+	if fs != nil {
+		t.Errorf("expected nil Fs for truncated tar, got %v", fs)
+	}
+
+	// Calling methods on nil fs should return error, not panic
+	if _, err := fs.Open("truncated.txt"); err == nil {
+		t.Error("expected error opening file on nil fs, got nil")
+	}
+	if _, err := fs.Stat("truncated.txt"); err == nil {
+		t.Error("expected error stating file on nil fs, got nil")
+	}
+
+	// Test NewWithError returns error and nil fs
+	tr2 := tar.NewReader(bytes.NewReader(buf.Bytes()))
+	fs2, err := NewWithError(tr2)
+	if err == nil {
+		t.Error("expected error from NewWithError for truncated tar, got nil")
+	}
+	if fs2 != nil {
+		t.Errorf("expected nil Fs from NewWithError, got %v", fs2)
 	}
 }
