@@ -21,6 +21,9 @@ type File struct {
 }
 
 func (f *File) fillBuffer(offset int64) (err error) {
+	if offset < 0 {
+		return syscall.EINVAL
+	}
 	if f.reader == nil {
 		if f.reader, err = f.zipfile.Open(); err != nil {
 			return
@@ -34,10 +37,16 @@ func (f *File) fillBuffer(offset int64) (err error) {
 		return
 	}
 	buf := make([]byte, int(offset)-len(f.buf))
-	if n, readErr := io.ReadFull(f.reader, buf); n > 0 {
+	n, readErr := io.ReadFull(f.reader, buf)
+	if n > 0 {
 		f.buf = append(f.buf, buf[:n]...)
-	} else if readErr != nil {
-		err = readErr
+	}
+	if readErr != nil {
+		if readErr == io.ErrUnexpectedEOF {
+			err = io.EOF
+		} else {
+			err = readErr
+		}
 	}
 	return
 }
@@ -60,9 +69,25 @@ func (f *File) Read(p []byte) (n int, err error) {
 	if f.closed {
 		return 0, afero.ErrFileClosed
 	}
-	err = f.fillBuffer(f.offset + int64(len(p)))
+	if len(p) == 0 {
+		return 0, nil
+	}
+	fillErr := f.fillBuffer(f.offset + int64(len(p)))
+	if f.offset >= int64(len(f.buf)) {
+		if fillErr != nil {
+			return 0, fillErr
+		}
+		return 0, io.EOF
+	}
 	n = copy(p, f.buf[f.offset:])
 	f.offset += int64(n)
+	if n < len(p) {
+		if fillErr != nil {
+			err = fillErr
+		} else {
+			err = io.EOF
+		}
+	}
 	return
 }
 
@@ -73,8 +98,27 @@ func (f *File) ReadAt(p []byte, off int64) (n int, err error) {
 	if f.closed {
 		return 0, afero.ErrFileClosed
 	}
-	err = f.fillBuffer(off + int64(len(p)))
+	if off < 0 {
+		return 0, syscall.EINVAL
+	}
+	if len(p) == 0 {
+		return 0, nil
+	}
+	fillErr := f.fillBuffer(off + int64(len(p)))
+	if off >= int64(len(f.buf)) {
+		if fillErr != nil {
+			return 0, fillErr
+		}
+		return 0, io.EOF
+	}
 	n = copy(p, f.buf[int(off):])
+	if n < len(p) {
+		if fillErr != nil {
+			err = fillErr
+		} else {
+			err = io.EOF
+		}
+	}
 	return
 }
 
