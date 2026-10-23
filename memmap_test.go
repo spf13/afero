@@ -571,7 +571,7 @@ func TestMemFsDirMode(t *testing.T) {
 	}
 }
 
-func TestMemFsUnexpectedEOF(t *testing.T) {
+func TestMemFsReadAtLeastErrors(t *testing.T) {
 	t.Parallel()
 
 	fs := NewMemMapFs()
@@ -586,17 +586,23 @@ func TestMemFsUnexpectedEOF(t *testing.T) {
 	}
 	defer f.Close()
 
-	// Seek beyond the end.
-	_, err = f.Seek(512, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	buff := make([]byte, 256)
-	_, err = io.ReadAtLeast(f, buff, 256)
-
-	if err != io.ErrUnexpectedEOF {
-		t.Fatal("Expected ErrUnexpectedEOF")
+	for _, tc := range []struct {
+		name   string
+		offset int64
+		want   error
+	}{
+		{name: "beyond-end", offset: 512, want: io.EOF},
+		{name: "partial", offset: 0, want: io.ErrUnexpectedEOF},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := f.Seek(tc.offset, io.SeekStart); err != nil {
+				t.Fatal(err)
+			}
+			_, err := io.ReadAtLeast(f, make([]byte, 256), 256)
+			if err != tc.want {
+				t.Fatalf("ReadAtLeast error = %v, want %v", err, tc.want)
+			}
+		})
 	}
 }
 

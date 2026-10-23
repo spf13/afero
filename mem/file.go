@@ -219,11 +219,11 @@ func (f *File) ReadAt(b []byte, off int64) (n int, err error) {
 	if f.closed {
 		return 0, ErrFileClosed
 	}
-	if len(b) > 0 && int(off) == len(f.fileData.data) {
-		return 0, io.EOF
-	}
-	if int(off) > len(f.fileData.data) {
-		return 0, io.ErrUnexpectedEOF
+	if off >= int64(len(f.fileData.data)) {
+		if len(b) > 0 {
+			return 0, io.EOF
+		}
+		return 0, nil
 	}
 	if len(f.fileData.data)-int(off) >= len(b) {
 		n = len(b)
