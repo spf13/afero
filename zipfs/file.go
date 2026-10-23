@@ -18,6 +18,8 @@ type File struct {
 	offset        int64
 	isdir, closed bool
 	buf           []byte
+	dirEntries    []os.FileInfo
+	dirOffset     int
 }
 
 func (f *File) fillBuffer(offset int64) (err error) {
@@ -46,6 +48,7 @@ func (f *File) Close() (err error) {
 	f.zipfile = nil
 	f.closed = true
 	f.buf = nil
+	f.dirEntries = nil
 	if f.reader != nil {
 		err = f.reader.Close()
 		f.reader = nil
@@ -128,33 +131,44 @@ func (f *File) getDirEntries() (map[string]*zip.File, error) {
 }
 
 func (f *File) Readdir(count int) (fi []os.FileInfo, err error) {
+	if f.closed {
+		return nil, afero.ErrFileClosed
+	}
 	zipfiles, err := f.getDirEntries()
 	if err != nil {
 		return nil, err
 	}
-	for d, zipfile := range zipfiles {
-		if zipfile == nil {
-			fi = append(fi, pseudoDir{d})
-		} else {
-			fi = append(fi, zipfile.FileInfo())
-		}
-		if count > 0 && len(fi) >= count {
-			break
+	if f.dirEntries == nil {
+		f.dirEntries = make([]os.FileInfo, 0, len(zipfiles))
+		for d, zipfile := range zipfiles {
+			if zipfile == nil {
+				f.dirEntries = append(f.dirEntries, pseudoDir{d})
+			} else {
+				f.dirEntries = append(f.dirEntries, zipfile.FileInfo())
+			}
 		}
 	}
+	if count > 0 && f.dirOffset == len(f.dirEntries) {
+		return nil, io.EOF
+	}
+	end := len(f.dirEntries)
+	if count > 0 && count < end-f.dirOffset {
+		end = f.dirOffset + count
+	}
+	fi = make([]os.FileInfo, end-f.dirOffset)
+	copy(fi, f.dirEntries[f.dirOffset:end])
+	f.dirOffset = end
 	return
 }
 
 func (f *File) Readdirnames(count int) (names []string, err error) {
-	zipfiles, err := f.getDirEntries()
+	entries, err := f.Readdir(count)
 	if err != nil {
 		return nil, err
 	}
-	for filename := range zipfiles {
-		names = append(names, filename)
-		if count > 0 && len(names) >= count {
-			break
-		}
+	names = make([]string, len(entries))
+	for i, entry := range entries {
+		names[i] = entry.Name()
 	}
 	return
 }
