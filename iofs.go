@@ -182,6 +182,9 @@ func (f FromIOFS) Open(name string) (File, error) {
 }
 
 func (f FromIOFS) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
+	if flag&(os.O_WRONLY|os.O_RDWR|os.O_APPEND|os.O_CREATE|os.O_TRUNC) != 0 {
+		return nil, notImplemented("openfile", name)
+	}
 	return f.Open(name)
 }
 
