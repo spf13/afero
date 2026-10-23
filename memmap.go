@@ -195,7 +195,10 @@ func (m *MemMapFs) MkdirAll(path string, perm os.FileMode) error {
 // Handle some relative paths
 func normalizePath(path string) string {
 	if path == "" {
-		return ""
+		// The empty path names the root, the same as "." and "..". Returning
+		// it unchanged made Stat("") fail while Stat(".") and Stat("/")
+		// succeeded, so a walk rooted at "" reported the root as missing.
+		return FilePathSeparator
 	}
 	path = filepath.Clean(path)
 
