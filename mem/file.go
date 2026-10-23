@@ -22,7 +22,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/spf13/afero/internal/common"
@@ -33,7 +32,6 @@ const FilePathSeparator = string(filepath.Separator)
 var _ fs.ReadDirFile = &File{}
 
 type File struct {
-	// atomic requires 64-bit alignment for struct field access
 	at           int64
 	readDirCount int64
 	closed       bool
@@ -119,9 +117,9 @@ func GetFileInfo(f *FileData) *FileInfo {
 }
 
 func (f *File) Open() error {
-	atomic.StoreInt64(&f.at, 0)
-	atomic.StoreInt64(&f.readDirCount, 0)
 	f.fileData.Lock()
+	f.at = 0
+	f.readDirCount = 0
 	f.dirBuf = nil
 	f.closed = false
 	f.fileData.Unlock()
@@ -216,6 +214,11 @@ func (f *File) ReadDir(n int) ([]fs.DirEntry, error) {
 func (f *File) ReadAt(b []byte, off int64) (n int, err error) {
 	f.fileData.Lock()
 	defer f.fileData.Unlock()
+	return f.readAt(b, off)
+}
+
+// readAt requires the caller to hold f.fileData's lock.
+func (f *File) readAt(b []byte, off int64) (n int, err error) {
 	if f.closed {
 		return 0, ErrFileClosed
 	}
@@ -238,8 +241,10 @@ func (f *File) ReadAt(b []byte, off int64) (n int, err error) {
 }
 
 func (f *File) Read(b []byte) (n int, err error) {
-	n, err = f.ReadAt(b, atomic.LoadInt64(&f.at))
-	atomic.AddInt64(&f.at, int64(n))
+	f.fileData.Lock()
+	defer f.fileData.Unlock()
+	n, err = f.readAt(b, f.at)
+	f.at += int64(n)
 	if n > 0 && err == io.EOF {
 		err = nil
 	}
@@ -273,21 +278,30 @@ func (f *File) Truncate(size int64) error {
 }
 
 func (f *File) Seek(offset int64, whence int) (int64, error) {
+	f.fileData.Lock()
+	defer f.fileData.Unlock()
 	if f.closed {
 		return 0, ErrFileClosed
 	}
 	switch whence {
 	case io.SeekStart:
-		atomic.StoreInt64(&f.at, offset)
+		f.at = offset
 	case io.SeekCurrent:
-		atomic.AddInt64(&f.at, offset)
+		f.at += offset
 	case io.SeekEnd:
-		atomic.StoreInt64(&f.at, int64(len(f.fileData.data))+offset)
+		f.at = int64(len(f.fileData.data)) + offset
 	}
 	return f.at, nil
 }
 
 func (f *File) WriteAt(b []byte, off int64) (n int, err error) {
+	f.fileData.Lock()
+	defer f.fileData.Unlock()
+	return f.writeAt(b, off)
+}
+
+// writeAt requires the caller to hold f.fileData's lock.
+func (f *File) writeAt(b []byte, off int64) (n int, err error) {
 	if f.closed {
 		return 0, ErrFileClosed
 	}
@@ -302,8 +316,6 @@ func (f *File) WriteAt(b []byte, off int64) (n int, err error) {
 	if n == 0 {
 		return 0, nil
 	}
-	f.fileData.Lock()
-	defer f.fileData.Unlock()
 	diff := off - int64(len(f.fileData.data))
 	var tail []byte
 	if n+int(off) < len(f.fileData.data) {
@@ -323,8 +335,10 @@ func (f *File) WriteAt(b []byte, off int64) (n int, err error) {
 }
 
 func (f *File) Write(b []byte) (n int, err error) {
-	n, err = f.WriteAt(b, atomic.LoadInt64(&f.at))
-	atomic.AddInt64(&f.at, int64(n))
+	f.fileData.Lock()
+	defer f.fileData.Unlock()
+	n, err = f.writeAt(b, f.at)
+	f.at += int64(n)
 	return
 }
 
