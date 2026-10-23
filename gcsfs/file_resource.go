@@ -100,9 +100,12 @@ func (o *gcsFileResource) maybeCloseWriter() error {
 				"couldn't simulate a partial write; the closing (and thus"+
 					" the whole file write) is NOT committed to GCS. %v", err)
 		}
-		if currentFile != nil && currentFile.Remain() > 0 {
-			if _, err := io.Copy(o.writer, currentFile); err != nil {
-				return fmt.Errorf("error writing: %v", err)
+		if currentFile != nil {
+			defer func() { _ = currentFile.Close() }()
+			if currentFile.Remain() > 0 {
+				if _, err := io.Copy(o.writer, currentFile); err != nil {
+					return fmt.Errorf("error writing: %v", err)
+				}
 			}
 		}
 	}
@@ -175,6 +178,13 @@ func (o *gcsFileResource) WriteAt(b []byte, off int64) (n int, err error) {
 	}
 
 	w := o.obj.NewWriter(o.ctx)
+	committed := false
+	defer func() {
+		if !committed {
+			// Abort the pending upload and release the writer's resources.
+			_ = w.CloseWithError(err)
+		}
+	}()
 	// TRIGGER WARNING: This can seem like a hack but it works thanks
 	// to GCS strong consistency. We will open and write to the same file; First when the
 	// writer is closed will the content get committed to GCS.
@@ -213,6 +223,7 @@ func (o *gcsFileResource) WriteAt(b []byte, off int64) (n int, err error) {
 			return 0, err
 		}
 		if _, err = io.CopyN(w, r, off); err != nil {
+			_ = r.Close()
 			return 0, err
 		}
 		if err = r.Close(); err != nil {
@@ -226,6 +237,7 @@ func (o *gcsFileResource) WriteAt(b []byte, off int64) (n int, err error) {
 	written, err := o.writer.Write(b)
 
 	o.offset += int64(written)
+	committed = true
 	return written, err
 }
 
@@ -246,12 +258,12 @@ func min(x, y int) int {
 	return y
 }
 
-func (o *gcsFileResource) Truncate(wantedSize int64) error {
+func (o *gcsFileResource) Truncate(wantedSize int64) (err error) {
 	if wantedSize < 0 {
 		return ErrOutOfRange
 	}
 
-	if err := o.maybeCloseIo(); err != nil {
+	if err = o.maybeCloseIo(); err != nil {
 		return err
 	}
 
@@ -259,8 +271,22 @@ func (o *gcsFileResource) Truncate(wantedSize int64) error {
 	if err != nil {
 		return err
 	}
+	rClosed := false
+	defer func() {
+		if !rClosed {
+			_ = r.Close()
+		}
+	}()
 
 	w := o.obj.NewWriter(o.ctx)
+	committed := false
+	defer func() {
+		if !committed {
+			// Abort the pending upload and release the writer's resources.
+			_ = w.CloseWithError(err)
+		}
+	}()
+
 	written, err := io.Copy(w, r)
 	if err != nil {
 		return err
@@ -280,8 +306,10 @@ func (o *gcsFileResource) Truncate(wantedSize int64) error {
 	if err = r.Close(); err != nil {
 		return fmt.Errorf("error closing reader: %v", err)
 	}
+	rClosed = true
 	if err = w.Close(); err != nil {
 		return fmt.Errorf("error closing writer: %v", err)
 	}
+	committed = true
 	return nil
 }
