@@ -37,7 +37,13 @@ type BasePathFile struct {
 
 func (f *BasePathFile) Name() string {
 	sourcename := f.File.Name()
-	return strings.TrimPrefix(sourcename, filepath.Clean(f.path))
+	base := filepath.Clean(f.path)
+	// A nested BasePathFs exposes a rooted name even for a relative base.
+	if base != "." && len(sourcename) > 0 && os.IsPathSeparator(sourcename[0]) &&
+		!os.IsPathSeparator(base[0]) {
+		base = string(filepath.Separator) + base
+	}
+	return strings.TrimPrefix(sourcename, base)
 }
 
 func (f *BasePathFile) ReadDir(n int) ([]fs.DirEntry, error) {

@@ -307,3 +307,39 @@ func TestBasePathTempFile(t *testing.T) {
 		t.Fatalf("TempFile realpath leaked: expected %s, got %s", expected, actual)
 	}
 }
+
+func TestNestedBasePathFileName(t *testing.T) {
+	for base, dir := range map[string]string{
+		"123": "123", "/123": "123", "123/": "123", "123/sub": "123",
+		".": ".123",
+	} {
+		t.Run(base, func(t *testing.T) {
+			for _, source := range []Fs{NewMemMapFs(), NewOsFs()} {
+				t.Run(source.Name(), func(t *testing.T) {
+					outer := NewBasePathFs(source, t.TempDir())
+					fs := NewBasePathFs(outer, filepath.FromSlash(base))
+					if err := fs.MkdirAll(dir, 0o755); err != nil {
+						t.Fatal(err)
+					}
+					f, err := TempFile(fs, dir, "afero-test-")
+					if err != nil {
+						t.Fatal(err)
+					}
+					name := f.Name()
+					if err := f.Close(); err != nil {
+						t.Fatal(err)
+					}
+					if got, want := filepath.Dir(name), filepath.Join(string(filepath.Separator), dir); got != want {
+						t.Errorf("Name() directory = %q, want %q", got, want)
+					}
+					if err := fs.Chmod(name, 0o600); err != nil {
+						t.Errorf("Chmod(Name()): %v", err)
+					}
+					if err := fs.Remove(name); err != nil {
+						t.Errorf("Remove(Name()): %v", err)
+					}
+				})
+			}
+		})
+	}
+}
