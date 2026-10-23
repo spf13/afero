@@ -18,11 +18,14 @@
 package afero
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -410,6 +413,106 @@ func TestWriteToDisk(t *testing.T) {
 		}
 		reader.Seek(0, 0)
 	}
+}
+
+func TestWriteReaderCreateErrors(t *testing.T) {
+	t.Parallel()
+
+	writers := map[string]func(Fs, string, io.Reader) error{
+		"WriteReader":     WriteReader,
+		"SafeWriteReader": SafeWriteReader,
+		"Afero.WriteReader": func(fs Fs, name string, r io.Reader) error {
+			return (Afero{Fs: fs}).WriteReader(name, r)
+		},
+		"Afero.SafeWriteReader": func(fs Fs, name string, r io.Reader) error {
+			return (Afero{Fs: fs}).SafeWriteReader(name, r)
+		},
+	}
+	for name, write := range writers {
+		t.Run(name, func(t *testing.T) {
+			for _, readOnly := range []bool{true, false} {
+				label := "wrapped create error"
+				if readOnly {
+					label = "read-only filesystem"
+				}
+				t.Run(label, func(t *testing.T) {
+					base := NewMemMapFs()
+					fs := NewReadOnlyFs(base)
+					wantErr := error(syscall.EPERM)
+					if !readOnly {
+						wantErr = syscall.ENOSPC
+						fs = &writeReaderErrorFs{
+							Fs: base,
+							createErr: &os.PathError{
+								Op: "create", Path: "output.txt", Err: wantErr,
+							},
+						}
+					}
+					reader := strings.NewReader("content")
+					err := write(fs, "output.txt", reader)
+					if !errors.Is(err, wantErr) {
+						t.Errorf("want create error %v, got %v", wantErr, err)
+					}
+					if _, err := base.Stat("output.txt"); !os.IsNotExist(err) {
+						t.Errorf("failed write created output.txt: %v", err)
+					}
+					if reader.Len() != len("content") {
+						t.Error("failed create consumed the reader")
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestSafeWriteReaderStatError(t *testing.T) {
+	t.Parallel()
+
+	writers := map[string]func(Fs, string, io.Reader) error{
+		"SafeWriteReader": SafeWriteReader,
+		"Afero.SafeWriteReader": func(fs Fs, name string, r io.Reader) error {
+			return (Afero{Fs: fs}).SafeWriteReader(name, r)
+		},
+	}
+	for name, write := range writers {
+		t.Run(name, func(t *testing.T) {
+			fs := &writeReaderErrorFs{
+				Fs: NewMemMapFs(),
+				statErr: &os.PathError{
+					Op: "stat", Path: "output.txt", Err: syscall.EIO,
+				},
+			}
+			reader := strings.NewReader("content")
+			if err := write(fs, "output.txt", reader); !errors.Is(err, syscall.EIO) {
+				t.Errorf("want stat error %v, got %v", syscall.EIO, err)
+			}
+			if fs.creates != 0 || reader.Len() != len("content") {
+				t.Error("stat failure attempted to create or write the file")
+			}
+		})
+	}
+}
+
+type writeReaderErrorFs struct {
+	Fs
+	createErr error
+	statErr   error
+	creates   int
+}
+
+func (fs *writeReaderErrorFs) Create(name string) (File, error) {
+	fs.creates++
+	if fs.createErr != nil {
+		return nil, fs.createErr
+	}
+	return fs.Fs.Create(name)
+}
+
+func (fs *writeReaderErrorFs) Stat(name string) (os.FileInfo, error) {
+	if fs.statErr != nil {
+		return nil, fs.statErr
+	}
+	return fs.Fs.Stat(name)
 }
 
 func TestGetTempDir(t *testing.T) {

@@ -54,7 +54,7 @@ func WriteReader(fs Fs, path string, r io.Reader) (retErr error) {
 
 	file, err := fs.Create(path)
 	if err != nil {
-		return
+		return err
 	}
 	defer func() {
 		if cerr := file.Close(); cerr != nil {
@@ -84,7 +84,7 @@ func SafeWriteReader(fs Fs, path string, r io.Reader) (retErr error) {
 
 	exists, err := Exists(fs, path)
 	if err != nil {
-		return
+		return err
 	}
 	if exists {
 		return fmt.Errorf("%v already exists", path)
@@ -92,7 +92,7 @@ func SafeWriteReader(fs Fs, path string, r io.Reader) (retErr error) {
 
 	file, err := fs.Create(path)
 	if err != nil {
-		return
+		return err
 	}
 	defer func() {
 		if cerr := file.Close(); cerr != nil {
