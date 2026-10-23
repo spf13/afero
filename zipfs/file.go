@@ -2,103 +2,171 @@ package zipfs
 
 import (
 	"archive/zip"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 	"syscall"
 
 	"github.com/spf13/afero"
 )
 
 type File struct {
+	mu            sync.RWMutex
 	fs            *Fs
 	zipfile       *zip.File
 	pseudodir     *pseudoDir
-	reader        io.ReadCloser
+	stream        fileStream
 	offset        int64
 	isdir, closed bool
-	buf           []byte
 }
 
-func (f *File) fillBuffer(offset int64) (err error) {
-	if f.reader == nil {
-		if f.reader, err = f.zipfile.Open(); err != nil {
-			return
+// fileStream keeps only the decompressor state, not the decompressed prefix.
+type fileStream struct {
+	reader io.ReadCloser
+	pos    int64
+	err    error
+}
+
+func (s *fileStream) close() error {
+	if s.reader == nil {
+		return nil
+	}
+	err := s.reader.Close()
+	*s = fileStream{}
+	return err
+}
+
+func (s *fileStream) read(p []byte) (int, error) {
+	total := 0
+	for total < len(p) {
+		if s.err != nil {
+			return total, s.err
+		}
+		n, err := s.reader.Read(p[total:])
+		total += n
+		s.pos += int64(n)
+		s.err = err
+		if err != nil {
+			if err == io.EOF && total == len(p) {
+				return total, nil
+			}
+			return total, err
 		}
 	}
-	if offset > int64(f.zipfile.UncompressedSize64) {
-		offset = int64(f.zipfile.UncompressedSize64)
-		err = io.EOF
+	return total, nil
+}
+
+func (s *fileStream) position(file *zip.File, offset int64) error {
+	if offset < s.pos {
+		if err := s.close(); err != nil {
+			return err
+		}
 	}
-	if len(f.buf) >= int(offset) {
-		return
+	if s.reader == nil {
+		r, err := file.Open()
+		if err != nil {
+			return err
+		}
+		s.reader = r
 	}
-	buf := make([]byte, int(offset)-len(f.buf))
-	if n, readErr := io.ReadFull(f.reader, buf); n > 0 {
-		f.buf = append(f.buf, buf[:n]...)
-	} else if readErr != nil {
-		err = readErr
+	if s.pos == offset {
+		return nil
 	}
-	return
+	var scratch [32 * 1024]byte
+	for s.pos < offset {
+		n := min(int64(len(scratch)), offset-s.pos)
+		if _, err := s.read(scratch[:n]); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (f *File) Close() (err error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.zipfile = nil
 	f.closed = true
-	f.buf = nil
-	if f.reader != nil {
-		err = f.reader.Close()
-		f.reader = nil
-	}
-	return
+	return f.stream.close()
 }
 
 func (f *File) Read(p []byte) (n int, err error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	if f.isdir {
 		return 0, syscall.EISDIR
 	}
 	if f.closed {
 		return 0, afero.ErrFileClosed
 	}
-	err = f.fillBuffer(f.offset + int64(len(p)))
-	n = copy(p, f.buf[f.offset:])
+	if len(p) == 0 {
+		return 0, nil
+	}
+	if err = f.stream.position(f.zipfile, f.offset); err != nil {
+		return 0, err
+	}
+	n, err = f.stream.read(p)
 	f.offset += int64(n)
 	return
 }
 
 func (f *File) ReadAt(p []byte, off int64) (n int, err error) {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
 	if f.isdir {
 		return 0, syscall.EISDIR
 	}
 	if f.closed {
 		return 0, afero.ErrFileClosed
 	}
-	err = f.fillBuffer(off + int64(len(p)))
-	n = copy(p, f.buf[int(off):])
-	return
+	if off < 0 {
+		return 0, afero.ErrOutOfRange
+	}
+	if len(p) == 0 {
+		return 0, nil
+	}
+	if uint64(off) >= f.zipfile.UncompressedSize64 {
+		return 0, io.EOF
+	}
+	var stream fileStream
+	defer func() {
+		if closeErr := stream.close(); closeErr != nil {
+			err = errors.Join(err, closeErr)
+		}
+	}()
+	if err = stream.position(f.zipfile, off); err != nil {
+		return 0, err
+	}
+	return stream.read(p)
 }
 
 func (f *File) Seek(offset int64, whence int) (int64, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	if f.isdir {
 		return 0, syscall.EISDIR
 	}
 	if f.closed {
 		return 0, afero.ErrFileClosed
 	}
+	var base int64
+	size := int64(f.zipfile.UncompressedSize64)
 	switch whence {
 	case io.SeekStart:
 	case io.SeekCurrent:
-		offset += f.offset
+		base = f.offset
 	case io.SeekEnd:
-		offset += int64(f.zipfile.UncompressedSize64)
+		base = size
 	default:
 		return 0, syscall.EINVAL
 	}
-	if offset < 0 || offset > int64(f.zipfile.UncompressedSize64) {
+	if offset < -base || offset > size-base {
 		return 0, afero.ErrOutOfRange
 	}
-	f.offset = offset
-	return offset, nil
+	f.offset = base + offset
+	return f.offset, nil
 }
 
 func (f *File) Write(p []byte) (n int, err error) { return 0, syscall.EPERM }

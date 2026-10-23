@@ -31,7 +31,7 @@ func TestFileRead(t *testing.T) {
 		t.Errorf("Expected read length to be %d, found: %d", info.Size(), n)
 	}
 
-	// read a second time to check f.offset and f.buf are correct
+	// Read a second time to check the cursor and end-of-file state.
 	buf = make([]byte, chunkSize)
 	n, err = f.Read(buf)
 	if err != io.EOF {
