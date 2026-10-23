@@ -173,10 +173,48 @@ func TestGlobSymlink(t *testing.T) {
 }
 
 func TestGlobError(t *testing.T) {
+	defer removeAllTestFiles(t)
 	for _, fs := range Fss {
-		_, err := Glob(fs, "[7]")
-		if err != nil {
-			t.Error("expected error for bad pattern; got none")
-		}
+		t.Run(fs.Name(), func(t *testing.T) {
+			root := testDir(fs)
+			for _, dir := range []string{"empty", "populated"} {
+				if err := fs.MkdirAll(filepath.Join(root, dir), 0o700); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := WriteFile(
+				fs,
+				filepath.Join(root, "populated", "entry"),
+				nil,
+				0o600,
+			); err != nil {
+				t.Fatal(err)
+			}
+
+			for _, tt := range []struct {
+				pattern string
+				wantErr error
+			}{
+				{"missing/b[", filepath.ErrBadPattern},
+				{"empty/b[", filepath.ErrBadPattern},
+				{"populated/b[", filepath.ErrBadPattern},
+				{"missing/[/file", filepath.ErrBadPattern},
+				{"missing/[7]", nil},
+				{"empty/[7]", nil},
+				{"populated/no_match*", nil},
+				{"missing*/no_match", nil},
+			} {
+				t.Run(tt.pattern, func(t *testing.T) {
+					pattern := filepath.Join(root, filepath.FromSlash(tt.pattern))
+					matches, err := Glob(fs, pattern)
+					if err != tt.wantErr {
+						t.Errorf("Glob(%q) error = %v, want %v", pattern, err, tt.wantErr)
+					}
+					if len(matches) != 0 {
+						t.Errorf("Glob(%q) = %v, want no matches", pattern, matches)
+					}
+				})
+			}
+		})
 	}
 }
