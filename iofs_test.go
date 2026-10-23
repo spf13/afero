@@ -139,7 +139,7 @@ func TestIOFSNativeDirEntryWhenPossible(t *testing.T) {
 	assertDirEntries(dirEntries, true)
 
 	fileCount := 0
-	err = fs.WalkDir(iofs, "", func(path string, d fs.DirEntry, err error) error {
+	err = fs.WalkDir(iofs, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -573,7 +573,7 @@ func BenchmarkWalkDir(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := fs.WalkDir(iofs, "", func(path string, d fs.DirEntry, err error) error {
+		err := fs.WalkDir(iofs, ".", func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
