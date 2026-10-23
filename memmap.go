@@ -339,13 +339,13 @@ func (m *MemMapFs) Rename(oldname, newname string) error {
 	oldname = normalizePath(oldname)
 	newname = normalizePath(newname)
 
-	if oldname == newname {
-		return nil
-	}
-
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	if _, ok := m.getData()[oldname]; ok {
+		if oldname == newname {
+			return nil
+		}
+
 		m.mu.RUnlock()
 		m.mu.Lock()
 		err := m.unRegisterWithParent(oldname)
