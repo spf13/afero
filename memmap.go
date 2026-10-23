@@ -22,6 +22,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/spf13/afero/mem"
@@ -56,6 +57,10 @@ func (*MemMapFs) Name() string { return "MemMapFS" }
 func (m *MemMapFs) Create(name string) (File, error) {
 	name = normalizePath(name)
 	m.mu.Lock()
+	if existing, ok := m.getData()[name]; ok && mem.GetFileInfo(existing).IsDir() {
+		m.mu.Unlock()
+		return nil, &os.PathError{Op: "create", Path: name, Err: syscall.EISDIR}
+	}
 	file := mem.CreateFile(name)
 	mem.SetMode(file, 0o666)
 	m.getData()[name] = file
