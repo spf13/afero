@@ -200,7 +200,7 @@ func TestFromIOFS(t *testing.T) {
 	})
 
 	t.Run("MkdirAll", func(t *testing.T) {
-		err := fromIOFS.Mkdir("test", 0)
+		err := fromIOFS.MkdirAll("test", 0)
 		assertPermissionError(t, err)
 	})
 
@@ -257,6 +257,11 @@ func TestFromIOFS(t *testing.T) {
 
 	t.Run("Remove", func(t *testing.T) {
 		err := fromIOFS.Remove("test")
+		assertPermissionError(t, err)
+	})
+
+	t.Run("RemoveAll", func(t *testing.T) {
+		err := fromIOFS.RemoveAll("test")
 		assertPermissionError(t, err)
 	})
 
