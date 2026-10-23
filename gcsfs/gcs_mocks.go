@@ -260,13 +260,18 @@ type objectItMock struct {
 func (it *objectItMock) Next() (*storage.ObjectAttrs, error) {
 	var err error
 	if it.dir == nil {
-		it.dir, err = it.fs.Open(it.name)
+		name := it.name
+		if name == "" {
+			// An empty object prefix lists the bucket root.
+			name = afero.FilePathSeparator
+		}
+		it.dir, err = it.fs.Open(name)
 		if err != nil {
 			return nil, err
 		}
 
 		var isDir bool
-		isDir, err = afero.IsDir(it.fs, it.name)
+		isDir, err = afero.IsDir(it.fs, name)
 		if err != nil {
 			return nil, err
 		}
