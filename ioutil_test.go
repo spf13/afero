@@ -51,6 +51,25 @@ func TestReadFile(t *testing.T) {
 	checkSizePath(t, filename, int64(len(contents)))
 }
 
+func TestReadFileOnDirectory(t *testing.T) {
+	// Regression test for #201: reading a directory as a file must
+	// return an error, like the real os.ReadFile does (EISDIR), instead
+	// of silently succeeding with empty data because an in-memory
+	// directory's data buffer happens to be empty too.
+	testFS = &MemMapFs{}
+	fsutil := &Afero{Fs: testFS}
+
+	dirname := "somedir"
+	if err := testFS.MkdirAll(dirname, 0o755); err != nil {
+		t.Fatalf("MkdirAll %s: %v", dirname, err)
+	}
+
+	contents, err := fsutil.ReadFile(dirname)
+	if err == nil {
+		t.Fatalf("ReadFile %s: error expected, got nil (contents=%q)", dirname, contents)
+	}
+}
+
 func TestWriteFile(t *testing.T) {
 	testFS = &MemMapFs{}
 	fsutil := &Afero{Fs: testFS}
