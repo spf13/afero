@@ -316,6 +316,10 @@ func (m *MemMapFs) Remove(name string) error {
 
 func (m *MemMapFs) RemoveAll(path string) error {
 	path = normalizePath(path)
+	prefix := path + FilePathSeparator
+	if path == FilePathSeparator {
+		prefix = path
+	}
 	m.mu.Lock()
 	m.unRegisterWithParent(path)
 	m.mu.Unlock()
@@ -324,7 +328,7 @@ func (m *MemMapFs) RemoveAll(path string) error {
 	defer m.mu.RUnlock()
 
 	for p := range m.getData() {
-		if p == path || strings.HasPrefix(p, path+FilePathSeparator) {
+		if p == path || strings.HasPrefix(p, prefix) {
 			m.mu.RUnlock()
 			m.mu.Lock()
 			delete(m.getData(), p)
