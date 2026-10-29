@@ -834,6 +834,89 @@ func TestMemFsRenameDir(t *testing.T) {
 	}
 }
 
+func TestMemMapFsConcurrentRename(t *testing.T) {
+	t.Parallel()
+
+	for _, directory := range []bool{false, true} {
+		t.Run(fmt.Sprintf("directory=%t", directory), func(t *testing.T) {
+			deadline := time.NewTimer(30 * time.Second)
+			defer deadline.Stop()
+
+			const contenders = 32
+			for round := 0; round < 32; round++ {
+				fs := NewMemMapFs()
+				source := filepath.Join("parent", "source")
+				payload := ""
+				if directory {
+					payload = filepath.Join("nested", "payload")
+				}
+				file := filepath.Join(source, payload)
+				if err := fs.MkdirAll(filepath.Dir(file), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := WriteFile(fs, file, []byte("contents"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+
+				type result struct {
+					destination string
+					err         error
+				}
+				start := make(chan struct{})
+				results := make(chan result, contenders)
+				for i := 0; i < contenders; i++ {
+					destination := filepath.Join("parent", fmt.Sprintf("destination-%d", i))
+					go func() {
+						<-start
+						results <- result{destination, fs.Rename(source, destination)}
+					}()
+				}
+				close(start)
+
+				winner := ""
+				for i := 0; i < contenders; i++ {
+					var r result
+					select {
+					case r = <-results:
+					case <-deadline.C:
+						t.Fatal("concurrent renames did not finish")
+					}
+					if r.err == nil {
+						if winner != "" {
+							t.Fatalf("both %q and %q succeeded", winner, r.destination)
+						}
+						winner = r.destination
+					} else if !os.IsNotExist(r.err) {
+						t.Fatalf("Rename to %q: %v; want not exist", r.destination, r.err)
+					}
+				}
+				if winner == "" {
+					t.Fatal("all renames failed")
+				}
+				if _, err := fs.Stat(source); !os.IsNotExist(err) {
+					t.Fatalf("Stat source after rename: %v; want not exist", err)
+				}
+				if directory {
+					if _, err := fs.Stat(file); !os.IsNotExist(err) {
+						t.Fatalf("Stat old nested file: %v; want not exist", err)
+					}
+				}
+				data, err := ReadFile(fs, filepath.Join(winner, payload))
+				if err != nil || string(data) != "contents" {
+					t.Fatalf("winner contents = %q, %v; want contents, nil", data, err)
+				}
+				entries, err := ReadDir(fs, "parent")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(entries) != 1 || entries[0].Name() != filepath.Base(winner) {
+					t.Fatalf("parent entries = %v; want only %q", entries, filepath.Base(winner))
+				}
+			}
+		})
+	}
+}
+
 func TestMemMapFsRename(t *testing.T) {
 	t.Parallel()
 
