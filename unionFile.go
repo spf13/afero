@@ -195,6 +195,7 @@ func (f *UnionFile) Readdir(c int) (ofi []os.FileInfo, err error) {
 	files := f.files[f.off:]
 
 	if c <= 0 {
+		f.off += len(files)
 		return files, nil
 	}
 

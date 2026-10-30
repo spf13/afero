@@ -581,3 +581,77 @@ func TestUnionFileReaddirAskForTooMany(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestUnionFileReaddirAdvancesAfterReadAll(t *testing.T) {
+	for _, namesOnly := range []bool{false, true} {
+		for _, counts := range [][]int{
+			{0, 0, 1},
+			{-1, -1, 1},
+			{0, 1, -1},
+			{-1, 1, 0},
+			{1, 0, 0, 1},
+			{1, -1, -1, 1},
+			{1, 1, 1, 1},
+		} {
+			t.Run(fmt.Sprintf("names=%t/counts=%v", namesOnly, counts), func(t *testing.T) {
+				base, layer := NewMemMapFs(), NewMemMapFs()
+				for _, fs := range []Fs{base, layer} {
+					if err := WriteFile(fs, "shared", nil, 0o600); err != nil {
+						t.Fatal(err)
+					}
+				}
+				if err := WriteFile(base, "base-only", nil, 0o600); err != nil {
+					t.Fatal(err)
+				}
+				if err := WriteFile(layer, "layer-only", nil, 0o600); err != nil {
+					t.Fatal(err)
+				}
+
+				f, err := NewCopyOnWriteFs(base, layer).Open(FilePathSeparator)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer f.Close()
+
+				seen := make(map[string]bool)
+				for _, count := range counts {
+					want := 3 - len(seen)
+					if count > 0 && count < want {
+						want = count
+					}
+					var wantErr error
+					if count > 0 && want == 0 {
+						wantErr = io.EOF
+					}
+
+					var names []string
+					if namesOnly {
+						names, err = f.Readdirnames(count)
+					} else {
+						var infos []os.FileInfo
+						infos, err = f.Readdir(count)
+						for _, info := range infos {
+							names = append(names, info.Name())
+						}
+					}
+					if err != wantErr || len(names) != want {
+						t.Fatalf(
+							"read(%d) = %v, %v; want %d entries, %v",
+							count, names, err, want, wantErr,
+						)
+					}
+					for _, name := range names {
+						if seen[name] {
+							t.Errorf("entry %q returned more than once", name)
+						}
+						seen[name] = true
+					}
+				}
+				wantNames := map[string]bool{"shared": true, "base-only": true, "layer-only": true}
+				if !reflect.DeepEqual(seen, wantNames) {
+					t.Errorf("read entries = %v", seen)
+				}
+			})
+		}
+	}
+}
