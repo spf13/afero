@@ -60,3 +60,39 @@ func TestCopyOnWriteFileInMemMapBase(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// https://github.com/spf13/afero/issues/713
+func TestCopyOnWriteFsOpenFileOExclDoesNotCopyToLayer(t *testing.T) {
+	base := NewMemMapFs()
+	layer := NewMemMapFs()
+	if err := WriteFile(base, "config.txt", []byte("initial"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	fs := NewCopyOnWriteFs(base, layer)
+
+	f, err := fs.OpenFile("config.txt", os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
+	if f != nil {
+		defer f.Close()
+	}
+	if err == nil || !os.IsExist(err) {
+		t.Fatalf("expected an already exists error, got %v", err)
+	}
+
+	// The failed exclusive create must not have copied the base file
+	// into the layer.
+	if _, err := layer.Stat("config.txt"); err == nil {
+		t.Fatal("expected config.txt to be absent from the layer")
+	}
+
+	// Later changes to the base file must remain visible through the union.
+	if err := WriteFile(base, "config.txt", []byte("updated"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	contents, err := ReadFile(fs, "config.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(contents) != "updated" {
+		t.Fatalf("expected %q, got %q", "updated", contents)
+	}
+}
