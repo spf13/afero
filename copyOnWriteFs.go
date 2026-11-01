@@ -191,8 +191,20 @@ func (u *CopyOnWriteFs) Remove(name string) error {
 }
 
 func (u *CopyOnWriteFs) RemoveAll(name string) error {
+	_, statErr := u.layer.Stat(name)
 	err := u.layer.RemoveAll(name)
 	switch err {
+	case nil:
+		if os.IsNotExist(statErr) {
+			// RemoveAll implementations follow os.RemoveAll and report
+			// success even when the path is absent from the layer. If the
+			// path exists in the base, it cannot be removed, and the call
+			// must not report success, consistent with Remove.
+			if _, err := u.base.Stat(name); err == nil {
+				return syscall.EPERM
+			}
+		}
+		return nil
 	case syscall.ENOENT:
 		_, err = u.base.Stat(name)
 		if err == nil {
