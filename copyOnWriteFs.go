@@ -212,6 +212,15 @@ func (u *CopyOnWriteFs) OpenFile(name string, flag int, perm os.FileMode) (File,
 
 	if flag&(os.O_WRONLY|os.O_RDWR|os.O_APPEND|os.O_CREATE|os.O_TRUNC) != 0 {
 		if b {
+			if flag&os.O_CREATE != 0 && flag&os.O_EXCL != 0 {
+				// The file already exists in the base, so an exclusive
+				// create must fail without copying it into the layer.
+				return nil, &os.PathError{
+					Op:   "open",
+					Path: name,
+					Err:  os.ErrExist,
+				}
+			}
 			if err = u.copyToLayer(name); err != nil {
 				return nil, err
 			}
