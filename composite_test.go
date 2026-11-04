@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/spf13/afero/mem"
 )
 
 var tempDirs []string
@@ -468,6 +470,41 @@ func TestCacheOnReadFsNotInLayer(t *testing.T) {
 }
 
 // #194
+type nilFileOpenErrFs struct {
+	Fs
+}
+
+func (nilFileOpenErrFs) Open(name string) (File, error) {
+	var f *mem.File
+	return f, os.ErrPermission
+}
+
+func TestCacheOnReadFsOpenDirIgnoresFailedBaseFile(t *testing.T) {
+	base := nilFileOpenErrFs{NewMemMapFs()}
+	layer := NewMemMapFs()
+	if err := layer.MkdirAll("/dir", 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteFile(layer, "/dir/file", []byte("data"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	ufs := NewCacheOnReadFs(base, layer, 0)
+	f, err := ufs.Open("/dir")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	names, err := f.Readdirnames(-1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(names) != 1 || names[0] != "file" {
+		t.Fatalf("expected [file], got %v", names)
+	}
+}
+
 func TestUnionFileReaddirEmpty(t *testing.T) {
 	osFs := NewOsFs()
 

@@ -271,10 +271,16 @@ func (u *CacheOnReadFs) Open(name string) (File, error) {
 		}
 	}
 	// the dirs from cacheHit, cacheStale fall down here:
-	bfile, _ := u.base.Open(name)
+	bfile, berr := u.base.Open(name)
+	if berr != nil {
+		bfile = nil
+	}
 	lfile, err := u.layer.Open(name)
-	if err != nil && bfile == nil {
-		return nil, err
+	if err != nil {
+		if bfile == nil {
+			return nil, err
+		}
+		lfile = nil
 	}
 	return &UnionFile{Base: bfile, Layer: lfile}, nil
 }
