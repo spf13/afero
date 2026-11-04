@@ -3,6 +3,7 @@ package afero
 import (
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 )
 
@@ -58,5 +59,40 @@ func TestCopyOnWriteFileInMemMapBase(t *testing.T) {
 	_, err := ufs.Stat("base.txt")
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestCopyOnWriteFsRemoveAllBaseOnlyDirectory(t *testing.T) {
+	base := NewMemMapFs()
+	layer := NewMemMapFs()
+	if err := base.MkdirAll("base-only", 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteFile(base, "base-only/file.txt", []byte("keep"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	fs := NewCopyOnWriteFs(base, layer)
+
+	if err := fs.RemoveAll("base-only"); err != syscall.EPERM {
+		t.Fatalf("expected EPERM, got %v", err)
+	}
+	if ok, _ := Exists(fs, "base-only/file.txt"); !ok {
+		t.Fatal("base file should still be visible")
+	}
+
+	// A path that exists nowhere keeps the os.RemoveAll behaviour: no error.
+	if err := fs.RemoveAll("missing"); err != nil {
+		t.Fatalf("expected nil for a missing path, got %v", err)
+	}
+
+	// A path that exists in the overlay is still removed.
+	if err := WriteFile(layer, "layer-only/a.txt", []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := fs.RemoveAll("layer-only"); err != nil {
+		t.Fatalf("expected nil for an overlay path, got %v", err)
+	}
+	if ok, _ := Exists(fs, "layer-only"); ok {
+		t.Fatal("overlay path should be gone")
 	}
 }

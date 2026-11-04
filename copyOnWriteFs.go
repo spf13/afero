@@ -191,6 +191,14 @@ func (u *CopyOnWriteFs) Remove(name string) error {
 }
 
 func (u *CopyOnWriteFs) RemoveAll(name string) error {
+	// RemoveAll on the layer returns nil for a missing path, so it never
+	// reaches the base check below. Look for a base-only path first.
+	if _, err := u.layer.Stat(name); os.IsNotExist(err) {
+		if _, err := u.base.Stat(name); err == nil {
+			return syscall.EPERM
+		}
+	}
+
 	err := u.layer.RemoveAll(name)
 	switch err {
 	case syscall.ENOENT:
