@@ -529,6 +529,98 @@ func TestFromIOFS_File(t *testing.T) {
 	})
 }
 
+func TestFromIOFSDirectoryReadErrors(t *testing.T) {
+	t.Parallel()
+
+	readErr := errors.New("directory read failed")
+	for _, tt := range []struct {
+		name  string
+		count int
+		err   error
+	}{
+		{"partial EOF", 3, io.EOF},
+		{"partial error", 3, readErr},
+		{"zero count", 0, readErr},
+		{"negative count", -1, readErr},
+		{"success", 3, nil},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, namesOnly := range []bool{false, true} {
+				method := "Readdir"
+				if namesOnly {
+					method = "Readdirnames"
+				}
+				t.Run(method, func(t *testing.T) {
+					fsys := FromIOFS{FS: fromIOFSReadDirErrorFS{
+						FS: fstest.MapFS{
+							"first.txt":  {Data: []byte("first.txt")},
+							"second.txt": {Data: []byte("second.txt")},
+						},
+						err: tt.err,
+					}}
+					dir, err := fsys.Open(".")
+					if err != nil {
+						t.Fatal(err)
+					}
+					defer dir.Close()
+
+					var names []string
+					if namesOnly {
+						names, err = dir.Readdirnames(tt.count)
+					} else {
+						var infos []os.FileInfo
+						infos, err = dir.Readdir(tt.count)
+						for _, info := range infos {
+							names = append(names, info.Name())
+							if info.Size() != int64(len(info.Name())) {
+								t.Errorf("unexpected size for %s: %d", info.Name(), info.Size())
+							}
+						}
+					}
+					if err != tt.err {
+						t.Errorf("got error %v, want %v", err, tt.err)
+					}
+					want := []string{"first.txt", "second.txt"}
+					if len(names) != len(want) {
+						t.Fatalf("got names %v, want %v", names, want)
+					}
+					for i := range want {
+						if names[i] != want[i] {
+							t.Errorf("entry %d: got %q, want %q", i, names[i], want[i])
+						}
+					}
+				})
+			}
+		})
+	}
+}
+
+type fromIOFSReadDirErrorFS struct {
+	fs.FS
+	err error
+}
+
+func (f fromIOFSReadDirErrorFS) Open(name string) (fs.File, error) {
+	file, err := f.FS.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	return fromIOFSReadDirErrorFile{ReadDirFile: file.(fs.ReadDirFile), err: f.err}, nil
+}
+
+type fromIOFSReadDirErrorFile struct {
+	fs.ReadDirFile
+	err error
+}
+
+func (f fromIOFSReadDirErrorFile) ReadDir(n int) ([]fs.DirEntry, error) {
+	entries, err := f.ReadDirFile.ReadDir(n)
+	if err != nil {
+		return entries, err
+	}
+	return entries, f.err
+}
+
 func assertPermissionError(t *testing.T, err error) {
 	t.Helper()
 
