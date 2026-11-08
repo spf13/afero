@@ -253,19 +253,20 @@ func (f fromIOFSFile) Readdir(count int) ([]os.FileInfo, error) {
 	}
 
 	entries, err := rdfile.ReadDir(count)
-	if err != nil {
+	if err != nil && len(entries) == 0 {
 		return nil, err
 	}
 
 	ret := make([]os.FileInfo, len(entries))
 	for i := range entries {
-		ret[i], err = entries[i].Info()
-		if err != nil {
-			return nil, err
+		info, infoErr := entries[i].Info()
+		if infoErr != nil {
+			return nil, infoErr
 		}
+		ret[i] = info
 	}
 
-	return ret, nil
+	return ret, err
 }
 
 func (f fromIOFSFile) Readdirnames(n int) ([]string, error) {
@@ -275,7 +276,7 @@ func (f fromIOFSFile) Readdirnames(n int) ([]string, error) {
 	}
 
 	entries, err := rdfile.ReadDir(n)
-	if err != nil {
+	if err != nil && len(entries) == 0 {
 		return nil, err
 	}
 
@@ -284,7 +285,7 @@ func (f fromIOFSFile) Readdirnames(n int) ([]string, error) {
 		ret[i] = entries[i].Name()
 	}
 
-	return ret, nil
+	return ret, err
 }
 
 func (f fromIOFSFile) Sync() error { return nil }
