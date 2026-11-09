@@ -1172,3 +1172,31 @@ func TestEmptyWritePastEnd(t *testing.T) {
 		})
 	}
 }
+
+func TestOpenFileAppendTruncate(t *testing.T) {
+	for _, fs := range []Fs{NewMemMapFs(), NewOsFs()} {
+		t.Run(fs.Name(), func(t *testing.T) {
+			name := filepath.Join(t.TempDir(), "file")
+			if err := WriteFile(fs, name, []byte("original"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			f, err := fs.OpenFile(name, os.O_WRONLY|os.O_APPEND|os.O_TRUNC, 0o600)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := f.WriteString("new"); err != nil {
+				t.Fatal(err)
+			}
+			if err := f.Close(); err != nil {
+				t.Fatal(err)
+			}
+			data, err := ReadFile(fs, name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(data) != "new" {
+				t.Fatalf("contents = %q, want %q", data, "new")
+			}
+		})
+	}
+}
