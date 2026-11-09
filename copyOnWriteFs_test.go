@@ -60,3 +60,34 @@ func TestCopyOnWriteFileInMemMapBase(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestCopyOnWriteFsFailedExclusiveOpenLeavesLayerUntouched(t *testing.T) {
+	base := NewMemMapFs()
+	layer := NewMemMapFs()
+	if err := WriteFile(base, "config.txt", []byte("initial"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	fs := NewCopyOnWriteFs(base, layer)
+
+	f, err := fs.OpenFile("config.txt", os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
+	if f != nil {
+		f.Close()
+	}
+	if !os.IsExist(err) {
+		t.Fatalf("expected an already-exists error, got %v", err)
+	}
+	if _, err := layer.Stat("config.txt"); !os.IsNotExist(err) {
+		t.Fatalf("expected the overlay to stay empty, Stat error: %v", err)
+	}
+
+	if err := WriteFile(base, "config.txt", []byte("updated"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ReadFile(fs, "config.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != "updated" {
+		t.Fatalf("expected base change to be visible, got %q", got)
+	}
+}
