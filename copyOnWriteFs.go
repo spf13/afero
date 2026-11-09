@@ -191,6 +191,17 @@ func (u *CopyOnWriteFs) Remove(name string) error {
 }
 
 func (u *CopyOnWriteFs) RemoveAll(name string) error {
+	// layer.RemoveAll follows os.RemoveAll and returns nil when the path
+	// is missing, so a base-only path never hits the ENOENT case below.
+	// Detect that first and match Remove, which reports EPERM.
+	if _, err := u.layer.Stat(name); os.IsNotExist(err) || err == syscall.ENOENT {
+		if _, baseErr := u.base.Stat(name); baseErr == nil {
+			return syscall.EPERM
+		}
+	} else if err != nil {
+		return err
+	}
+
 	err := u.layer.RemoveAll(name)
 	switch err {
 	case syscall.ENOENT:
