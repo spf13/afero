@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/spf13/afero/internal/common"
@@ -276,15 +277,30 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 	if f.closed {
 		return 0, ErrFileClosed
 	}
+	var at int64
 	switch whence {
 	case io.SeekStart:
-		atomic.StoreInt64(&f.at, offset)
+		at = offset
 	case io.SeekCurrent:
-		atomic.AddInt64(&f.at, offset)
+		at = atomic.LoadInt64(&f.at) + offset
 	case io.SeekEnd:
-		atomic.StoreInt64(&f.at, int64(len(f.fileData.data))+offset)
+		at = int64(len(f.fileData.data)) + offset
+	default:
+		return 0, &os.PathError{
+			Op:   "seek",
+			Path: f.fileData.name,
+			Err:  syscall.EINVAL,
+		}
 	}
-	return f.at, nil
+	if at < 0 {
+		return 0, &os.PathError{
+			Op:   "seek",
+			Path: f.fileData.name,
+			Err:  syscall.EINVAL,
+		}
+	}
+	atomic.StoreInt64(&f.at, at)
+	return at, nil
 }
 
 func (f *File) WriteAt(b []byte, off int64) (n int, err error) {
