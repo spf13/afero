@@ -12,6 +12,7 @@ import (
 
 var (
 	_ Lstater        = (*BasePathFs)(nil)
+	_ RootOpener     = (*BasePathFs)(nil)
 	_ fs.ReadDirFile = (*BasePathFile)(nil)
 	_ io.WriterTo    = (*BasePathFile)(nil)
 	_ io.ReaderFrom  = (*BasePathFile)(nil)
@@ -25,6 +26,10 @@ var (
 //
 // Note that it does not clean the error messages on return, so you may
 // reveal the real path on errors.
+//
+// BasePathFs checks paths as text only, so a symbolic link inside the base
+// path can point outside it. For an OsFs source, use NewRootFs instead.
+// It uses os.Root, which also blocks escapes through symbolic links.
 type BasePathFs struct {
 	source Fs
 	path   string
@@ -239,4 +244,17 @@ func (b *BasePathFs) ReadlinkIfPossible(name string) (string, error) {
 		return reader.ReadlinkIfPossible(name)
 	}
 	return "", &os.PathError{Op: "readlink", Path: name, Err: ErrNoReadlink}
+}
+
+// OpenRoot opens a root at name, inside the base path.
+// If the source is a RootOpener, the call goes to the source.
+func (b *BasePathFs) OpenRoot(name string) (FsCloser, error) {
+	name, err := b.RealPath(name)
+	if err != nil {
+		return nil, &os.PathError{Op: "openroot", Path: name, Err: err}
+	}
+	if opener, ok := b.source.(RootOpener); ok {
+		return opener.OpenRoot(name)
+	}
+	return newBasePathRootFs(b.source, name)
 }

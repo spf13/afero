@@ -44,9 +44,11 @@ import "github.com/spf13/afero"
 | :--- | :--- | :--- | :--- | :--- |
 | **Core** | **OsFs** | `afero.NewOsFs()` | Interacts with the real operating system filesystem. Use in production. | ✅ Official |
 | | **MemMapFs** | `afero.NewMemMapFs()` | A fast, atomic, concurrent-safe, in-memory filesystem. Ideal for testing. | ✅ Official |
+| | **OsRootFs** | `afero.NewOsRootFs(root)` | The real filesystem, limited to an `os.Root`. Blocks escapes through `..` and symlinks. | ✅ Official |
 | **Composition** | **CopyOnWriteFs**| `afero.NewCopyOnWriteFs(base, overlay)` | A read-only base with a writable overlay. Ideal for sandboxing. | ✅ Official |
 | | **CacheOnReadFs**| `afero.NewCacheOnReadFs(base, cache, ttl)` | Lazily caches files from a slow base into a fast layer on first read. | ✅ Official |
 | | **BasePathFs** | `afero.NewBasePathFs(source, path)` | Restricts operations to a subdirectory (chroot/jail). | ✅ Official |
+| | **RootFs** | `afero.NewRootFs(source, path)` | Restricts operations to a subdirectory. Uses `os.Root` when the source supports it, else `BasePathFs`. Call `Close` when done. | ✅ Official |
 | | **ReadOnlyFs** | `afero.NewReadOnlyFs(source)` | Provides a read-only view, preventing any modifications. | ✅ Official |
 | | **RegexpFs** | `afero.NewRegexpFs(source, regexp)` | Filters a filesystem, only showing files that match a regex. | ✅ Official |
 | **Utility** | **HttpFs** | `afero.NewHttpFs(source)` | Wraps any Afero filesystem to be served via `http.FileServer`. | ✅ Official |
@@ -184,7 +186,11 @@ osFs := afero.NewOsFs()
 
 // Create a filesystem rooted at /home/user/public
 // The application cannot access anything above this directory.
-jailedFs := afero.NewBasePathFs(osFs, "/home/user/public")
+jailedFs, err := afero.NewRootFs(osFs, "/home/user/public")
+if err != nil {
+    return err
+}
+defer jailedFs.Close()
 
 // To the application, this is reading "/"
 // In reality, it's reading "/home/user/public/"
@@ -192,7 +198,12 @@ dirInfo, err := afero.ReadDir(jailedFs, "/")
 
 // Attempts to access parent directories fail
 _, err = jailedFs.Open("../secrets.txt") // Returns an error
+
+// Symlinks that point outside the directory also fail
+_, err = jailedFs.Open("link-to-etc/passwd") // Returns an error
 ```
+
+When the source is `OsFs`, or a `BasePathFs` over `OsFs`, `NewRootFs` uses `os.Root`, which blocks escapes through `..` and symlinks. For other sources, it falls back to `BasePathFs`, which checks paths as text only.
 
 ## Real-World Use Cases
 
