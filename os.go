@@ -19,7 +19,10 @@ import (
 	"time"
 )
 
-var _ Lstater = (*OsFs)(nil)
+var (
+	_ Lstater    = (*OsFs)(nil)
+	_ RootOpener = (*OsFs)(nil)
+)
 
 // OsFs is a Fs implementation that uses functions provided by the os package.
 //
@@ -110,4 +113,13 @@ func (OsFs) SymlinkIfPossible(oldname, newname string) error {
 
 func (OsFs) ReadlinkIfPossible(name string) (string, error) {
 	return os.Readlink(name)
+}
+
+// OpenRoot opens an os.Root at name and returns an OsRootFs for it.
+func (OsFs) OpenRoot(name string) (FsCloser, error) {
+	root, err := os.OpenRoot(name)
+	if err != nil {
+		return nil, err
+	}
+	return &OsRootFs{root: root, owned: true}, nil
 }

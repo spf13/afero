@@ -177,6 +177,48 @@ func TestCreate(t *testing.T) {
 	}
 }
 
+// On error, the returned File must be a nil interface, not a nil *os.File
+// inside a File interface. Otherwise f == nil is false.
+func TestNilFileOnError(t *testing.T) {
+	defer removeAllTestFiles(t)
+	for _, fs := range Fss {
+		tmp := testDir(fs)
+		existing := filepath.Join(tmp, testName)
+		missing := filepath.Join(tmp, "missing.txt")
+		if err := WriteFile(fs, existing, []byte("x"), 0o644); err != nil {
+			t.Fatal(fs.Name(), "WriteFile failed:", err)
+		}
+
+		calls := []struct {
+			name string
+			call func() (File, error)
+			// MemMapFs.Create never fails, so Create may succeed.
+			mayPass bool
+		}{
+			{"Open", func() (File, error) { return fs.Open(missing) }, false},
+			{"OpenFile", func() (File, error) {
+				return fs.OpenFile(existing, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0o644)
+			}, false},
+			{"Create", func() (File, error) {
+				return fs.Create(filepath.Join(existing, "child"))
+			}, true},
+		}
+		for _, c := range calls {
+			f, err := c.call()
+			if err == nil {
+				if !c.mayPass {
+					t.Error(fs.Name(), c.name, "should fail")
+				}
+				f.Close()
+				continue
+			}
+			if f != nil {
+				t.Errorf("%s %s: got non-nil File %#v on error", fs.Name(), c.name, f)
+			}
+		}
+	}
+}
+
 func TestMemFileRead(t *testing.T) {
 	f := tmpFile(new(MemMapFs))
 	// f := MemFileCreate("testfile")

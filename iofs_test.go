@@ -1,6 +1,3 @@
-//go:build go1.16
-// +build go1.16
-
 package afero
 
 import (
@@ -71,6 +68,31 @@ func TestIOFS(t *testing.T) {
 		f.Close()
 
 		if err := fstest.TestFS(NewIOFS(osfs), "dir1/dir2/test.txt"); err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("use OsRootFs", func(t *testing.T) {
+		root, err := os.OpenRoot(t.TempDir())
+		if err != nil {
+			t.Fatal("OpenRoot failed:", err)
+		}
+		defer root.Close()
+		osrootfs := NewOsRootFs(root)
+
+		err = osrootfs.MkdirAll("dir1/dir2", os.ModePerm)
+		if err != nil {
+			t.Fatal("MkdirAll failed:", err)
+		}
+
+		f, err := osrootfs.OpenFile("dir1/dir2/test.txt", os.O_RDWR|os.O_CREATE, os.ModePerm)
+		if err != nil {
+			t.Fatal("OpenFile (O_CREATE) failed:", err)
+		}
+
+		f.Close()
+
+		if err := fstest.TestFS(NewIOFS(osrootfs), "dir1/dir2/test.txt"); err != nil {
 			t.Error(err)
 		}
 	})
