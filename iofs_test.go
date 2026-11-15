@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -527,6 +528,56 @@ func TestFromIOFS_File(t *testing.T) {
 		_, err := file.WriteString("a")
 		assertPermissionError(t, err)
 	})
+}
+
+func TestFromIOFSFailedIOCounts(t *testing.T) {
+	file, err := (FromIOFS{fstest.MapFS{"file": {Data: []byte("original")}}}).Open("file")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	for _, tc := range []struct {
+		name string
+		call func() (int, error)
+	}{
+		{"Write", func() (int, error) { return file.Write([]byte("new")) }},
+		{"WriteAt", func() (int, error) { return file.WriteAt([]byte("new"), 0) }},
+		{"WriteString", func() (int, error) { return file.WriteString("new") }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			n, err := tc.call()
+			if n != 0 {
+				t.Errorf("failed I/O returned %d bytes, want 0", n)
+			}
+			assertPermissionError(t, err)
+		})
+	}
+
+	t.Run("Copy", func(t *testing.T) {
+		source := strings.NewReader("payload")
+		n, err := io.Copy(file, source)
+		if n != 0 || source.Len() != len("payload") {
+			t.Errorf("copy returned %d bytes and left %d unread, want 0 and 7", n, source.Len())
+		}
+		assertPermissionError(t, err)
+	})
+}
+
+func TestFromIOFSUnsupportedReadAtCount(t *testing.T) {
+	// Hide optional interfaces to exercise a filesystem that only provides fs.File.
+	base, err := (fstest.MapFS{"file": {Data: []byte("original")}}).Open("file")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer base.Close()
+	file := fromIOFSFile{File: struct{ fs.File }{base}, name: "file"}
+	buf := []byte("unchanged")
+	n, err := file.ReadAt(buf, 0)
+	if n != 0 || string(buf) != "unchanged" {
+		t.Errorf("ReadAt returned %d bytes and buffer %q, want 0 and unchanged", n, buf)
+	}
+	assertPermissionError(t, err)
 }
 
 func assertPermissionError(t *testing.T, err error) {

@@ -221,7 +221,7 @@ type fromIOFSFile struct {
 func (f fromIOFSFile) ReadAt(p []byte, off int64) (n int, err error) {
 	readerAt, ok := f.File.(io.ReaderAt)
 	if !ok {
-		return -1, notImplemented("readat", f.name)
+		return 0, notImplemented("readat", f.name)
 	}
 
 	return readerAt.ReadAt(p, off)
@@ -237,11 +237,11 @@ func (f fromIOFSFile) Seek(offset int64, whence int) (int64, error) {
 }
 
 func (f fromIOFSFile) Write(p []byte) (n int, err error) {
-	return -1, notImplemented("write", f.name)
+	return 0, notImplemented("write", f.name)
 }
 
 func (f fromIOFSFile) WriteAt(p []byte, off int64) (n int, err error) {
-	return -1, notImplemented("writeat", f.name)
+	return 0, notImplemented("writeat", f.name)
 }
 
 func (f fromIOFSFile) Name() string { return f.name }
@@ -294,7 +294,7 @@ func (f fromIOFSFile) Truncate(size int64) error {
 }
 
 func (f fromIOFSFile) WriteString(s string) (ret int, err error) {
-	return -1, notImplemented("writestring", f.name)
+	return 0, notImplemented("writestring", f.name)
 }
 
 func notImplemented(op, path string) error {
