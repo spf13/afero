@@ -2,10 +2,59 @@ package mem
 
 import (
 	"bytes"
+	"errors"
 	"io"
+	"os"
+	"sync"
+	"syscall"
 	"testing"
 	"time"
 )
+
+func TestFileSeekRejectsANegativePosition(t *testing.T) {
+	t.Parallel()
+	f := &File{fileData: &FileData{name: "f", data: []byte("hello")}}
+
+	if _, err := f.Seek(-2, io.SeekStart); err == nil {
+		t.Fatal("Seek(-2, io.SeekStart) should have returned an error")
+	} else {
+		var pathErr *os.PathError
+		if !errors.As(err, &pathErr) || pathErr.Err != syscall.EINVAL {
+			t.Errorf("Seek(-2, io.SeekStart) = %v, want a *os.PathError with syscall.EINVAL", err)
+		}
+	}
+
+	// The rejected seek must leave the handle usable: the position is
+	// unchanged and the next read returns the data instead of panicking.
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("Read after a rejected Seek panicked: %v", r)
+		}
+	}()
+	buf := make([]byte, 3)
+	if n, err := f.Read(buf); n != 3 || err != nil {
+		t.Errorf("Read = %d, %v, want 3, nil", n, err)
+	}
+}
+
+func TestFileSeekRejectsAnInvalidWhence(t *testing.T) {
+	t.Parallel()
+	f := &File{fileData: &FileData{name: "f", data: []byte("hello")}}
+
+	if _, err := f.Seek(1, 7); err == nil {
+		t.Fatal("Seek(1, 7) should have returned an error")
+	} else {
+		var pathErr *os.PathError
+		if !errors.As(err, &pathErr) || pathErr.Err != syscall.EINVAL {
+			t.Errorf("Seek(1, 7) = %v, want a *os.PathError with syscall.EINVAL", err)
+		}
+	}
+
+	// The position is unchanged.
+	if pos, err := f.Seek(0, io.SeekCurrent); pos != 0 || err != nil {
+		t.Errorf("Seek(0, io.SeekCurrent) = %d, %v, want 0, nil", pos, err)
+	}
+}
 
 func TestFileDataNameRace(t *testing.T) {
 	t.Parallel()
@@ -305,5 +354,35 @@ func TestFileWriteAndSeek(t *testing.T) {
 		cur, err = f.Seek(off-int64(n), io.SeekCurrent)
 		assert(err == nil, err)
 		assert(cur == off, cur, off)
+	}
+}
+
+func TestFileSeekConcurrentRelativeUpdates(t *testing.T) {
+	t.Parallel()
+	fd := CreateFile("foo")
+	f := NewFileHandle(fd)
+
+	// Concurrent Seek(1, SeekCurrent) used to lose updates when the offset
+	// was read, checked and stored as separate steps.
+	const goroutines = 8
+	const per = 50_000
+	var wg sync.WaitGroup
+	for g := 0; g < goroutines; g++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < per; i++ {
+				if _, err := f.Seek(1, io.SeekCurrent); err != nil {
+					t.Errorf("Seek(1, SeekCurrent) = %v", err)
+					return
+				}
+			}
+		}()
+	}
+	wg.Wait()
+	if pos, err := f.Seek(0, io.SeekCurrent); err != nil {
+		t.Fatal(err)
+	} else if pos != int64(goroutines*per) {
+		t.Fatalf("final position = %d, want %d", pos, int64(goroutines*per))
 	}
 }

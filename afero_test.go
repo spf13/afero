@@ -330,6 +330,42 @@ func TestTruncate(t *testing.T) {
 	}
 }
 
+func TestSeekRejectsANegativePosition(t *testing.T) {
+	defer removeAllTestFiles(t)
+	for _, fs := range Fss {
+		f := tmpFile(fs)
+		defer f.Close()
+		io.WriteString(f, "hello, world\n")
+
+		pos, err := f.Seek(0, io.SeekCurrent)
+		if err != nil {
+			t.Errorf("%s: Seek(0, io.SeekCurrent) = %d, %v, want no error", fs.Name(), pos, err)
+			continue
+		}
+
+		if p, err := f.Seek(-1, io.SeekStart); err == nil {
+			t.Errorf("%s: Seek(-1, io.SeekStart) = %d, nil, want an error", fs.Name(), p)
+			continue
+		}
+
+		// The rejected seek leaves the position alone.
+		if p, err := f.Seek(0, io.SeekCurrent); p != pos || err != nil {
+			t.Errorf("%s: Seek(0, io.SeekCurrent) = %d, %v, want %d, nil", fs.Name(), p, err, pos)
+			continue
+		}
+
+		// And the file is still readable.
+		if p, err := f.Seek(0, io.SeekStart); p != 0 || err != nil {
+			t.Errorf("%s: Seek(0, io.SeekStart) = %d, %v, want 0, nil", fs.Name(), p, err)
+			continue
+		}
+		buf := make([]byte, 5)
+		if n, err := f.Read(buf); n != 5 || err != nil {
+			t.Errorf("%s: Read = %d, %v, want 5, nil", fs.Name(), n, err)
+		}
+	}
+}
+
 func TestSeek(t *testing.T) {
 	defer removeAllTestFiles(t)
 	for _, fs := range Fss {
