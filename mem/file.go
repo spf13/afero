@@ -277,30 +277,38 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 	if f.closed {
 		return 0, ErrFileClosed
 	}
-	var at int64
-	switch whence {
-	case io.SeekStart:
-		at = offset
-	case io.SeekCurrent:
-		at = atomic.LoadInt64(&f.at) + offset
-	case io.SeekEnd:
-		at = int64(len(f.fileData.data)) + offset
-	default:
-		return 0, &os.PathError{
-			Op:   "seek",
-			Path: f.fileData.name,
-			Err:  syscall.EINVAL,
+	// The read, the validation and the store have to be one atomic step, not
+	// load-compute-store: two goroutines doing Seek(1, SeekCurrent) must not
+	// overwrite each other's offset. CAS with a retry keeps the negative
+	// position check while preserving concurrent updates.
+	for {
+		cur := atomic.LoadInt64(&f.at)
+		var at int64
+		switch whence {
+		case io.SeekStart:
+			at = offset
+		case io.SeekCurrent:
+			at = cur + offset
+		case io.SeekEnd:
+			at = int64(len(f.fileData.data)) + offset
+		default:
+			return 0, &os.PathError{
+				Op:   "seek",
+				Path: f.fileData.name,
+				Err:  syscall.EINVAL,
+			}
+		}
+		if at < 0 {
+			return 0, &os.PathError{
+				Op:   "seek",
+				Path: f.fileData.name,
+				Err:  syscall.EINVAL,
+			}
+		}
+		if atomic.CompareAndSwapInt64(&f.at, cur, at) {
+			return at, nil
 		}
 	}
-	if at < 0 {
-		return 0, &os.PathError{
-			Op:   "seek",
-			Path: f.fileData.name,
-			Err:  syscall.EINVAL,
-		}
-	}
-	atomic.StoreInt64(&f.at, at)
-	return at, nil
 }
 
 func (f *File) WriteAt(b []byte, off int64) (n int, err error) {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -353,5 +354,35 @@ func TestFileWriteAndSeek(t *testing.T) {
 		cur, err = f.Seek(off-int64(n), io.SeekCurrent)
 		assert(err == nil, err)
 		assert(cur == off, cur, off)
+	}
+}
+
+func TestFileSeekConcurrentRelativeUpdates(t *testing.T) {
+	t.Parallel()
+	fd := CreateFile("foo")
+	f := NewFileHandle(fd)
+
+	// Concurrent Seek(1, SeekCurrent) used to lose updates when the offset
+	// was read, checked and stored as separate steps.
+	const goroutines = 8
+	const per = 50_000
+	var wg sync.WaitGroup
+	for g := 0; g < goroutines; g++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < per; i++ {
+				if _, err := f.Seek(1, io.SeekCurrent); err != nil {
+					t.Errorf("Seek(1, SeekCurrent) = %v", err)
+					return
+				}
+			}
+		}()
+	}
+	wg.Wait()
+	if pos, err := f.Seek(0, io.SeekCurrent); err != nil {
+		t.Fatal(err)
+	} else if pos != int64(goroutines*per) {
+		t.Fatalf("final position = %d, want %d", pos, int64(goroutines*per))
 	}
 }
