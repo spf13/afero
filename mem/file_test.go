@@ -7,6 +7,22 @@ import (
 	"time"
 )
 
+func TestAppendFileHandleEmptyAndClosedWrites(t *testing.T) {
+	file := NewAppendFileHandle(CreateFile("append.txt"))
+	if n, err := file.Write(nil); n != 0 || err != nil {
+		t.Fatalf("empty Write = %d, %v; want 0, nil", n, err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if n, err := file.Write([]byte("data")); n != 0 || err != ErrFileClosed {
+		t.Errorf("closed Write = %d, %v; want 0, ErrFileClosed", n, err)
+	}
+	if size := file.Info().Size(); size != 0 {
+		t.Errorf("size = %d; want 0", size)
+	}
+}
+
 func TestFileDataNameRace(t *testing.T) {
 	t.Parallel()
 	const someName = "someName"

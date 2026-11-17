@@ -38,6 +38,7 @@ type File struct {
 	readDirCount int64
 	closed       bool
 	readOnly     bool
+	appendMode   bool
 	dirBuf       []*FileData
 	fileData     *FileData
 }
@@ -48,6 +49,13 @@ func NewFileHandle(data *FileData) *File {
 
 func NewReadOnlyFileHandle(data *FileData) *File {
 	return &File{fileData: data, readOnly: true}
+}
+
+// NewAppendFileHandle creates a handle whose writes append to the current end of data.
+func NewAppendFileHandle(data *FileData) *File {
+	data.Lock()
+	defer data.Unlock()
+	return &File{fileData: data, appendMode: true, at: int64(len(data.data))}
 }
 
 func (f File) Data() *FileData {
@@ -288,6 +296,16 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 }
 
 func (f *File) WriteAt(b []byte, off int64) (n int, err error) {
+	f.fileData.Lock()
+	defer f.fileData.Unlock()
+	if f.appendMode {
+		return 0, errors.New("invalid use of WriteAt on file opened with O_APPEND")
+	}
+	return f.writeAt(b, off)
+}
+
+// writeAt requires the caller to hold f.fileData's lock.
+func (f *File) writeAt(b []byte, off int64) (n int, err error) {
 	if f.closed {
 		return 0, ErrFileClosed
 	}
@@ -302,8 +320,6 @@ func (f *File) WriteAt(b []byte, off int64) (n int, err error) {
 	if n == 0 {
 		return 0, nil
 	}
-	f.fileData.Lock()
-	defer f.fileData.Unlock()
 	diff := off - int64(len(f.fileData.data))
 	var tail []byte
 	if n+int(off) < len(f.fileData.data) {
@@ -323,6 +339,16 @@ func (f *File) WriteAt(b []byte, off int64) (n int, err error) {
 }
 
 func (f *File) Write(b []byte) (n int, err error) {
+	if f.appendMode {
+		f.fileData.Lock()
+		defer f.fileData.Unlock()
+		off := int64(len(f.fileData.data))
+		n, err = f.writeAt(b, off)
+		if n > 0 {
+			atomic.StoreInt64(&f.at, off+int64(n))
+		}
+		return
+	}
 	n, err = f.WriteAt(b, atomic.LoadInt64(&f.at))
 	atomic.AddInt64(&f.at, int64(n))
 	return
