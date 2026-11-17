@@ -13,6 +13,150 @@ import (
 	"time"
 )
 
+func TestOpenFileAppendWrites(t *testing.T) {
+	for _, backend := range []Fs{NewMemMapFs(), NewOsFs()} {
+		t.Run(backend.Name(), func(t *testing.T) {
+			for _, scenario := range []string{"two handles", "seek", "truncate", "writeat", "ordinary write"} {
+				t.Run(scenario, func(t *testing.T) {
+					name := filepath.Join(t.TempDir(), "append.txt")
+					if err := WriteFile(backend, name, []byte("seed"), 0o600); err != nil {
+						t.Fatal(err)
+					}
+					flag := os.O_RDWR | os.O_APPEND
+					if scenario == "ordinary write" {
+						flag = os.O_RDWR
+					}
+					first, err := backend.OpenFile(name, flag, 0o600)
+					if err != nil {
+						t.Fatal(err)
+					}
+					t.Cleanup(func() {
+						if err := first.Close(); err != nil {
+							t.Error(err)
+						}
+					})
+					want := "seedA"
+					switch scenario {
+					case "two handles":
+						second, err := backend.OpenFile(name, os.O_WRONLY|os.O_APPEND, 0o600)
+						if err != nil {
+							t.Fatal(err)
+						}
+						t.Cleanup(func() {
+							if err := second.Close(); err != nil {
+								t.Error(err)
+							}
+						})
+						if n, err := first.Write([]byte("A")); err != nil || n != 1 {
+							t.Fatalf("first Write = %d, %v", n, err)
+						}
+						if n, err := second.WriteString("B"); err != nil || n != 1 {
+							t.Fatalf("second WriteString = %d, %v", n, err)
+						}
+						if n, err := first.Write([]byte("C")); err != nil || n != 1 {
+							t.Fatalf("third Write = %d, %v", n, err)
+						}
+						want = "seedABC"
+					case "seek":
+						if _, err := first.Seek(0, io.SeekStart); err != nil {
+							t.Fatal(err)
+						}
+					case "truncate":
+						// Windows denies Truncate on an append handle.
+						other, err := backend.OpenFile(name, os.O_WRONLY, 0o600)
+						if err != nil {
+							t.Fatal(err)
+						}
+						err = other.Truncate(1)
+						closeErr := other.Close()
+						if err != nil {
+							t.Fatal(err)
+						}
+						if closeErr != nil {
+							t.Fatal(closeErr)
+						}
+						want = "sA"
+					case "writeat":
+						if n, err := first.WriteAt([]byte("X"), 0); err == nil || n != 0 {
+							t.Errorf("WriteAt on append handle = %d, %v; want 0 and error", n, err)
+						}
+						want = "seed"
+					case "ordinary write":
+						if _, err := first.Seek(1, io.SeekStart); err != nil {
+							t.Fatal(err)
+						}
+						want = "sAed"
+					}
+					if scenario != "two handles" && scenario != "writeat" {
+						if n, err := first.WriteString("A"); err != nil || n != 1 {
+							t.Fatalf("WriteString = %d, %v", n, err)
+						}
+					}
+					data, err := ReadFile(backend, name)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if string(data) != want {
+						t.Errorf("content = %q; want %q", data, want)
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestOpenFileConcurrentAppend(t *testing.T) {
+	for _, backend := range []Fs{NewMemMapFs(), NewOsFs()} {
+		t.Run(backend.Name(), func(t *testing.T) {
+			name := filepath.Join(t.TempDir(), "append.txt")
+			if err := WriteFile(backend, name, nil, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			const writers, records = 8, 25
+			files := make([]File, writers)
+			for i := range files {
+				file, err := backend.OpenFile(name, os.O_WRONLY|os.O_APPEND, 0o600)
+				if err != nil {
+					t.Fatal(err)
+				}
+				files[i] = file
+				t.Cleanup(func() {
+					if err := file.Close(); err != nil {
+						t.Error(err)
+					}
+				})
+			}
+			var wg sync.WaitGroup
+			for i, file := range files {
+				wg.Add(1)
+				go func(id int, file File) {
+					defer wg.Done()
+					line := fmt.Sprintf("%d\n", id)
+					for j := 0; j < records; j++ {
+						if n, err := file.WriteString(line); err != nil || n != len(line) {
+							t.Errorf("WriteString = %d, %v; want %d, nil", n, err, len(line))
+							return
+						}
+					}
+				}(i, file)
+			}
+			wg.Wait()
+			data, err := ReadFile(backend, name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(data) != writers*records*2 {
+				t.Errorf("content length = %d; want %d", len(data), writers*records*2)
+			}
+			for i := 0; i < writers; i++ {
+				if got := strings.Count(string(data), fmt.Sprintf("%d\n", i)); got != records {
+					t.Errorf("writer %d records = %d; want %d", i, got, records)
+				}
+			}
+		})
+	}
+}
+
 func TestNormalizePath(t *testing.T) {
 	type test struct {
 		input    string
