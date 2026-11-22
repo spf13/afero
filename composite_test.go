@@ -13,6 +13,34 @@ import (
 
 var tempDirs []string
 
+func TestCacheOnReadFsReadAtPreservesWritePosition(t *testing.T) {
+	base, layer := NewMemMapFs(), NewMemMapFs()
+	if err := WriteFile(base, "data", []byte("0123456789"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	f, err := NewCacheOnReadFs(base, layer, 0).OpenFile("data", os.O_RDWR, 0o644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	if _, err := f.Seek(2, io.SeekStart); err != nil {
+		t.Fatal(err)
+	}
+	buf := make([]byte, 2)
+	if n, err := f.ReadAt(buf, 6); n != 2 || err != nil || string(buf) != "67" {
+		t.Fatalf("ReadAt = %q, %d, %v", buf, n, err)
+	}
+	if n, err := f.Write([]byte("XX")); n != 2 || err != nil {
+		t.Fatalf("Write = %d, %v", n, err)
+	}
+	for name, fs := range map[string]Fs{"base": base, "layer": layer} {
+		content, err := ReadFile(fs, "data")
+		if err != nil || string(content) != "01XX456789" {
+			t.Errorf("%s content = %q, %v; want 01XX456789", name, content, err)
+		}
+	}
+}
+
 type closeResultFile struct {
 	File
 	err   error
