@@ -94,6 +94,23 @@ func TestFsOpen(t *testing.T) {
 	}
 }
 
+func TestMetadataAfterClose(t *testing.T) {
+	file, err := afs.Open("/testFile")
+	if err != nil {
+		t.Fatal(err)
+	}
+	name := file.Name()
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if got := file.Name(); got != name {
+		t.Errorf("Name after Close = %q, want %q", got, name)
+	}
+	if _, err := file.Stat(); !errors.Is(err, afero.ErrFileClosed) {
+		t.Errorf("Stat after Close = %v, want ErrFileClosed", err)
+	}
+}
+
 func TestRead(t *testing.T) {
 	for _, f := range files {
 		if !f.exists {
