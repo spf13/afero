@@ -3,6 +3,7 @@ package tarfs
 
 import (
 	"archive/tar"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -45,6 +46,48 @@ var dirs = []struct {
 }
 
 var afs *afero.Afero
+
+func TestNewDirectoryIndex(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		header  tar.Header
+		content string
+		paths   []string
+	}{
+		{"implicit parents", tar.Header{Name: "nested/deep/data.txt", Typeflag: tar.TypeReg, Mode: 0o644, Size: 5}, "hello", []string{"/", "/nested", "/nested/deep", "/nested/deep/data.txt"}},
+		{"empty directory", tar.Header{Name: "empty/", Typeflag: tar.TypeDir, Mode: 0o750}, "", []string{"/", "/empty"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			var buffer bytes.Buffer
+			writer := tar.NewWriter(&buffer)
+			if err := writer.WriteHeader(&test.header); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := writer.Write([]byte(test.content)); err != nil {
+				t.Fatal(err)
+			}
+			if err := writer.Close(); err != nil {
+				t.Fatal(err)
+			}
+			fs := New(tar.NewReader(&buffer))
+			var paths []string
+			err := afero.Walk(
+				fs,
+				afero.FilePathSeparator,
+				func(path string, info os.FileInfo, err error) error {
+					paths = append(paths, filepath.ToSlash(path))
+					return err
+				},
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(paths, test.paths) {
+				t.Errorf("walked %v, want %v", paths, test.paths)
+			}
+		})
+	}
+}
 
 func TestMain(m *testing.M) {
 	tf, err := os.Open("testdata/t.tar")

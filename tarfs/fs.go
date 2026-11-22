@@ -64,6 +64,24 @@ func New(t *tar.Reader) *Fs {
 			data: buf.Bytes(),
 		}
 		fs.files[d][f] = file
+		if hdr.Typeflag == tar.TypeDir {
+			name := filepath.Join(d, f)
+			if fs.files[name] == nil {
+				fs.files[name] = make(map[string]*fsEntry)
+			}
+		}
+		for dir := d; dir != afero.FilePathSeparator; {
+			parent, name := splitpath(dir)
+			if fs.files[parent] == nil {
+				fs.files[parent] = make(map[string]*fsEntry)
+			}
+			if fs.files[parent][name] == nil {
+				fs.files[parent][name] = &fsEntry{h: &tar.Header{
+					Name: filepath.ToSlash(dir), Typeflag: tar.TypeDir, Mode: 0o755,
+				}}
+			}
+			dir = parent
+		}
 
 	}
 
