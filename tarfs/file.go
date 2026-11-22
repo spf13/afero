@@ -24,7 +24,6 @@ func (f *File) Close() error {
 	}
 
 	f.closed = true
-	f.h = nil
 	f.data = nil
 	f.fs = nil
 
@@ -135,7 +134,12 @@ func (f *File) Readdirnames(n int) ([]string, error) {
 	return names, nil
 }
 
-func (f *File) Stat() (os.FileInfo, error) { return f.h.FileInfo(), nil }
+func (f *File) Stat() (os.FileInfo, error) {
+	if f.closed {
+		return nil, afero.ErrFileClosed
+	}
+	return f.h.FileInfo(), nil
+}
 
 func (f *File) Sync() error { return nil }
 
