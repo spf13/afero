@@ -487,6 +487,30 @@ func TestMemFsMkdirAllMode(t *testing.T) {
 	}
 }
 
+func TestMemFsMkdirAllWithFileInPath(t *testing.T) {
+	t.Parallel()
+
+	for _, path := range []string{"file", filepath.Join("file", "child", "leaf")} {
+		t.Run(path, func(t *testing.T) {
+			fsys := NewMemMapFs()
+			const contents = "existing file"
+			if err := WriteFile(fsys, "file", []byte(contents), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if err := fsys.MkdirAll(path, 0o755); !os.IsExist(err) {
+				t.Fatalf("MkdirAll(%q) = %v, want existing-file error", path, err)
+			}
+			got, err := ReadFile(fsys, "file")
+			if err != nil || string(got) != contents {
+				t.Fatalf("original file contents = %q, err = %v", got, err)
+			}
+			if _, err := fsys.Stat(filepath.Join("file", "child")); !os.IsNotExist(err) {
+				t.Fatalf("Stat of child = %v, want not exist", err)
+			}
+		})
+	}
+}
+
 // MkdirAll does not change permissions of already-existing directories
 func TestMemFsMkdirAllNoClobber(t *testing.T) {
 	t.Parallel()
