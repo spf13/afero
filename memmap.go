@@ -182,14 +182,28 @@ func (m *MemMapFs) Mkdir(name string, perm os.FileMode) error {
 }
 
 func (m *MemMapFs) MkdirAll(path string, perm os.FileMode) error {
-	err := m.Mkdir(path, perm)
-	if err != nil {
-		if err.(*os.PathError).Err == ErrFileExists {
-			return nil
+	name := normalizePath(path)
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Validate the existing parent before registering any new directories.
+	data := m.getData()
+	for current := name; ; {
+		if item, exists := data[current]; exists {
+			if !mem.GetFileInfo(item).IsDir() {
+				return &os.PathError{Op: "mkdir", Path: current, Err: ErrFileExists}
+			}
+			break
 		}
-		return err
+		parent := normalizePath(filepath.Dir(current))
+		if parent == current {
+			break
+		}
+		current = parent
 	}
-	return nil
+
+	return m.lockfreeMkdir(name, perm&chmodBits)
 }
 
 // Handle some relative paths
