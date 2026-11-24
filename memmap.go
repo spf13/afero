@@ -22,6 +22,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/spf13/afero/mem"
@@ -272,6 +273,11 @@ func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, erro
 	}
 	if err != nil {
 		return nil, err
+	}
+	if flag&(os.O_WRONLY|os.O_RDWR|os.O_APPEND|os.O_TRUNC) != 0 &&
+		mem.GetFileInfo(file.(*mem.File).Data()).IsDir() {
+		file.Close()
+		return nil, &os.PathError{Op: "open", Path: name, Err: syscall.EISDIR}
 	}
 	if flag == os.O_RDONLY {
 		file = mem.NewReadOnlyFileHandle(file.(*mem.File).Data())
