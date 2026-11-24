@@ -1,6 +1,7 @@
 package afero
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -9,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -1170,5 +1172,75 @@ func TestEmptyWritePastEnd(t *testing.T) {
 				})
 			}
 		})
+	}
+}
+
+// TestMemMapFsOpenDirAsFile verifies that directories cannot be opened,
+// read from, or written to as if they were regular files.
+// See https://github.com/spf13/afero/issues/101
+func TestMemMapFsOpenDirAsFile(t *testing.T) {
+	fs := NewMemMapFs()
+	if err := fs.MkdirAll("/dir/sub", 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteFile(fs, "/dir/file", []byte("data"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Opening a directory for writing must fail like OsFs does.
+	for _, flag := range []int{os.O_WRONLY, os.O_RDWR, os.O_WRONLY | os.O_APPEND, os.O_RDWR | os.O_TRUNC} {
+		f, err := fs.OpenFile("/dir", flag, 0)
+		if err == nil {
+			f.Close()
+			t.Errorf("OpenFile(dir, %d) succeeded; want EISDIR error", flag)
+			continue
+		}
+		if !errors.Is(err, syscall.EISDIR) {
+			t.Errorf("OpenFile(dir, %d) error = %v; want EISDIR", flag, err)
+		}
+	}
+
+	// A read-only open of a directory succeeds (Readdir works)...
+	f, err := fs.Open("/dir")
+	if err != nil {
+		t.Fatalf("Open(dir) failed: %v", err)
+	}
+	if _, err := f.Readdir(0); err != nil {
+		t.Errorf("Readdir on dir failed: %v", err)
+	}
+	// ...but reading its raw contents fails like OsFs does.
+	if _, err := f.Read(make([]byte, 16)); !errors.Is(err, syscall.EISDIR) {
+		t.Errorf("Read on dir err = %v; want EISDIR", err)
+	}
+	if _, err := f.ReadAt(make([]byte, 16), 0); !errors.Is(err, syscall.EISDIR) {
+		t.Errorf("ReadAt on dir err = %v; want EISDIR", err)
+	}
+	f.Close()
+
+	// Same through the O_RDONLY OpenFile path.
+	f, err = fs.OpenFile("/dir", os.O_RDONLY, 0)
+	if err != nil {
+		t.Fatalf("OpenFile(dir, O_RDONLY) failed: %v", err)
+	}
+	if _, err := f.Read(make([]byte, 16)); !errors.Is(err, syscall.EISDIR) {
+		t.Errorf("Read on dir via OpenFile err = %v; want EISDIR", err)
+	}
+	f.Close()
+
+	// Writing through helpers must fail as well.
+	if err := WriteFile(fs, "/dir", []byte("x"), 0o644); !errors.Is(err, syscall.EISDIR) {
+		t.Errorf("WriteFile on dir err = %v; want EISDIR", err)
+	}
+	if _, err := ReadFile(fs, "/dir"); !errors.Is(err, syscall.EISDIR) {
+		t.Errorf("ReadFile on dir err = %v; want EISDIR", err)
+	}
+
+	// Regular files are unaffected.
+	if err := WriteFile(fs, "/dir/file", []byte("more"), 0o644); err != nil {
+		t.Errorf("WriteFile on file failed: %v", err)
+	}
+	b, err := ReadFile(fs, "/dir/file")
+	if err != nil || string(b) != "more" {
+		t.Errorf("ReadFile on file = %q, %v; want more, nil", b, err)
 	}
 }
