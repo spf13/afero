@@ -141,7 +141,14 @@ func (u *CopyOnWriteFs) SymlinkIfPossible(oldname, newname string) error {
 
 func (u *CopyOnWriteFs) ReadlinkIfPossible(name string) (string, error) {
 	if rlayer, ok := u.layer.(LinkReader); ok {
-		return rlayer.ReadlinkIfPossible(name)
+		target, err := rlayer.ReadlinkIfPossible(name)
+		if err == nil || !u.isNotExist(err) {
+			return target, err
+		}
+	} else if _, err := u.layer.Stat(name); err == nil {
+		return "", &os.PathError{Op: "readlink", Path: name, Err: ErrNoReadlink}
+	} else if !u.isNotExist(err) {
+		return "", err
 	}
 
 	if rbase, ok := u.base.(LinkReader); ok {
