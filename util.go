@@ -290,7 +290,9 @@ func (a Afero) IsEmpty(path string) (bool, error) {
 
 // IsEmpty checks if a given file or directory is empty.
 func IsEmpty(fs Fs, path string) (bool, error) {
-	if b, _ := Exists(fs, path); !b {
+	if b, err := Exists(fs, path); err != nil {
+		return false, err
+	} else if !b {
 		return false, fmt.Errorf("%q path does not exist", path)
 	}
 	fi, err := fs.Stat(path)
