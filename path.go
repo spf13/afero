@@ -106,9 +106,14 @@ func (a Afero) Walk(root string, walkFn filepath.WalkFunc) error {
 func Walk(fs Fs, root string, walkFn filepath.WalkFunc) error {
 	info, err := lstatIfPossible(fs, root)
 	if err != nil {
-		return walkFn(root, nil, err)
+		err = walkFn(root, nil, err)
+	} else {
+		err = walk(fs, root, info, walkFn)
 	}
-	return walk(fs, root, info, walkFn)
+	if err == filepath.SkipDir || err == filepath.SkipAll {
+		return nil
+	}
+	return err
 }
 
 // readDirEntries reads the directory named by dirname and returns
