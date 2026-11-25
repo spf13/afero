@@ -241,8 +241,12 @@ func readerContainsAny(r io.Reader, subslices ...[]byte) bool {
 		}
 
 		if n > 0 {
+			valid := n
+			if i > 1 {
+				valid += halflen
+			}
 			for _, sl := range subslices {
-				if bytes.Contains(buff, sl) {
+				if bytes.Contains(buff[:valid], sl) {
 					return true
 				}
 			}
