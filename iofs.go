@@ -115,7 +115,19 @@ func (iofs IOFS) ReadFile(name string) ([]byte, error) {
 	return bytes, nil
 }
 
-func (iofs IOFS) Sub(dir string) (fs.FS, error) { return IOFS{NewBasePathFs(iofs.Fs, dir)}, nil }
+func (iofs IOFS) Stat(name string) (fs.FileInfo, error) {
+	if !fs.ValidPath(name) {
+		return nil, iofs.wrapError("stat", name, fs.ErrInvalid)
+	}
+	return iofs.Fs.Stat(name)
+}
+
+func (iofs IOFS) Sub(dir string) (fs.FS, error) {
+	if !fs.ValidPath(dir) {
+		return nil, iofs.wrapError("sub", dir, fs.ErrInvalid)
+	}
+	return IOFS{NewBasePathFs(iofs.Fs, dir)}, nil
+}
 
 func (IOFS) wrapError(op, path string, err error) error {
 	if _, ok := err.(*fs.PathError); ok {

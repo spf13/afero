@@ -139,7 +139,7 @@ func TestIOFSNativeDirEntryWhenPossible(t *testing.T) {
 	assertDirEntries(dirEntries, true)
 
 	fileCount := 0
-	err = fs.WalkDir(iofs, "", func(path string, d fs.DirEntry, err error) error {
+	err = fs.WalkDir(iofs, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
