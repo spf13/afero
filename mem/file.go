@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/spf13/afero/internal/common"
@@ -38,6 +39,7 @@ type File struct {
 	readDirCount int64
 	closed       bool
 	readOnly     bool
+	writeOnly    bool
 	dirBuf       []*FileData
 	fileData     *FileData
 }
@@ -48,6 +50,11 @@ func NewFileHandle(data *FileData) *File {
 
 func NewReadOnlyFileHandle(data *FileData) *File {
 	return &File{fileData: data, readOnly: true}
+}
+
+// NewWriteOnlyFileHandle creates a handle that permits writes but rejects reads.
+func NewWriteOnlyFileHandle(data *FileData) *File {
+	return &File{fileData: data, writeOnly: true}
 }
 
 func (f File) Data() *FileData {
@@ -218,6 +225,9 @@ func (f *File) ReadAt(b []byte, off int64) (n int, err error) {
 	defer f.fileData.Unlock()
 	if f.closed {
 		return 0, ErrFileClosed
+	}
+	if f.writeOnly {
+		return 0, &os.PathError{Op: "read", Path: f.fileData.name, Err: syscall.EBADF}
 	}
 	if len(b) > 0 && int(off) == len(f.fileData.data) {
 		return 0, io.EOF
