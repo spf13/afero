@@ -90,9 +90,9 @@ func SafeWriteReader(fs Fs, path string, r io.Reader) (retErr error) {
 		return fmt.Errorf("%v already exists", path)
 	}
 
-	file, err := fs.Create(path)
+	file, err := fs.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o666)
 	if err != nil {
-		return
+		return err
 	}
 	defer func() {
 		if cerr := file.Close(); cerr != nil {
