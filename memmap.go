@@ -276,6 +276,9 @@ func (m *MemMapFs) OpenFile(name string, flag int, perm os.FileMode) (File, erro
 	if flag == os.O_RDONLY {
 		file = mem.NewReadOnlyFileHandle(file.(*mem.File).Data())
 	}
+	if flag&os.O_WRONLY != 0 {
+		file = mem.NewWriteOnlyFileHandle(file.(*mem.File).Data())
+	}
 	if flag&os.O_APPEND > 0 {
 		_, err = file.Seek(0, io.SeekEnd)
 		if err != nil {
