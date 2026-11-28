@@ -22,6 +22,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/spf13/afero/mem"
@@ -346,6 +347,13 @@ func (m *MemMapFs) Rename(oldname, newname string) error {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	if _, ok := m.getData()[oldname]; ok {
+		if mem.GetFileInfo(m.getData()[oldname]).IsDir() &&
+			strings.HasPrefix(
+				newname,
+				strings.TrimSuffix(oldname, FilePathSeparator)+FilePathSeparator,
+			) {
+			return &os.PathError{Op: "rename", Path: oldname, Err: syscall.EINVAL}
+		}
 		m.mu.RUnlock()
 		m.mu.Lock()
 		err := m.unRegisterWithParent(oldname)
