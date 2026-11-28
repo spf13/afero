@@ -182,8 +182,10 @@ func (u *CacheOnReadFs) Remove(name string) error {
 		return err
 	}
 	switch st {
+	case cacheMiss:
+		return u.base.Remove(name)
 	case cacheLocal:
-	case cacheHit, cacheStale, cacheMiss:
+	case cacheHit, cacheStale:
 		err = u.base.Remove(name)
 	}
 	if err != nil {
